@@ -22,7 +22,7 @@ namespace EvoS.DirectoryServer
         {
             var host = WebHost.CreateDefaultBuilder()
                 .SuppressStatusMessages(true)
-                .UseKestrel(koptions => koptions.Listen(IPAddress.Parse("127.0.0.1"), 6050))
+                .UseKestrel(koptions => koptions.Listen(IPAddress.Parse("0.0.0.0"), 6050))
                 .UseStartup<DirectoryServer>()
                 .Build();
 

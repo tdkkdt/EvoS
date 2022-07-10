@@ -1,15 +1,17 @@
-﻿using EvoS.Framework.Constants.Enums;
-using EvoS.Framework.Network.Static;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using CentralServer.LobbyServer.Gamemode;
+using EvoS.Framework.Constants.Enums;
+using EvoS.Framework.Logging;
+using EvoS.Framework.Network.Static;
+using WebSocketSharp;
 
 namespace CentralServer.LobbyServer.Matchmaking
 {
     class MatchmakingQueue
     {
         Dictionary<string, LobbyGameInfo> Games = new Dictionary<string, LobbyGameInfo>();
-        List<LobbyPlayerInfo> QueuedPlayers = new List<LobbyPlayerInfo>();
+        SynchronizedCollection<LobbyServerProtocolBase> QueuedPlayers = new SynchronizedCollection<LobbyServerProtocolBase>();
         GameType GameType;
         
         private static int GameID = 0;
@@ -18,14 +20,54 @@ namespace CentralServer.LobbyServer.Matchmaking
         {
             GameType = gameType;
         }
+
         public void Update()
         {
-            
+			for (int i = 0; i < QueuedPlayers.Count; i++)
+            {
+				LobbyServerProtocolBase connection = QueuedPlayers[i];
+				if (connection.State != WebSocketState.Open)
+                {
+                    Log.Print(LogType.Game, $"Removing disconnected player {connection.AccountId} from {GameType} queue");
+                    QueuedPlayers.RemoveAt(i--);
+				}
+			}
+
+            Log.Print(LogType.Game, $"{QueuedPlayers.Count} players in {GameType} queue");
+            if (QueuedPlayers.Count >= 2)
+			{
+                List<LobbyServerProtocolBase> clients = new List<LobbyServerProtocolBase>();
+                for (int i = 0; i < 2; i++)
+				{
+                    LobbyServerProtocolBase client = QueuedPlayers[0];
+                    QueuedPlayers.RemoveAt(0);
+                    clients.Add(client);
+				}
+                MatchmakingManager.StartGame(clients, GameType);
+			}
+        }
+
+        public LobbyMatchmakingQueueInfo AddPlayer(LobbyServerProtocolBase connection)
+		{
+            QueuedPlayers.Add(connection);
+
+            return new LobbyMatchmakingQueueInfo()
+            {
+                ShowQueueSize = true,
+                QueuedPlayers = QueuedPlayers.Count,
+                PlayersPerMinute = 1,
+                GameConfig = new LobbyGameConfig()
+                {
+                    GameType = GameType
+                },
+                QueueStatus = QueueStatus.Success,
+                AverageWaitTime = TimeSpan.FromSeconds(0)
+            };
         }
 
         public LobbyGameInfo CreateGameInfo()
         {
-            GameTypeAvailability gameAvailability = Gamemode.GameModeManager.GetGameTypeAvailabilities()[GameType];
+            GameTypeAvailability gameAvailability = GameModeManager.GetGameTypeAvailabilities()[GameType];
 
             LobbyGameInfo gameInfo = new LobbyGameInfo
             {
