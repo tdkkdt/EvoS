@@ -1,20 +1,20 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using WebSocketSharp;
-using WebSocketSharp.Server;
-using EvoS.Framework.Network;
+using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.Logging;
 using EvoS.Framework.Network.Static;
-using EvoS.Framework.Constants.Enums;
 using Newtonsoft.Json;
-using CentralServer.LobbyServer.Session;
+using WebSocketSharp;
+using WebSocketSharp.Server;
+using StreamReader = System.IO.StreamReader;
 
 namespace CentralServer.BridgeServer
 {
     public class BridgeServerProtocol : WebSocketBehavior
     {
+        private const string PATH = @"E:\Atlas Reactor\game.json";
+        
         public string Address;
         public int Port;
         private LobbyGameInfo GameInfo;
@@ -39,7 +39,7 @@ namespace CentralServer.BridgeServer
 
             BridgeMessageType messageType;
             
-            using (System.IO.StreamReader reader = new System.IO.StreamReader(stream))
+            using (StreamReader reader = new StreamReader(stream))
             {
                 messageType = (BridgeMessageType)reader.Read();
                 data = reader.ReadToEnd();
@@ -85,7 +85,7 @@ namespace CentralServer.BridgeServer
                 gameInfo = gameInfo,
                 teamInfo = teamInfo
             };
-			using StreamWriter file = File.CreateText(@"E:\Atlas Reactor\game.json");
+            using StreamWriter file = File.CreateText(PATH);
 			JsonSerializer serializer = new JsonSerializer();
 			serializer.Serialize(file, _data);
 		}
