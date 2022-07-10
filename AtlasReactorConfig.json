@@ -1,0 +1,7 @@
+{
+	"DirectoryServerAddress": "127.0.0.1:6050",
+	"EnableLogging": true,
+	"PlatformConfig": {
+		"AllowFakeTickets": true
+	}
+}
