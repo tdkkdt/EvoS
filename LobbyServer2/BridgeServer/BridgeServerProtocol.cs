@@ -13,7 +13,7 @@ namespace CentralServer.BridgeServer
 {
     public class BridgeServerProtocol : WebSocketBehavior
     {
-        private const string PATH = @"E:\Atlas Reactor\game.json";
+        private static readonly string PATH = Path.GetTempPath() + @"atlas-reactor-hc-server-game.json";
         
         public string Address;
         public int Port;
@@ -88,6 +88,7 @@ namespace CentralServer.BridgeServer
             using StreamWriter file = File.CreateText(PATH);
 			JsonSerializer serializer = new JsonSerializer();
 			serializer.Serialize(file, _data);
+            Log.Print(LogType.Game, $"Setting Game Info at {PATH}");
 		}
 
         private ReadOnlySpan<byte> GetBytesSpan(string str)
