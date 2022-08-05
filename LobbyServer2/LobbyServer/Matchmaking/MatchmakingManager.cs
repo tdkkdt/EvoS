@@ -13,8 +13,13 @@ using System.Text;
 
 namespace CentralServer.LobbyServer.Matchmaking
 {
+    /// <summary>
+    /// Manages the matchmaking process. it contains queues where all the player are assigned and when there are enough
+    /// players launches a new game
+    /// </summary>
     public static class MatchmakingManager
     {
+        // List of matchmaking queues by game mode (practive, coop, pvp, ranked and custom)
         private static Dictionary<GameType, MatchmakingQueue> Queues = new Dictionary<GameType, MatchmakingQueue>()
         {
             {GameType.Practice, new MatchmakingQueue(GameType.Practice)},
@@ -24,6 +29,9 @@ namespace CentralServer.LobbyServer.Matchmaking
             {GameType.Custom, new MatchmakingQueue(GameType.Custom)}
         };
 
+        /// <summary>
+        /// Updates all the queues
+        /// </summary>
         public static void Update()
 		{
             foreach (var queue in Queues.Values)
@@ -32,10 +40,18 @@ namespace CentralServer.LobbyServer.Matchmaking
 			}
 		}
 
+        /// <summary>
+        /// Adds a player to a queue
+        /// </summary>
+        /// <param name="gameType">player's selected gamemode</param>
+        /// <param name="client">client</param>
+        /// <returns></returns>
         public static LobbyMatchmakingQueueInfo AddToQueue(GameType gameType, LobbyServerProtocolBase client)
         {
-            LobbyMatchmakingQueueInfo info = Queues[gameType].AddPlayer(client);
-            Update();
+            // Get the queue
+            MatchmakingQueue queue = Queues[gameType];
+            LobbyMatchmakingQueueInfo info = queue.AddPlayer(client);
+            queue.Update();
             return info;
         }
 
