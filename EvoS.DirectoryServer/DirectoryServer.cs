@@ -13,6 +13,7 @@ using Newtonsoft.Json;
 using EvoS.Framework.Logging;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network;
+using EvoS.Framework;
 
 namespace EvoS.DirectoryServer
 {
@@ -22,7 +23,7 @@ namespace EvoS.DirectoryServer
         {
             var host = WebHost.CreateDefaultBuilder()
                 .SuppressStatusMessages(true)
-                .UseKestrel(koptions => koptions.Listen(IPAddress.Parse("0.0.0.0"), 6050))
+                .UseKestrel(koptions => koptions.Listen(IPAddress.Parse("0.0.0.0"), EvosConfiguration.GetDirectoryServerPort()))
                 .UseStartup<DirectoryServer>()
                 .Build();
 

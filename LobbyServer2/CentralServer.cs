@@ -1,6 +1,7 @@
 ﻿using System;
 using WebSocketSharp;
 using WebSocketSharp.Server;
+using EvoS.Framework;
 
 namespace CentralServer
 {
@@ -8,7 +9,7 @@ namespace CentralServer
     {
         public static void Main(string[] args)
         {
-            WebSocketServer server = new WebSocketServer(6060);
+            WebSocketServer server = new WebSocketServer(EvosConfiguration.GetLobbyServerPort());
             server.AddWebSocketService<LobbyServer.LobbyServerProtocol>("/LobbyGameClientSessionManager");
             server.AddWebSocketService<BridgeServer.BridgeServerProtocol>("/BridgeServer");
             server.Log.Level = LogLevel.Debug;
