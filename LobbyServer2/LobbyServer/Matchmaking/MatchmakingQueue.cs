@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using CentralServer.LobbyServer.Gamemode;
 using EvoS.Framework.Constants.Enums;
@@ -58,10 +58,11 @@ namespace CentralServer.LobbyServer.Matchmaking
                 PlayersPerMinute = 1,
                 GameConfig = new LobbyGameConfig()
                 {
-                    GameType = GameType
+                    GameType = GameType,
+                    SubTypes = GameModeManager.GetGameTypeAvailabilities()[connection.SelectedGameType].SubTypes
                 },
-                QueueStatus = QueueStatus.Success,
-                AverageWaitTime = TimeSpan.FromSeconds(0)
+                QueueStatus = QueueStatus.WaitingForHumans,
+                AverageWaitTime = TimeSpan.FromSeconds(8)
             };
         }
 

@@ -34,7 +34,8 @@ namespace CentralServer.LobbyServer
             RegisterHandler(new EvosMessageDelegate<PurchaseTintRequest>(HandlePurchaseTintRequest));
             RegisterHandler(new EvosMessageDelegate<LeaveGameRequest>(HandleLeaveGameRequest));
             RegisterHandler(new EvosMessageDelegate<JoinMatchmakingQueueRequest>(HandleJoinMatchmakingQueueRequest));
-            
+            RegisterHandler(new EvosMessageDelegate<LeaveMatchmakingQueueRequest>(HandleLeaveMatchmakingQueueRequest));
+
 
             /*
             RegisterHandler(new EvosMessageDelegate<PurchaseModResponse>(HandlePurchaseModRequest));
@@ -257,21 +258,28 @@ namespace CentralServer.LobbyServer
         {
             Console.WriteLine("JoinMatchmakingQueueRequest " + JsonConvert.SerializeObject(request));
 
-
+            /*
             LeaveGameResponse response = new LeaveGameResponse()
             {
                 Success = true,
                 ResponseId = request.RequestId
             };
-            Send(response);
+            Send(response);*/
 
             LobbyMatchmakingQueueInfo queueInfo = MatchmakingManager.AddToQueue(request.GameType, this);
             MatchmakingQueueAssignmentNotification assignmentNotification = new MatchmakingQueueAssignmentNotification()
             {
-                Reason = "",
                 MatchmakingQueueInfo = queueInfo
             };
             Send(assignmentNotification);
+
+            Send(new JoinMatchmakingQueueResponse { LocalizedFailure = null, ResponseId = request.RequestId});
+        }
+
+        public void HandleLeaveMatchmakingQueueRequest(LeaveMatchmakingQueueRequest request)
+        {
+            Log.Print(LogType.Error, "Code not implented yet for LeaveMatchmakingQueueRequest, must remove from queue");
+            Send(new LeaveMatchmakingQueueResponse() { ResponseId = request.RequestId });
         }
 
 
