@@ -15,7 +15,7 @@
 
   <ItemGroup>
     <Reference Include="websocket-sharp">
-      <HintPath>..\..\..\..\..\Artemis\Win64\AtlasReactor_Data\Managed\websocket-sharp.dll</HintPath>
+      <HintPath>..\dll\websocket-sharp.dll</HintPath>
     </Reference>
   </ItemGroup>
 
