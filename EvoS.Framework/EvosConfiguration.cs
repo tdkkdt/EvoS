@@ -1,0 +1,38 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using YamlDotNet.Serialization.NamingConventions;
+
+namespace EvoS.Framework
+{
+    public class EvosConfiguration
+    {
+        private static EvosConfiguration Instance = null;
+        public int DirectoryServerPort = 6050;
+        public int LobbyServerPort = 6060;
+
+        private static EvosConfiguration GetInstance()
+        {
+            if (Instance == null)
+            {
+                var deserializer = new YamlDotNet.Serialization.DeserializerBuilder()
+                    .Build();
+
+                Instance = deserializer.Deserialize<EvosConfiguration>(File.ReadAllText("settings.yaml"));
+            }
+
+            return Instance;
+        }
+
+        public static int GetDirectoryServerPort()
+        {
+            return GetInstance().DirectoryServerPort;
+        }
+
+        public static int GetLobbyServerPort()
+        {
+            return GetInstance().LobbyServerPort;
+        }
+    }
+}

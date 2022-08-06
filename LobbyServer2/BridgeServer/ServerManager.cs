@@ -1,4 +1,5 @@
-﻿using EvoS.Framework.Constants.Enums;
+﻿using CentralServer.LobbyServer.Matchmaking;
+using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.Logging;
 using EvoS.Framework.Network.Static;
 using System;
@@ -16,6 +17,7 @@ namespace CentralServer.BridgeServer
             ServerPool.Add(gameServer.ID, gameServer);
 
             Log.Print(LogType.Lobby, $"New game server connected with address {gameServer.Address}:{gameServer.Port}");
+            MatchmakingManager.Update();
         }
 
         public static void RemoveServer(string connectionID)
