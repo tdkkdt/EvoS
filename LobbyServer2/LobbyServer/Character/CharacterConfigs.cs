@@ -27,7 +27,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Tank,
                     CharacterType = CharacterType.BattleMonk,
                     Difficulty = 1,
@@ -66,7 +66,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Tank,
                     CharacterType = CharacterType.Claymore,
                     Difficulty = 1,
@@ -157,7 +157,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Assassin,
                     CharacterType = CharacterType.Gremlins,
                     Difficulty = 1,
@@ -274,7 +274,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Assassin,
                     CharacterType = CharacterType.RobotAnimal,
                     Difficulty = 1,
@@ -313,7 +313,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Assassin,
                     CharacterType = CharacterType.Scoundrel,
                     Difficulty = 1,
