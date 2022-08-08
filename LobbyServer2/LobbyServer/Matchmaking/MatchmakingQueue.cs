@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Gamemode;
+using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.Logging;
 using EvoS.Framework.Network.Static;
@@ -11,59 +14,108 @@ namespace CentralServer.LobbyServer.Matchmaking
     class MatchmakingQueue
     {
         Dictionary<string, LobbyGameInfo> Games = new Dictionary<string, LobbyGameInfo>();
-        SynchronizedCollection<LobbyServerProtocolBase> QueuedPlayers = new SynchronizedCollection<LobbyServerProtocolBase>();
-        GameType GameType;
+        SynchronizedCollection<LobbyServerProtocolBase> Players = new SynchronizedCollection<LobbyServerProtocolBase>();
+        public LobbyMatchmakingQueueInfo MatchmakingQueueInfo;
+        GameType GameType => MatchmakingQueueInfo.GameType;
         
         private static int GameID = 0;
 
         public MatchmakingQueue(GameType gameType)
         {
-            GameType = gameType;
+            MatchmakingQueueInfo = new LobbyMatchmakingQueueInfo()
+            {
+                QueueStatus = QueueStatus.Idle,
+                QueuedPlayers = 0,
+                ShowQueueSize = true,
+                AverageWaitTime = TimeSpan.FromSeconds(60),
+                GameConfig = new LobbyGameConfig()
+                {
+                    GameType = gameType,
+                    SubTypes = GameModeManager.GetGameTypeAvailabilities()[gameType].SubTypes
+                }
+            };
+        }
+
+        public LobbyMatchmakingQueueInfo AddPlayer(LobbyServerProtocolBase connection)
+        {
+            Players.Add(connection);
+            MatchmakingQueueInfo.QueuedPlayers = Players.Count;
+
+            return MatchmakingQueueInfo;
         }
 
         public void Update()
         {
-			for (int i = 0; i < QueuedPlayers.Count; i++)
-            {
-				LobbyServerProtocolBase connection = QueuedPlayers[i];
-				if (connection.State != WebSocketState.Open)
-                {
-                    Log.Print(LogType.Game, $"Removing disconnected player {connection.AccountId} from {GameType} queue");
-                    QueuedPlayers.RemoveAt(i--);
-				}
-			}
+            RemoveDisconnectedPlayers();
+            Log.Print(LogType.Game, $"{Players.Count} players in {GameType} queue");
 
-            Log.Print(LogType.Game, $"{QueuedPlayers.Count} players in {GameType} queue");
-            if (QueuedPlayers.Count >= 2)
-			{
-                List<LobbyServerProtocolBase> clients = new List<LobbyServerProtocolBase>();
-                for (int i = 0; i < 2; i++)
-				{
-                    LobbyServerProtocolBase client = QueuedPlayers[0];
-                    QueuedPlayers.RemoveAt(0);
-                    clients.Add(client);
-				}
-                MatchmakingManager.StartGame(clients, GameType);
-			}
+            foreach (GameSubType subType in MatchmakingQueueInfo.GameConfig.SubTypes)
+            {
+                int FullGamePlayers = subType.TeamAPlayers + subType.TeamBPlayers;
+                if (Players.Count >= FullGamePlayers)
+                {
+                    if (!CheckGameServerAvailable())
+                    {
+                        Log.Print(LogType.Error, "No available game server to start a match");
+                        return;
+                    }
+
+                    List<LobbyServerProtocolBase> clients = new List<LobbyServerProtocolBase>();
+                    for (int i = 0; i < FullGamePlayers; i++)
+                    {
+                        LobbyServerProtocolBase client = Players[i];
+                        clients.Add(client);
+                    }
+                    MatchmakingManager.StartGame(clients, GameType);
+                }
+            }
         }
 
-        public LobbyMatchmakingQueueInfo AddPlayer(LobbyServerProtocolBase connection)
-		{
-            QueuedPlayers.Add(connection);
-
-            return new LobbyMatchmakingQueueInfo()
+        public void RemoveDisconnectedPlayers()
+        {
+            for (int i = 0; i < Players.Count; i++)
             {
-                ShowQueueSize = true,
-                QueuedPlayers = QueuedPlayers.Count,
-                PlayersPerMinute = 1,
-                GameConfig = new LobbyGameConfig()
+                LobbyServerProtocolBase connection = Players[i];
+                if (connection.State != WebSocketState.Open)
                 {
-                    GameType = GameType,
-                    SubTypes = GameModeManager.GetGameTypeAvailabilities()[connection.SelectedGameType].SubTypes
-                },
-                QueueStatus = QueueStatus.WaitingForHumans,
-                AverageWaitTime = TimeSpan.FromSeconds(8)
-            };
+                    Log.Print(LogType.Game, $"Removing disconnected player {connection.AccountId} from {GameType} queue");
+                    Players.RemoveAt(i--);
+                }
+            }
+        }
+
+        public void RemovePlayers(List<LobbyServerProtocolBase> playerList)
+        {
+            foreach (LobbyServerProtocolBase player in playerList)
+            {
+                Players.Remove(player);
+            }
+        }
+
+        public bool CheckGameServerAvailable()
+        {
+            if (ServerManager.IsAnyServerAvailable()) return true;
+
+            // If there is no game server already connected, we check if we can launch one
+            string gameServer = EvosConfiguration.GetGameServerExecutable();
+            if (gameServer.IsNullOrEmpty()) return false;
+            
+            // TODO: this will start a new game server eveerytime the queue is runned, which can cause multiple server that aren't needed to start
+            using (var process = new Process())
+            {
+                try
+                {
+                    process.StartInfo = new ProcessStartInfo(gameServer);
+                    process.Start();
+
+                    return true;
+                }
+                catch(Exception e)
+                {
+                    Log.Print(LogType.Error, e.ToString());
+                    return false;
+                }   
+            }
         }
 
         public LobbyGameInfo CreateGameInfo()

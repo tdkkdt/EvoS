@@ -43,5 +43,14 @@ namespace CentralServer.BridgeServer
             
             return null;
         }
+
+        public static bool IsAnyServerAvailable()
+        {
+            foreach (BridgeServerProtocol server in ServerPool.Values)
+            {
+                if (server.IsAvailable()) return true;
+            }
+            return false;
+        }
     }
 }

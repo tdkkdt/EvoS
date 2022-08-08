@@ -1,4 +1,4 @@
-﻿using CentralServer.LobbyServer.Account;
+using CentralServer.LobbyServer.Account;
 using CentralServer.LobbyServer.Friend;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
@@ -256,24 +256,13 @@ namespace CentralServer.LobbyServer
 
         public void HandleJoinMatchmakingQueueRequest(JoinMatchmakingQueueRequest request)
         {
-            Console.WriteLine("JoinMatchmakingQueueRequest " + JsonConvert.SerializeObject(request));
+            Log.Print(LogType.Lobby, $"{this.UserName} joined {request.GameType} queue ");
 
-            /*
-            LeaveGameResponse response = new LeaveGameResponse()
-            {
-                Success = true,
-                ResponseId = request.RequestId
-            };
-            Send(response);*/
+            // Send response to the calling request
+            Send(new JoinMatchmakingQueueResponse { LocalizedFailure = null, ResponseId = request.RequestId });
 
-            LobbyMatchmakingQueueInfo queueInfo = MatchmakingManager.AddToQueue(request.GameType, this);
-            MatchmakingQueueAssignmentNotification assignmentNotification = new MatchmakingQueueAssignmentNotification()
-            {
-                MatchmakingQueueInfo = queueInfo
-            };
-            Send(assignmentNotification);
-
-            Send(new JoinMatchmakingQueueResponse { LocalizedFailure = null, ResponseId = request.RequestId});
+            // Add player to the selected queue
+            MatchmakingManager.AddToQueue(request.GameType, this);
         }
 
         public void HandleLeaveMatchmakingQueueRequest(LeaveMatchmakingQueueRequest request)

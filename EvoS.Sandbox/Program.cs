@@ -22,12 +22,6 @@ namespace EvoS.Sandbox
         private void OnExecute()
         {
             Banner.PrintBanner();
-            Log.Print(LogType.Debug, "Asset folder hint: "+ System.Convert.ToString(Assets));
-            if (!AssetLoader.FindAssetRoot(Assets))
-            {
-                Log.Print(LogType.Error, "AtlasReactor_Data folder not found, please specify with --assets!");
-                Log.Print(LogType.Misc, "Alternatively, place Win64 or AtlasReactor_Data in this folder.");
-            }
 
             // Start Directory Server
             new Thread(() => StartDirServer()).Start();

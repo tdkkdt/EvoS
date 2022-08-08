@@ -45,14 +45,19 @@ namespace CentralServer.LobbyServer.Matchmaking
         /// </summary>
         /// <param name="gameType">player's selected gamemode</param>
         /// <param name="client">client</param>
-        /// <returns></returns>
-        public static LobbyMatchmakingQueueInfo AddToQueue(GameType gameType, LobbyServerProtocolBase client)
+        public static void AddToQueue(GameType gameType, LobbyServerProtocolBase client)
         {
             // Get the queue
             MatchmakingQueue queue = Queues[gameType];
+
+            // Add player to the queue
             LobbyMatchmakingQueueInfo info = queue.AddPlayer(client);
+
+            // Send 'Assigned to queue notification' to the player
+            client.Send(new MatchmakingQueueAssignmentNotification() { MatchmakingQueueInfo = info });
+
+            // Update the queue
             queue.Update();
-            return info;
         }
 
         public static void StartPractice(LobbyServerProtocolBase client)
@@ -135,38 +140,32 @@ namespace CentralServer.LobbyServer.Matchmaking
 
         public static void StartGame(List<LobbyServerProtocolBase> clients, GameType gameType)
         {
-            Log.Print(LogType.Error, $"Starting {gameType} game...");
-            LobbyTeamInfo teamInfo = new LobbyTeamInfo
-            {
-                TeamPlayerInfo = new List<LobbyPlayerInfo>()
-            };
+            Log.Print(LogType.Lobby, $"Starting {gameType} game...");
 
-            int teamANum = 0;
-            int teamBNum = 0;
-            foreach (LobbyServerProtocolBase client in clients)
+            MatchmakingQueue lobbyQueue = Queues[gameType];
+            GameSubType subType = lobbyQueue.MatchmakingQueueInfo.GameConfig.SubTypes[0];
+            LobbyTeamInfo teamInfo = new LobbyTeamInfo{ TeamPlayerInfo = new List<LobbyPlayerInfo>() };
+
+            // Fill team A
+            for (int i = 0; i < subType.TeamAPlayers; i++)
             {
+                LobbyServerProtocolBase client = clients[i];
                 LobbyPlayerInfo playerInfo = SessionManager.GetPlayerInfo(client.AccountId);
-                if (playerInfo.CharacterInfo.CharacterType == CharacterType.Tracker)
-                {
-                    continue;
-                }
                 playerInfo.TeamId = Team.TeamA;
                 playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count;
+                Log.Print(LogType.Game, $"adding player {client.UserName}, {client.AccountId} to team A");
                 teamInfo.TeamPlayerInfo.Add(playerInfo);
-                teamANum++;
             }
 
-            foreach (LobbyServerProtocolBase client in clients)
+            // Fill team B
+            for (int i = 0; i < subType.TeamBPlayers; i++)
             {
+                LobbyServerProtocolBase client = clients[subType.TeamAPlayers+i];
                 LobbyPlayerInfo playerInfo = SessionManager.GetPlayerInfo(client.AccountId);
-                if (playerInfo.CharacterInfo.CharacterType != CharacterType.Tracker)
-                {
-                    continue;
-                }
                 playerInfo.TeamId = Team.TeamB;
                 playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count;
+                Log.Print(LogType.Game, $"adding player {client.UserName}, {client.AccountId} to team B");
                 teamInfo.TeamPlayerInfo.Add(playerInfo);
-                teamBNum++;
             }
             
             LobbyGameInfo gameInfo = new LobbyGameInfo
@@ -190,9 +189,9 @@ namespace CentralServer.LobbyServer.Matchmaking
                     Spectators = 0,
                     SubTypes = GameModeManager.GetGameTypeAvailabilities()[gameType].SubTypes,
                     TeamABots = 0,
-                    TeamAPlayers = teamANum,
+                    TeamAPlayers = teamInfo.TeamAPlayerInfo.Count(),
                     TeamBBots = 0,
-                    TeamBPlayers = teamBNum,
+                    TeamBPlayers = teamInfo.TeamBPlayerInfo.Count(),
                 }
             };
 
@@ -200,9 +199,11 @@ namespace CentralServer.LobbyServer.Matchmaking
             if (serverAddress == null)
             {
                 Log.Print(LogType.Error, $"No available server for {gameType} gamemode");
+                return;
             }
             else
             {
+                lobbyQueue.RemovePlayers(clients);
                 gameInfo.GameServerAddress = "ws://" + serverAddress;
                 gameInfo.GameStatus = GameStatus.Launching;
 
@@ -235,9 +236,8 @@ namespace CentralServer.LobbyServer.Matchmaking
 
                     client.Send(notification);
                 }
+                Log.Print(LogType.Error, $"Game {gameType} started");
             }
-            Log.Print(LogType.Error, $"Game {gameType} started");
-            Update();
         }
 
         public static void StartGameVBots(List<LobbyServerProtocolBase> clients, GameType gameType)
