@@ -5,6 +5,8 @@ using CentralServer.LobbyServer.Config;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Newtonsoft.Json;
+using System.IO;
 
 namespace CentralServer.LobbyServer.Gamemode
 {
@@ -103,51 +105,26 @@ namespace CentralServer.LobbyServer.Gamemode
             type.MaxWillFillPerTeam = 0;
             type.SubTypes = new List<GameSubType>()
             {
-                new GameSubType
-                {
-                    LocalizedName = "GenericPvP@SubTypes",
-                    GameMapConfigs = new List<GameMapConfig>{ new GameMapConfig(Maps.Skyway_Deathmatch, true) },
-                    RewardBucket = GameBalanceVars.GameRewardBucketType.NoRewards,
-                    PersistedStatBucket = PersistedStatBucket.DoNotPersist,
-                    TeamAPlayers = 1,
-                    TeamABots = 0,
-                    TeamBPlayers = 1,
-                    TeamBBots = 0,
-                    Mods = new List<GameSubType.SubTypeMods>
-                    {
-                        GameSubType.SubTypeMods.AllowPlayingLockedCharacters,
-                        GameSubType.SubTypeMods.HumansHaveFirstSlots
-                    },
-                    TeamComposition = new TeamCompositionRules
-                    {
-                        Rules = new Dictionary<TeamCompositionRules.SlotTypes, FreelancerSet>
-                        {
-                            {
-                                TeamCompositionRules.SlotTypes.A1, new FreelancerSet
-                                {
-                                    Roles = new List<CharacterRole>
-                                    {
-                                        CharacterRole.Tank,
-                                        CharacterRole.Assassin,
-                                        CharacterRole.Support
-                                    }
-                                }
-                            }, {
-                                TeamCompositionRules.SlotTypes.B1, new FreelancerSet
-                                {
-                                    Roles = new List<CharacterRole>
-                                    {
-                                        CharacterRole.Tank,
-                                        CharacterRole.Assassin,
-                                        CharacterRole.Support
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                LoadGameSubType("1v1PvP.json")
+                //LoadGameSubType("GenericPvP.json")
             };
             return type;
+        }
+
+        /// <summary>
+        /// Reads a json file that represents a GameSubType
+        /// </summary>
+        /// <param name="filename">File name inside the folder 'Config/GameSubTypes/'</param>
+        /// <returns>A GameSubType loaded from the file</returns>
+        private static GameSubType LoadGameSubType(string filename)
+        {
+            // TODO: this always read from file, it could be stored in a cache
+            JsonReader reader = new JsonTextReader(new StreamReader(@"Config\GameSubTypes\" + filename));
+            try
+            {
+                return new JsonSerializer().Deserialize<GameSubType>(reader);
+            }
+            finally { reader.Close(); }
         }
 
         private static GameTypeAvailability GetRankedGameTypeAvailability()

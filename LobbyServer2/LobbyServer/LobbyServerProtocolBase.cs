@@ -52,7 +52,9 @@ namespace CentralServer.LobbyServer
                 EvosMessageDelegate<WebSocketMessage> handler = GetHandler(deserialized.GetType());
                 if (handler != null)
                 {
+                    #if DEBUG
                     Log.Print(LogType.Network, "Received " + deserialized.GetType().Name);
+                    #endif
                     handler.Invoke(deserialized);
                 }
                 else

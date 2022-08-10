@@ -11,6 +11,7 @@ namespace EvoS.Framework
         private static EvosConfiguration Instance = null;
         public int DirectoryServerPort = 6050;
         public int LobbyServerPort = 6060;
+        public string GameServerExecutable = "";
 
         private static EvosConfiguration GetInstance()
         {
@@ -33,6 +34,15 @@ namespace EvoS.Framework
         public static int GetLobbyServerPort()
         {
             return GetInstance().LobbyServerPort;
+        }
+
+        /// <summary>
+        /// Full path to server's "AtlasReactor.exe"
+        /// </summary>
+        /// <returns></returns>
+        public static string GetGameServerExecutable()
+        {
+            return GetInstance().GameServerExecutable;
         }
     }
 }

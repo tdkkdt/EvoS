@@ -1,0 +1,37 @@
+{
+  "LocalizedName": "GenericPvP@SubTypes",
+  "GameMapConfigs": [
+    {
+      "Map": "Skyway_Deathmatch",
+      "IsActive": true
+    }
+  ],
+  "TeamAPlayers": 4,
+  "TeamBPlayers": 4,
+  "TeamABots": 0,
+  "TeamBBots": 0,
+  "TeamComposition": {
+    "Rules": {
+      "A1": {
+        "Roles": [
+          "Tank",
+          "Assassin",
+          "Support"
+        ]
+      },
+      "B1": {
+        "Roles": [
+          "Tank",
+          "Assassin",
+          "Support"
+        ]
+      }
+    }
+  },
+  "RewardBucket": "NoRewards",
+  "PersistedStatBucket": "DoNotPersist",
+  "Mods": [
+    "AllowPlayingLockedCharacters",
+    "HumansHaveFirstSlots"
+  ]
+}
