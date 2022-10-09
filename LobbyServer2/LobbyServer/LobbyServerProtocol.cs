@@ -45,7 +45,6 @@ namespace CentralServer.LobbyServer
             RegisterHandler(new EvosMessageDelegate<PurchaseChatEmojiRequest>(HandlePurchaseChatEmoji));
             RegisterHandler(new EvosMessageDelegate<PurchaseLoadoutSlotRequest>(HandlePurchaseLoadoutSlot));
             */
-
         }
 
         protected override void OnClose(CloseEventArgs e)
@@ -89,8 +88,14 @@ namespace CentralServer.LobbyServer
             }
         }
 
-        public void HandleOptionsNotification(OptionsNotification notification) {}
-        public void HandleCustomKeyBindNotification(CustomKeyBindNotification notification) { }
+        public void HandleOptionsNotification(OptionsNotification notification)
+        {
+        }
+
+        public void HandleCustomKeyBindNotification(CustomKeyBindNotification notification)
+        {
+        }
+
         public void HandlePricesRequest(PricesRequest request)
         {
             PricesResponse response = StoreManager.GetPricesResponse();
@@ -127,7 +132,7 @@ namespace CentralServer.LobbyServer
         public void HandlePlayerInfoUpdateRequest(PlayerInfoUpdateRequest request)
         {
             LobbyPlayerInfoUpdate playerInfoUpdate = request.PlayerInfoUpdate;
-            
+
 
             if (request.GameType != null && request.GameType.HasValue)
                 SetGameType(request.GameType.Value);
@@ -145,7 +150,7 @@ namespace CentralServer.LobbyServer
                 accountData.AccountComponent.SelectedRibbonID = playerInfo.RibbonID;
                 accountData.AccountComponent.SelectedTitleID = playerInfo.TitleID;
                 // end "should be automatic"
-                
+
                 PlayerAccountDataUpdateNotification updateNotification = new PlayerAccountDataUpdateNotification()
                 {
                     AccountData = accountData
@@ -172,9 +177,9 @@ namespace CentralServer.LobbyServer
                 SetCharacterLoadoutChanges(playerInfoUpdate.CharacterLoadoutChanges.Value);
             if (playerInfoUpdate.CharacterMods != null && playerInfoUpdate.CharacterMods.HasValue)
                 SetCharacterMods(playerInfoUpdate.CharacterMods.Value);
-            if (playerInfoUpdate.CharacterSkin!= null && playerInfoUpdate.CharacterSkin.HasValue)
+            if (playerInfoUpdate.CharacterSkin != null && playerInfoUpdate.CharacterSkin.HasValue)
                 SetCharacterSkin(playerInfoUpdate.CharacterSkin.Value);
-            
+
             if (playerInfoUpdate.ContextualReadyState != null && playerInfoUpdate.ContextualReadyState.HasValue)
                 SetContextualReadyState(playerInfoUpdate.ContextualReadyState.Value);
             if (playerInfoUpdate.EnemyDifficulty != null && playerInfoUpdate.EnemyDifficulty.HasValue)
@@ -213,7 +218,7 @@ namespace CentralServer.LobbyServer
         {
             PreviousGameInfoResponse response = new PreviousGameInfoResponse()
             {
-                PreviousGameInfo =  null,
+                PreviousGameInfo = null,
                 ResponseId = request.RequestId
             };
             Send(response);
@@ -253,7 +258,6 @@ namespace CentralServer.LobbyServer
         }
 
 
-
         public void HandleJoinMatchmakingQueueRequest(JoinMatchmakingQueueRequest request)
         {
             Log.Print(LogType.Lobby, $"{this.UserName} joined {request.GameType} queue ");
@@ -270,7 +274,5 @@ namespace CentralServer.LobbyServer
             Log.Print(LogType.Error, "Code not implented yet for LeaveMatchmakingQueueRequest, must remove from queue");
             Send(new LeaveMatchmakingQueueResponse() { ResponseId = request.RequestId });
         }
-
-
     }
 }

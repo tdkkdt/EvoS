@@ -22,23 +22,23 @@ namespace CentralServer.LobbyServer.Matchmaking
         // List of matchmaking queues by game mode (practive, coop, pvp, ranked and custom)
         private static Dictionary<GameType, MatchmakingQueue> Queues = new Dictionary<GameType, MatchmakingQueue>()
         {
-            {GameType.Practice, new MatchmakingQueue(GameType.Practice)},
-            {GameType.Coop, new MatchmakingQueue(GameType.Coop)},
-            {GameType.PvP, new MatchmakingQueue(GameType.PvP)},
-            {GameType.Ranked, new MatchmakingQueue(GameType.Ranked)},
-            {GameType.Custom, new MatchmakingQueue(GameType.Custom)}
+            { GameType.Practice, new MatchmakingQueue(GameType.Practice) },
+            { GameType.Coop, new MatchmakingQueue(GameType.Coop) },
+            { GameType.PvP, new MatchmakingQueue(GameType.PvP) },
+            { GameType.Ranked, new MatchmakingQueue(GameType.Ranked) },
+            { GameType.Custom, new MatchmakingQueue(GameType.Custom) }
         };
 
         /// <summary>
         /// Updates all the queues
         /// </summary>
         public static void Update()
-		{
+        {
             foreach (var queue in Queues.Values)
-			{
+            {
                 queue.Update();
-			}
-		}
+            }
+        }
 
         /// <summary>
         /// Adds a player to a queue
@@ -65,12 +65,12 @@ namespace CentralServer.LobbyServer.Matchmaking
             LobbyGameInfo practiceGameInfo = new LobbyGameInfo
             {
                 AcceptedPlayers = 1,
-                AcceptTimeout = new TimeSpan(0,0,0),
+                AcceptTimeout = new TimeSpan(0, 0, 0),
                 ActiveHumanPlayers = 1,
                 ActivePlayers = 1,
                 CreateTimestamp = DateTime.Now.Ticks,
                 GameServerProcessCode = "Artemis" + DateTime.Now.Ticks,
-                GameConfig = new LobbyGameConfig 
+                GameConfig = new LobbyGameConfig
                 {
                     GameOptionFlags = GameOptionFlag.NoInputIdleDisconnect & GameOptionFlag.NoInputIdleDisconnect,
                     GameServerShutdownTime = -1,
@@ -93,17 +93,17 @@ namespace CentralServer.LobbyServer.Matchmaking
             teamInfo.TeamPlayerInfo = new List<LobbyPlayerInfo>
             {
                 SessionManager.GetPlayerInfo(client.AccountId),
-				CharacterManager.GetPunchingDummyPlayerInfo(),
-				CharacterManager.GetPunchingDummyPlayerInfo()
-			};
+                CharacterManager.GetPunchingDummyPlayerInfo(),
+                CharacterManager.GetPunchingDummyPlayerInfo()
+            };
             teamInfo.TeamPlayerInfo[0].TeamId = Team.TeamA;
             teamInfo.TeamPlayerInfo[0].PlayerId = 1;
-			teamInfo.TeamPlayerInfo[1].TeamId = Team.TeamB;
-			teamInfo.TeamPlayerInfo[1].PlayerId = 2;
-			teamInfo.TeamPlayerInfo[2].TeamId = Team.TeamB;
-			teamInfo.TeamPlayerInfo[2].PlayerId = 3;
+            teamInfo.TeamPlayerInfo[1].TeamId = Team.TeamB;
+            teamInfo.TeamPlayerInfo[1].PlayerId = 2;
+            teamInfo.TeamPlayerInfo[2].TeamId = Team.TeamB;
+            teamInfo.TeamPlayerInfo[2].PlayerId = 3;
 
-			string serverAddress = ServerManager.GetServer(practiceGameInfo, teamInfo);
+            string serverAddress = ServerManager.GetServer(practiceGameInfo, teamInfo);
             if (serverAddress == null)
             {
                 Log.Print(LogType.Error, "No available server for practice gamemode");
@@ -112,7 +112,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             {
                 practiceGameInfo.GameServerAddress = "ws://" + serverAddress;
                 practiceGameInfo.GameStatus = GameStatus.Launching;
-                
+
                 GameAssignmentNotification notification1 = new GameAssignmentNotification
                 {
                     GameInfo = practiceGameInfo,
@@ -131,7 +131,6 @@ namespace CentralServer.LobbyServer.Matchmaking
                     TeamInfo = teamInfo,
                     GameInfo = practiceGameInfo,
                     PlayerInfo = teamInfo.TeamPlayerInfo[0]
-
                 };
 
                 client.Send(notification2);
@@ -144,7 +143,7 @@ namespace CentralServer.LobbyServer.Matchmaking
 
             MatchmakingQueue lobbyQueue = Queues[gameType];
             GameSubType subType = lobbyQueue.MatchmakingQueueInfo.GameConfig.SubTypes[0];
-            LobbyTeamInfo teamInfo = new LobbyTeamInfo{ TeamPlayerInfo = new List<LobbyPlayerInfo>() };
+            LobbyTeamInfo teamInfo = new LobbyTeamInfo { TeamPlayerInfo = new List<LobbyPlayerInfo>() };
 
             // Fill team A
             for (int i = 0; i < subType.TeamAPlayers; i++)
@@ -160,14 +159,14 @@ namespace CentralServer.LobbyServer.Matchmaking
             // Fill team B
             for (int i = 0; i < subType.TeamBPlayers; i++)
             {
-                LobbyServerProtocolBase client = clients[subType.TeamAPlayers+i];
+                LobbyServerProtocolBase client = clients[subType.TeamAPlayers + i];
                 LobbyPlayerInfo playerInfo = SessionManager.GetPlayerInfo(client.AccountId);
                 playerInfo.TeamId = Team.TeamB;
                 playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count;
                 Log.Print(LogType.Game, $"adding player {client.UserName}, {client.AccountId} to team B");
                 teamInfo.TeamPlayerInfo.Add(playerInfo);
             }
-            
+
             LobbyGameInfo gameInfo = new LobbyGameInfo
             {
                 AcceptedPlayers = clients.Count,
@@ -207,10 +206,10 @@ namespace CentralServer.LobbyServer.Matchmaking
                 gameInfo.GameServerAddress = "ws://" + serverAddress;
                 gameInfo.GameStatus = GameStatus.Launching;
 
-				for (int i = 0; i < clients.Count; i++)
+                for (int i = 0; i < clients.Count; i++)
                 {
-					LobbyServerProtocolBase client = clients[i];
-					GameAssignmentNotification notification = new GameAssignmentNotification
+                    LobbyServerProtocolBase client = clients[i];
+                    GameAssignmentNotification notification = new GameAssignmentNotification
                     {
                         GameInfo = gameInfo,
                         GameResult = GameResult.NoResult,
@@ -222,12 +221,13 @@ namespace CentralServer.LobbyServer.Matchmaking
 
                     client.Send(notification);
                 }
+
                 gameInfo.GameStatus = GameStatus.Launched;
 
-				for (int i = 0; i < clients.Count; i++)
+                for (int i = 0; i < clients.Count; i++)
                 {
-					LobbyServerProtocolBase client = clients[i];
-					GameInfoNotification notification = new GameInfoNotification()
+                    LobbyServerProtocolBase client = clients[i];
+                    GameInfoNotification notification = new GameInfoNotification()
                     {
                         TeamInfo = teamInfo,
                         GameInfo = gameInfo,
@@ -236,6 +236,7 @@ namespace CentralServer.LobbyServer.Matchmaking
 
                     client.Send(notification);
                 }
+
                 Log.Print(LogType.Error, $"Game {gameType} started");
             }
         }
@@ -273,7 +274,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             teamInfo.TeamPlayerInfo = new List<LobbyPlayerInfo>();
 
             for (int i = 0; i < clients.Count; i++)
-			{
+            {
                 LobbyPlayerInfo playerInfo = SessionManager.GetPlayerInfo(clients[i].AccountId);
                 playerInfo.TeamId = Team.TeamA;
                 playerInfo.PlayerId = i;
@@ -298,10 +299,10 @@ namespace CentralServer.LobbyServer.Matchmaking
                 gameInfo.GameServerAddress = "ws://" + serverAddress;
                 gameInfo.GameStatus = GameStatus.Launching;
 
-				for (int i = 0; i < clients.Count; i++)
+                for (int i = 0; i < clients.Count; i++)
                 {
-					LobbyServerProtocolBase client = clients[i];
-					GameAssignmentNotification notification = new GameAssignmentNotification
+                    LobbyServerProtocolBase client = clients[i];
+                    GameAssignmentNotification notification = new GameAssignmentNotification
                     {
                         GameInfo = gameInfo,
                         GameResult = GameResult.NoResult,
@@ -313,12 +314,13 @@ namespace CentralServer.LobbyServer.Matchmaking
 
                     client.Send(notification);
                 }
+
                 gameInfo.GameStatus = GameStatus.Launched;
 
-				for (int i = 0; i < clients.Count; i++)
+                for (int i = 0; i < clients.Count; i++)
                 {
-					LobbyServerProtocolBase client = clients[i];
-					GameInfoNotification notification = new GameInfoNotification()
+                    LobbyServerProtocolBase client = clients[i];
+                    GameInfoNotification notification = new GameInfoNotification()
                     {
                         TeamInfo = teamInfo,
                         GameInfo = gameInfo,
