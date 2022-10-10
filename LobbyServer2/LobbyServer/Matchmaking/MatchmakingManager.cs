@@ -151,7 +151,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 LobbyServerProtocolBase client = clients[i];
                 LobbyPlayerInfo playerInfo = SessionManager.GetPlayerInfo(client.AccountId);
                 playerInfo.TeamId = Team.TeamA;
-                playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count;
+                playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
                 Log.Print(LogType.Game, $"adding player {client.UserName}, {client.AccountId} to team A");
                 teamInfo.TeamPlayerInfo.Add(playerInfo);
             }
@@ -162,7 +162,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 LobbyServerProtocolBase client = clients[subType.TeamAPlayers + i];
                 LobbyPlayerInfo playerInfo = SessionManager.GetPlayerInfo(client.AccountId);
                 playerInfo.TeamId = Team.TeamB;
-                playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count;
+                playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
                 Log.Print(LogType.Game, $"adding player {client.UserName}, {client.AccountId} to team B");
                 teamInfo.TeamPlayerInfo.Add(playerInfo);
             }
@@ -278,7 +278,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             {
                 LobbyPlayerInfo playerInfo = SessionManager.GetPlayerInfo(clients[i].AccountId);
                 playerInfo.TeamId = Team.TeamA;
-                playerInfo.PlayerId = i;
+                playerInfo.PlayerId = i + 1;
                 teamInfo.TeamPlayerInfo.Add(playerInfo);
             }
 
@@ -286,7 +286,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             {
                 LobbyPlayerInfo playerInfo = CharacterManager.GetPunchingDummyPlayerInfo();
                 playerInfo.TeamId = Team.TeamB;
-                playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count;
+                playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
                 teamInfo.TeamPlayerInfo.Add(playerInfo);
             }
 
