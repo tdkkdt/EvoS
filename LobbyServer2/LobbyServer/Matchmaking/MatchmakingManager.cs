@@ -1,15 +1,15 @@
-﻿using CentralServer.BridgeServer;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Character;
 using CentralServer.LobbyServer.Gamemode;
 using CentralServer.LobbyServer.Session;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.Logging;
+using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace CentralServer.LobbyServer.Matchmaking
 {
@@ -62,6 +62,7 @@ namespace CentralServer.LobbyServer.Matchmaking
 
         public static void StartPractice(LobbyServerProtocolBase client)
         {
+            MatchmakingQueueConfig queueConfig = new MatchmakingQueueConfig();
             LobbyGameInfo practiceGameInfo = new LobbyGameInfo
             {
                 AcceptedPlayers = 1,
@@ -88,8 +89,8 @@ namespace CentralServer.LobbyServer.Matchmaking
                 }
             };
 
-            LobbyTeamInfo teamInfo = new LobbyTeamInfo();
-            teamInfo.TeamPlayerInfo = new List<LobbyPlayerInfo>
+            LobbyServerTeamInfo teamInfo = new LobbyServerTeamInfo();
+            teamInfo.TeamPlayerInfo = new List<LobbyServerPlayerInfo>
             {
                 SessionManager.GetPlayerInfo(client.AccountId),
                 CharacterManager.GetPunchingDummyPlayerInfo(),
@@ -118,7 +119,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                     GameInfo = practiceGameInfo,
                     GameResult = GameResult.NoResult,
                     Observer = false,
-                    PlayerInfo = teamInfo.TeamPlayerInfo[0],
+                    PlayerInfo = LobbyPlayerInfo.FromServer(teamInfo.TeamPlayerInfo[0], 0, queueConfig),
                     Reconnection = false,
                     GameplayOverrides = client.GetGameplayOverrides()
                 };
@@ -128,9 +129,9 @@ namespace CentralServer.LobbyServer.Matchmaking
                 practiceGameInfo.GameStatus = GameStatus.Launched;
                 GameInfoNotification notification2 = new GameInfoNotification()
                 {
-                    TeamInfo = teamInfo,
+                    TeamInfo = LobbyTeamInfo.FromServer(teamInfo, 0, queueConfig),
                     GameInfo = practiceGameInfo,
-                    PlayerInfo = teamInfo.TeamPlayerInfo[0]
+                    PlayerInfo = LobbyPlayerInfo.FromServer(teamInfo.TeamPlayerInfo[0], 0, queueConfig)
                 };
 
                 client.Send(notification2);
@@ -140,16 +141,17 @@ namespace CentralServer.LobbyServer.Matchmaking
         public static void StartGame(List<LobbyServerProtocolBase> clients, GameType gameType)
         {
             Log.Print(LogType.Lobby, $"Starting {gameType} game...");
+            MatchmakingQueueConfig queueConfig = new MatchmakingQueueConfig();
 
             MatchmakingQueue lobbyQueue = Queues[gameType];
             GameSubType subType = lobbyQueue.MatchmakingQueueInfo.GameConfig.SubTypes[0];
-            LobbyTeamInfo teamInfo = new LobbyTeamInfo { TeamPlayerInfo = new List<LobbyPlayerInfo>() };
+            LobbyServerTeamInfo teamInfo = new LobbyServerTeamInfo { TeamPlayerInfo = new List<LobbyServerPlayerInfo>() };
 
             // Fill team A
             for (int i = 0; i < subType.TeamAPlayers; i++)
             {
                 LobbyServerProtocolBase client = clients[i];
-                LobbyPlayerInfo playerInfo = SessionManager.GetPlayerInfo(client.AccountId);
+                LobbyServerPlayerInfo playerInfo = SessionManager.GetPlayerInfo(client.AccountId);
                 playerInfo.TeamId = Team.TeamA;
                 playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
                 Log.Print(LogType.Game, $"adding player {client.UserName}, {client.AccountId} to team A");
@@ -160,7 +162,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             for (int i = 0; i < subType.TeamBPlayers; i++)
             {
                 LobbyServerProtocolBase client = clients[subType.TeamAPlayers + i];
-                LobbyPlayerInfo playerInfo = SessionManager.GetPlayerInfo(client.AccountId);
+                LobbyServerPlayerInfo playerInfo = SessionManager.GetPlayerInfo(client.AccountId);
                 playerInfo.TeamId = Team.TeamB;
                 playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
                 Log.Print(LogType.Game, $"adding player {client.UserName}, {client.AccountId} to team B");
@@ -215,7 +217,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                         GameInfo = gameInfo,
                         GameResult = GameResult.NoResult,
                         Observer = false,
-                        PlayerInfo = teamInfo.TeamPlayerInfo[i],
+                        PlayerInfo = LobbyPlayerInfo.FromServer(teamInfo.TeamPlayerInfo[i], 0, queueConfig),
                         Reconnection = false,
                         GameplayOverrides = client.GetGameplayOverrides()
                     };
@@ -231,9 +233,9 @@ namespace CentralServer.LobbyServer.Matchmaking
                     LobbyServerProtocolBase client = clients[i];
                     GameInfoNotification notification = new GameInfoNotification()
                     {
-                        TeamInfo = teamInfo,
+                        TeamInfo = LobbyTeamInfo.FromServer(teamInfo, 0, queueConfig),
                         GameInfo = gameInfo,
-                        PlayerInfo = teamInfo.TeamPlayerInfo[i]
+                        PlayerInfo = LobbyPlayerInfo.FromServer(teamInfo.TeamPlayerInfo[i], 0, queueConfig)
                     };
 
                     client.Send(notification);
@@ -245,6 +247,7 @@ namespace CentralServer.LobbyServer.Matchmaking
 
         public static void StartGameVBots(List<LobbyServerProtocolBase> clients, GameType gameType)
         {
+            MatchmakingQueueConfig queueConfig = new MatchmakingQueueConfig();
             LobbyGameInfo gameInfo = new LobbyGameInfo
             {
                 AcceptedPlayers = clients.Count,
@@ -271,12 +274,12 @@ namespace CentralServer.LobbyServer.Matchmaking
                 }
             };
 
-            LobbyTeamInfo teamInfo = new LobbyTeamInfo();
-            teamInfo.TeamPlayerInfo = new List<LobbyPlayerInfo>();
+            LobbyServerTeamInfo teamInfo = new LobbyServerTeamInfo();
+            teamInfo.TeamPlayerInfo = new List<LobbyServerPlayerInfo>();
 
             for (int i = 0; i < clients.Count; i++)
             {
-                LobbyPlayerInfo playerInfo = SessionManager.GetPlayerInfo(clients[i].AccountId);
+                LobbyServerPlayerInfo playerInfo = SessionManager.GetPlayerInfo(clients[i].AccountId);
                 playerInfo.TeamId = Team.TeamA;
                 playerInfo.PlayerId = i + 1;
                 teamInfo.TeamPlayerInfo.Add(playerInfo);
@@ -284,7 +287,7 @@ namespace CentralServer.LobbyServer.Matchmaking
 
             for (int i = 0; i < 2; i++)
             {
-                LobbyPlayerInfo playerInfo = CharacterManager.GetPunchingDummyPlayerInfo();
+                LobbyServerPlayerInfo playerInfo = CharacterManager.GetPunchingDummyPlayerInfo();
                 playerInfo.TeamId = Team.TeamB;
                 playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
                 teamInfo.TeamPlayerInfo.Add(playerInfo);
@@ -309,7 +312,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                         GameInfo = gameInfo,
                         GameResult = GameResult.NoResult,
                         Observer = false,
-                        PlayerInfo = teamInfo.TeamPlayerInfo[i],
+                        PlayerInfo = LobbyPlayerInfo.FromServer(teamInfo.TeamPlayerInfo[i], 0, queueConfig),
                         Reconnection = false,
                         GameplayOverrides = client.GetGameplayOverrides()
                     };
@@ -324,9 +327,9 @@ namespace CentralServer.LobbyServer.Matchmaking
                     LobbyServerProtocolBase client = clients[i];
                     GameInfoNotification notification = new GameInfoNotification()
                     {
-                        TeamInfo = teamInfo,
+                        TeamInfo = LobbyTeamInfo.FromServer(teamInfo, 0, queueConfig),
                         GameInfo = gameInfo,
-                        PlayerInfo = teamInfo.TeamPlayerInfo[i]
+                        PlayerInfo = LobbyPlayerInfo.FromServer(teamInfo.TeamPlayerInfo[i], 0, queueConfig)
                     };
 
                     client.Send(notification);

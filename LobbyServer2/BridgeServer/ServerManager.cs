@@ -5,6 +5,7 @@ using EvoS.Framework.Network.Static;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using EvoS.Framework.Misc;
 
 namespace CentralServer.BridgeServer
 {
@@ -26,7 +27,7 @@ namespace CentralServer.BridgeServer
             Log.Print(LogType.Lobby, $"Game server disconnected");
         }
 
-        public static BridgeServerProtocol GetServer(LobbyGameInfo gameInfo, LobbyTeamInfo teamInfo)
+        public static BridgeServerProtocol GetServer(LobbyGameInfo gameInfo, LobbyServerTeamInfo teamInfo)
         {
             lock (ServerPool)
             {

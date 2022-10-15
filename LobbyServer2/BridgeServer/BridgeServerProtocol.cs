@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Linq;
 using System.Reflection;
-using System.Text;
 using CentralServer.LobbyServer;
+using CentralServer.LobbyServer.Session;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.Logging;
+using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using EvoS.Framework.Network.Unity;
-using Newtonsoft.Json;
 using WebSocketSharp;
 using WebSocketSharp.Server;
 
@@ -17,12 +17,10 @@ namespace CentralServer.BridgeServer
 {
     public class BridgeServerProtocol : WebSocketBehavior
     {
-        private static readonly string PATH = Path.GetTempPath() + @"atlas-reactor-hc-server-game.json";
-        
         public string Address;
         public int Port;
         private LobbyGameInfo GameInfo;
-        private LobbyTeamInfo TeamInfo;
+        private LobbyServerTeamInfo TeamInfo;
         public List<LobbyServerProtocolBase> clients = new List<LobbyServerProtocolBase>();
         public string URI => "ws://" + Address + ":" + Port;
         public GameStatus GameStatus { get; private set; } = GameStatus.Stopped;
@@ -32,7 +30,7 @@ namespace CentralServer.BridgeServer
         {
             typeof(RegisterGameServerRequest),
             typeof(RegisterGameServerResponse),
-            null, // typeof(LaunchGameRequest),
+            typeof(LaunchGameRequest),
             null, // typeof(JoinGameServerRequest),
             null, // typeof(JoinGameAsObserverRequest),
             null, // typeof(ShutdownGameRequest),
@@ -129,31 +127,23 @@ namespace CentralServer.BridgeServer
             return GameStatus == GameStatus.Stopped;
         }
 
-        public void StartGame(LobbyGameInfo gameInfo, LobbyTeamInfo teamInfo)
+        public void StartGame(LobbyGameInfo gameInfo, LobbyServerTeamInfo teamInfo)
         {
             GameInfo = gameInfo;
             TeamInfo = teamInfo;
             GameStatus = GameStatus.Assembling;
+            Dictionary<int, LobbySessionInfo> SessionInfo = teamInfo.TeamPlayerInfo
+                .ToDictionary(
+                    playerInfo => playerInfo.PlayerId,
+                    playerInfo => SessionManager.GetSessionInfo(playerInfo.AccountId) ?? new LobbySessionInfo());  // fallback for bots TODO something smarter
 
-            WriteGame(gameInfo, teamInfo);
-        }
-
-        public void WriteGame(LobbyGameInfo gameInfo, LobbyTeamInfo teamInfo)
-		{
-            var _data = new ServerGame()
+            Send(new LaunchGameRequest()
             {
-                gameInfo = gameInfo,
-                teamInfo = teamInfo
-            };
-            using StreamWriter file = File.CreateText(PATH);
-			JsonSerializer serializer = new JsonSerializer();
-			serializer.Serialize(file, _data);
-            Log.Print(LogType.Game, $"Setting Game Info at {PATH}");
-		}
-
-        private ReadOnlySpan<byte> GetBytesSpan(string str)
-        {
-            return new ReadOnlySpan<byte>(Encoding.GetEncoding("UTF-8").GetBytes(str));
+                GameInfo = gameInfo,
+                TeamInfo = teamInfo,
+                SessionInfo = SessionInfo,
+                GameplayOverrides = new LobbyGameplayOverrides()
+            });
         }
 
         public bool Send(AllianceMessageBase msg, int originalCallbackId = 0)
@@ -187,12 +177,6 @@ namespace CentralServer.BridgeServer
             }
 
             return num;
-        }
-
-        class ServerGame
-        {
-            public LobbyGameInfo gameInfo;
-            public LobbyTeamInfo teamInfo;
         }
     }
 }

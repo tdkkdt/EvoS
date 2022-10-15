@@ -50,7 +50,7 @@ namespace CentralServer.LobbyServer
 
         protected override void OnClose(CloseEventArgs e)
         {
-            LobbyPlayerInfo playerInfo = SessionManager.GetPlayerInfo(this.AccountId);
+            LobbyServerPlayerInfo playerInfo = SessionManager.GetPlayerInfo(this.AccountId);
             if (playerInfo != null)
             {
                 Log.Print(LogType.Lobby, string.Format(Config.Messages.PlayerDisconnected, this.UserName));
@@ -62,7 +62,7 @@ namespace CentralServer.LobbyServer
         {
             try
             {
-                LobbyPlayerInfo playerInfo = SessionManager.OnPlayerConnect(this, request);
+                LobbyServerPlayerInfo playerInfo = SessionManager.OnPlayerConnect(this, request);
 
                 if (playerInfo != null)
                 {
@@ -70,7 +70,7 @@ namespace CentralServer.LobbyServer
                     RegisterGameClientResponse response = new RegisterGameClientResponse
                     {
                         AuthInfo = request.AuthInfo,
-                        SessionInfo = request.SessionInfo,
+                        SessionInfo = SessionManager.GetSessionInfo(request.AuthInfo.AccountId),
                         ResponseId = request.RequestId
                     };
 
@@ -141,7 +141,7 @@ namespace CentralServer.LobbyServer
             if (playerInfoUpdate.CharacterType != null && playerInfoUpdate.CharacterType.HasValue)
             {
                 SetCharacterType(playerInfoUpdate.CharacterType.Value);
-                LobbyPlayerInfo playerInfo = SessionManager.GetPlayerInfo(this.AccountId);
+                LobbyServerPlayerInfo playerInfo = SessionManager.GetPlayerInfo(this.AccountId);
 
                 PersistedAccountData accountData = AccountManager.GetPersistedAccountData(this.AccountId);
                 // should be automatic when account gets its data from database, but for now we modify the needed things here
@@ -160,7 +160,7 @@ namespace CentralServer.LobbyServer
 
                 PlayerInfoUpdateResponse response = new PlayerInfoUpdateResponse()
                 {
-                    PlayerInfo = playerInfo,
+                    PlayerInfo = LobbyPlayerInfo.FromServer(playerInfo, 0, new MatchmakingQueueConfig()),
                     CharacterInfo = playerInfo.CharacterInfo,
                     OriginalPlayerInfoUpdate = request.PlayerInfoUpdate,
                     ResponseId = request.RequestId
