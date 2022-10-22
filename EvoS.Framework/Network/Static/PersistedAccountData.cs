@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.Network.NetworkMessages;
+using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
 
 namespace EvoS.Framework.Network.Static
@@ -24,7 +25,8 @@ namespace EvoS.Framework.Network.Static
             AddedMatchData = new List<PersistedCharacterMatchData>();
             QuestComponent = new QuestComponent();
         }
-
+        
+        [BsonId]
         public long AccountId { get; set; }
 
         public string UserName { get; set; }

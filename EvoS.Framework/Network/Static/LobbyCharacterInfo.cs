@@ -29,5 +29,22 @@ namespace EvoS.Framework.Network.Static
         public int CharacterMatches;
 
         public int CharacterLevel;
+
+        public static LobbyCharacterInfo Of(PersistedCharacterData data)
+        {
+            CharacterComponent cc = data.CharacterComponent;
+            return new LobbyCharacterInfo
+            {
+                CharacterType = data.CharacterType,
+                CharacterSkin = cc.LastSkin,
+                CharacterCards = cc.LastCards,
+                CharacterMods = cc.LastMods,
+                CharacterAbilityVfxSwaps = cc.LastAbilityVfxSwaps,
+                CharacterTaunts = cc.Taunts,
+                CharacterLoadouts = cc.CharacterLoadouts,
+                CharacterMatches = data.ExperienceComponent.Matches,
+                CharacterLevel = data.ExperienceComponent.Level
+            };
+        }
     }
 }

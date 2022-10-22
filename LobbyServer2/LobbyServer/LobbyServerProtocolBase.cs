@@ -15,9 +15,11 @@ using EvoS.Framework.Network.WebSocket;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using CentralServer.BridgeServer;
+using EvoS.Framework.DataAccess;
 using WebSocketSharp;
 using WebSocketSharp.Server;
 
@@ -112,11 +114,12 @@ namespace CentralServer.LobbyServer
 
         public void SendLobbyServerReadyNotification()
         {
-            LobbyServerReadyNotification notification = new LobbyServerReadyNotification()
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+            LobbyServerReadyNotification notification = new LobbyServerReadyNotification
             {
-                AccountData = AccountManager.GetPersistedAccountData(this.AccountId),
+                AccountData = account,
                 AlertMissionData = new LobbyAlertMissionDataNotification(),
-                CharacterDataList = CharacterManager.GetCharacterDataList(this.AccountId),
+                CharacterDataList = account.CharacterData.Values.ToList(),
                 CommerceURL = "http://127.0.0.1/AtlasCommerce",
                 EnvironmentType = EnvironmentType.External,
                 FactionCompetitionStatus = new FactionCompetitionNotification(),
@@ -179,7 +182,7 @@ namespace CentralServer.LobbyServer
                 AllowSpectatorsOutsideCustom = false,
                 CharacterConfigs = CharacterConfigs.Characters,
                 //CharacterSkinConfigOverrides = null TODO: maybe can be used to unlock all skins
-                //EnableAllMods = true,
+                EnableAllMods = true,
                 EnableAllAbilityVfxSwaps = true,
                 EnableCards = true,
                 EnableClientPerformanceCollecting = false,

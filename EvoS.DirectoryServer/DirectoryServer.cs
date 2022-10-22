@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using System;
 using System.IO;
 using System.Net;
+using CentralServer.LobbyServer.Account;
 using Newtonsoft.Json;
 using EvoS.Framework.Logging;
 using EvoS.Framework.DataAccess;
@@ -54,43 +55,50 @@ namespace EvoS.DirectoryServer
                 ms.Dispose();
 
                 AssignGameClientRequest request = JsonConvert.DeserializeObject<AssignGameClientRequest>(requestBody);
-                AssignGameClientResponse response = new AssignGameClientResponse();
-                response.RequestId = request.RequestId;
-                response.ResponseId = request.ResponseId;
-                response.Success = true;
-                response.ErrorMessage = "";
+                AssignGameClientResponse response = new AssignGameClientResponse
+                {
+                    RequestId = request.RequestId,
+                    ResponseId = request.ResponseId,
+                    Success = true,
+                    ErrorMessage = ""
+                };
 
-                PlayerData.Player p;
+                PersistedAccountData account;
                 try
                 {
-                    p = PlayerData.GetPlayer(request.AuthInfo.Handle, request.AuthInfo.AccountId);
-                    if (p == null)
+                    account = DB.Get().AccountDao.GetAccount(request.AuthInfo.AccountId);
+                    if (account == null)
                     {
-                        Log.Print(LogType.Warning, $"Player {request.AuthInfo.Handle} doesnt exists");
-                        PlayerData.CreatePlayer(request.AuthInfo.Handle);
-                        p = PlayerData.GetPlayer(request.AuthInfo.Handle, request.AuthInfo.AccountId);
-                        if (p != null)
+                        Log.Print(LogType.Warning, $"Player {request.AuthInfo.AccountId} doesnt exists");
+                        DB.Get().AccountDao.CreateAccount(NewAccount(request));
+                        account = DB.Get().AccountDao.GetAccount(request.AuthInfo.AccountId);
+                        if (account != null)
                         {
-                            Log.Print(LogType.Debug, $"Succesfully Registered {p.UserName}");
+                            Log.Print(LogType.Debug, $"Successfully Registered {account.Handle}/{account.AccountId}");
                         }
                         else
                         {
-                            Log.Print(LogType.Error, $"Error creating a new account for player '{request.AuthInfo.UserName}'");
+                            Log.Print(LogType.Error, $"Error creating a new account for player '{request.AuthInfo.UserName}'/{request.AuthInfo.AccountId}");
+                            account = NewAccount(request);
+                            Log.Print(LogType.Error, $"Temp user {account.Handle}/{account.AccountId}");
                         }
                     }
+                    else
+                    {
+                        Log.Print(LogType.Lobby, $"Player {account.Handle}/{request.AuthInfo.AccountId} logged in");
+                    }
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    p = new PlayerData.Player();
-                    p.AccountId = 508;
-                    p.UserName = request.AuthInfo.Handle;
+                    account = NewAccount(request);
+                    Log.Print(LogType.Error, $"Temp user {account.Handle}/{account.AccountId}: {e}");
                 }
 
                 request.SessionInfo.SessionToken = 0;
 
                 response.SessionInfo = request.SessionInfo;
-                response.SessionInfo.AccountId = p.AccountId;
-                response.SessionInfo.Handle = p.UserName;
+                response.SessionInfo.AccountId = account.AccountId;
+                response.SessionInfo.Handle = account.UserName;
                 response.SessionInfo.ConnectionAddress = "127.0.0.1";
                 response.SessionInfo.ProcessCode = "";
                 response.SessionInfo.FakeEntitlements = "";
@@ -98,17 +106,24 @@ namespace EvoS.DirectoryServer
 
                 response.LobbyServerAddress = EvosConfiguration.GetLobbyServerAddress();
 
-                LobbyGameClientProxyInfo proxyInfo = new LobbyGameClientProxyInfo();
-                proxyInfo.AccountId = response.SessionInfo.AccountId;
-                proxyInfo.SessionToken = request.SessionInfo.SessionToken;
-                proxyInfo.AssignmentTime = 1565574095;
-                proxyInfo.Handle = request.SessionInfo.Handle;
-                proxyInfo.Status = ClientProxyStatus.Assigned;
+                LobbyGameClientProxyInfo proxyInfo = new LobbyGameClientProxyInfo
+                {
+                    AccountId = response.SessionInfo.AccountId,
+                    SessionToken = request.SessionInfo.SessionToken,
+                    AssignmentTime = 1565574095,
+                    Handle = request.SessionInfo.Handle,
+                    Status = ClientProxyStatus.Assigned
+                };
 
                 response.ProxyInfo = proxyInfo;
 
                 return context.Response.WriteAsync(JsonConvert.SerializeObject(response));
             });
+        }
+
+        private static PersistedAccountData NewAccount(AssignGameClientRequest request)
+        {
+            return AccountManager.CreateAccount(request);  // TODO move to DirectoryServer
         }
     }
 }

@@ -65,7 +65,7 @@ namespace EvoS.Framework.Network.Static
             public override object ReadJson(JsonReader reader, Type objectType, object existingValue,
                 JsonSerializer serializer)
             {
-                return reader.Value.ToString();
+                return (Rate) reader.Value.ToString();
             }
         }
     }

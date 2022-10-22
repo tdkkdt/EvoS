@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using CentralServer.BridgeServer;
+using EvoS.Framework.DataAccess;
 using WebSocketSharp;
 
 namespace CentralServer.LobbyServer
@@ -132,7 +133,40 @@ namespace CentralServer.LobbyServer
 
         public void HandlePlayerInfoUpdateRequest(PlayerInfoUpdateRequest request)
         {
-            LobbyPlayerInfoUpdate playerInfoUpdate = request.PlayerInfoUpdate;
+            LobbyPlayerInfoUpdate update = request.PlayerInfoUpdate;
+            LobbyPlayerInfoUpdate playerInfoUpdate = update;
+            
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+            if (update.CharacterType.HasValue)
+            {
+                account.AccountComponent.LastCharacter = update.CharacterType.Value;
+            }
+            CharacterComponent characterComponent = account.CharacterData[account.AccountComponent.LastCharacter].CharacterComponent;
+            if (update.CharacterSkin.HasValue)
+            {
+                characterComponent.LastSkin = update.CharacterSkin.Value;
+            }
+            if (update.CharacterCards.HasValue)
+            {
+                characterComponent.LastCards = update.CharacterCards.Value;
+            }
+            if (update.CharacterMods.HasValue)
+            {
+                characterComponent.LastMods = update.CharacterMods.Value;
+            }
+            if (update.CharacterAbilityVfxSwaps.HasValue)
+            {
+                characterComponent.LastAbilityVfxSwaps = update.CharacterAbilityVfxSwaps.Value;
+            }
+            if (update.CharacterLoadoutChanges.HasValue)
+            {
+                characterComponent.CharacterLoadouts = update.CharacterLoadoutChanges.Value.CharacterLoadoutChanges;
+            }
+            if (update.LastSelectedLoadout.HasValue)
+            {
+                characterComponent.LastSelectedLoadout = update.LastSelectedLoadout.Value;
+            }
+            DB.Get().AccountDao.UpdateAccount(account);
 
 
             if (request.GameType != null && request.GameType.HasValue)
@@ -143,13 +177,13 @@ namespace CentralServer.LobbyServer
                 SetCharacterType(playerInfoUpdate.CharacterType.Value);
                 LobbyServerPlayerInfo playerInfo = SessionManager.GetPlayerInfo(this.AccountId);
 
-                PersistedAccountData accountData = AccountManager.GetPersistedAccountData(this.AccountId);
+                PersistedAccountData accountData = DB.Get().AccountDao.GetAccount(AccountId);
                 // should be automatic when account gets its data from database, but for now we modify the needed things here
-                accountData.AccountComponent.LastCharacter = playerInfo.CharacterInfo.CharacterType;
-                accountData.AccountComponent.SelectedBackgroundBannerID = playerInfo.BannerID;
-                accountData.AccountComponent.SelectedForegroundBannerID = playerInfo.EmblemID;
-                accountData.AccountComponent.SelectedRibbonID = playerInfo.RibbonID;
-                accountData.AccountComponent.SelectedTitleID = playerInfo.TitleID;
+                // accountData.AccountComponent.LastCharacter = playerInfo.CharacterInfo.CharacterType;
+                // accountData.AccountComponent.SelectedBackgroundBannerID = playerInfo.BannerID;
+                // accountData.AccountComponent.SelectedForegroundBannerID = playerInfo.EmblemID;
+                // accountData.AccountComponent.SelectedRibbonID = playerInfo.RibbonID;
+                // accountData.AccountComponent.SelectedTitleID = playerInfo.TitleID;
                 // end "should be automatic"
 
                 PlayerAccountDataUpdateNotification updateNotification = new PlayerAccountDataUpdateNotification()
@@ -162,7 +196,7 @@ namespace CentralServer.LobbyServer
                 {
                     PlayerInfo = LobbyPlayerInfo.FromServer(playerInfo, 0, new MatchmakingQueueConfig()),
                     CharacterInfo = playerInfo.CharacterInfo,
-                    OriginalPlayerInfoUpdate = request.PlayerInfoUpdate,
+                    OriginalPlayerInfoUpdate = update,
                     ResponseId = request.RequestId
                 };
                 Send(response);

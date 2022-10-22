@@ -11,21 +11,20 @@ namespace CentralServer.LobbyServer.Account
 {
     public class AccountManager
     {
-        public static PersistedAccountData GetPersistedAccountData(long accountId)
+        public static PersistedAccountData CreateAccount(AssignGameClientRequest request)
         {
-            Database.Account account = Database.Account.GetByAccountId(accountId);
-
+            long accountId = request.AuthInfo.AccountId;
             PersistedAccountData accountData = new PersistedAccountData()
             {
-                AccountComponent =  GetAccountComponent(account),
+                AccountComponent = GetAccountComponent(Database.Account.GetByAccountId(accountId)),
                 AccountId = accountId,
-                BankComponent = Bank.GetBankComponent(account.AccountId),
-                CharacterData = CharacterManager.GetPersistedCharacterData(account.AccountId),
-                Handle = account.UserName,
+                BankComponent = Bank.GetBankComponent(accountId),
+                CharacterData = CharacterManager.GetPersistedCharacterData(accountId),
+                Handle = request.AuthInfo.Handle,
                 InventoryComponent = InventoryManager.GetInventoryComponent(accountId),
-                QuestComponent = new QuestComponent() { ActiveSeason = 9 },
+                QuestComponent = new QuestComponent() { ActiveSeason = 0 },
                 SchemaVersion = new SchemaVersion<AccountSchemaChange>(0x1FFFF),
-                UserName = account.UserName
+                UserName = request.AuthInfo.UserName
             };
 
             return accountData;

@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
+using EvoS.Framework.DataAccess;
 
 namespace CentralServer.LobbyServer.Session
 {
@@ -17,48 +18,42 @@ namespace CentralServer.LobbyServer.Session
         private static ConcurrentDictionary<long, long> SessionTokenAccountIDCache = new ConcurrentDictionary<long, long>(); // key: SessionToken, value: AccountID
         private static ConcurrentDictionary<long, LobbyServerProtocol> ActiveConnections = new ConcurrentDictionary<long, LobbyServerProtocol>();
         private static ConcurrentDictionary<long, LobbySessionInfo> ActiveSessions = new ConcurrentDictionary<long, LobbySessionInfo>();
-        private static long GeneratedSessionToken = 0;
-
-
+        
         public static LobbyServerPlayerInfo OnPlayerConnect(LobbyServerProtocol client, RegisterGameClientRequest clientRequest)
         {
-            long sessionToken = Interlocked.Increment(ref GeneratedSessionToken);
-            Database.Account user = Database.Account.GetByUserName(clientRequest.AuthInfo.Handle);
-            user.AccountId = clientRequest.AuthInfo.AccountId;
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(clientRequest.AuthInfo.AccountId);
 
-            client.AccountId = user.AccountId;
-            client.SessionToken = sessionToken;
-            client.UserName = user.UserName;
-            client.SelectedGameType = user.LastSelectedGameType;
+            client.AccountId = account.AccountId;
+            client.SessionToken = clientRequest.SessionInfo.SessionToken;  // we are kinda supposed to validate it
+            client.UserName = account.UserName;
+            client.SelectedGameType = GameType.PvP;
             client.SelectedSubTypeMask = 0;
-            clientRequest.SessionInfo.SessionToken = sessionToken;
 
             LobbyServerPlayerInfo playerInfo = new LobbyServerPlayerInfo
             {
-                AccountId = user.AccountId,
-                BannerID = user.BannerID,
+                AccountId = account.AccountId,
+                BannerID = account.AccountComponent.SelectedBackgroundBannerID,
                 BotCanTaunt = false,
-                // BotsMasqueradeAsHumans = false,
-                CharacterInfo = CharacterManager.GetCharacterInfo(user.AccountId, user.LastCharacter),
+                CharacterInfo = LobbyCharacterInfo.Of(account.CharacterData[account.AccountComponent.LastCharacter]),
                 ControllingPlayerId = 0,
                 EffectiveClientAccessLevel = ClientAccessLevel.Full,
-                EmblemID = user.EmblemID,
-                Handle = user.UserName,
+                EmblemID = account.AccountComponent.SelectedForegroundBannerID,
+                Handle = account.Handle,
                 IsGameOwner = true,
                 IsLoadTestBot = false,
                 IsNPCBot = false,
                 PlayerId = 0,
                 ReadyState = ReadyState.Unknown,
                 ReplacedWithBots = false,
-                RibbonID = user.RibbonID,
-                TitleID = user.TitleID,
+                RibbonID = account.AccountComponent.SelectedRibbonID,
+                TitleID = account.AccountComponent.SelectedTitleID,
                 TitleLevel = 1
             };
 
-            ActivePlayers.TryAdd(user.AccountId, playerInfo);
-            SessionTokenAccountIDCache.TryAdd(sessionToken, playerInfo.AccountId);
-            ActiveConnections.TryAdd(user.AccountId, client);
-            ActiveSessions.TryAdd(user.AccountId, clientRequest.SessionInfo);
+            ActivePlayers.TryAdd(client.AccountId, playerInfo);
+            SessionTokenAccountIDCache.TryAdd(client.SessionToken, playerInfo.AccountId);
+            ActiveConnections.TryAdd(client.AccountId, client);
+            ActiveSessions.TryAdd(client.AccountId, clientRequest.SessionInfo);
 
             return playerInfo;
         }
