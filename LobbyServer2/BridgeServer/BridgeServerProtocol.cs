@@ -31,7 +31,7 @@ namespace CentralServer.BridgeServer
             typeof(RegisterGameServerRequest),
             typeof(RegisterGameServerResponse),
             typeof(LaunchGameRequest),
-            null, // typeof(JoinGameServerRequest),
+            typeof(JoinGameServerRequest),
             null, // typeof(JoinGameAsObserverRequest),
             null, // typeof(ShutdownGameRequest),
             null, // typeof(DisconnectPlayerRequest),
@@ -137,6 +137,19 @@ namespace CentralServer.BridgeServer
                     playerInfo => playerInfo.PlayerId,
                     playerInfo => SessionManager.GetSessionInfo(playerInfo.AccountId) ?? new LobbySessionInfo());  // fallback for bots TODO something smarter
 
+            foreach (LobbyServerPlayerInfo playerInfo in teamInfo.TeamPlayerInfo)
+            {
+                LobbySessionInfo sessionInfo = SessionInfo[playerInfo.PlayerId];
+                JoinGameServerRequest request = new JoinGameServerRequest
+                {
+                    OrigRequestId = 0,
+                    GameServerProcessCode = GameInfo.GameServerProcessCode,
+                    PlayerInfo = playerInfo,
+                    SessionInfo = sessionInfo
+                };
+                Send(request);
+            }
+            
             Send(new LaunchGameRequest()
             {
                 GameInfo = gameInfo,
