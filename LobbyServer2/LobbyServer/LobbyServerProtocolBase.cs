@@ -117,7 +117,7 @@ namespace CentralServer.LobbyServer
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
             LobbyServerReadyNotification notification = new LobbyServerReadyNotification
             {
-                AccountData = account,
+                AccountData = account.CloneForClient(),
                 AlertMissionData = new LobbyAlertMissionDataNotification(),
                 CharacterDataList = account.CharacterData.Values.ToList(),
                 CommerceURL = "http://127.0.0.1/AtlasCommerce",
@@ -210,33 +210,6 @@ namespace CentralServer.LobbyServer
         protected void SetAllyDifficulty(BotDifficulty difficulty)
         {
             // TODO
-        }
-        protected void SetCharacterAbilityVfxSwaps(CharacterAbilityVfxSwapInfo characterAbilityVfxSwapInfo)
-        {
-            SessionManager.GetPlayerInfo(this.AccountId).CharacterInfo.CharacterAbilityVfxSwaps = characterAbilityVfxSwapInfo;
-        }
-        protected void SetCharacterCards(CharacterCardInfo characterCardInfo)
-        {
-            SessionManager.GetPlayerInfo(this.AccountId).CharacterInfo.CharacterCards = characterCardInfo;
-        }
-        protected void SetCharacterLoadoutChanges(CharacterLoadoutUpdate characterLoadoutUpdate)
-        {
-            // TODO
-            Log.Print(LogType.Debug, "SetCharacterLoadoutChanges not implemented!");
-        }
-        protected void SetCharacterMods(CharacterModInfo characterModInfo)
-        {
-            SessionManager.GetPlayerInfo(this.AccountId).CharacterInfo.CharacterMods = characterModInfo;
-        }
-        protected void SetCharacterSkin(CharacterVisualInfo characterVisualInfo)
-        {
-            SessionManager.GetPlayerInfo(this.AccountId).CharacterInfo.CharacterSkin = characterVisualInfo;
-            Log.Print(LogType.Debug, characterVisualInfo.ToString());
-        }
-        protected void SetCharacterType(CharacterType characterType)
-        {
-            SessionManager.GetPlayerInfo(this.AccountId).CharacterInfo = CharacterManager.GetCharacterInfo(this.AccountId, characterType);
-
         }
         protected void SetContextualReadyState(ContextualReadyState contextualReadyState)
         {

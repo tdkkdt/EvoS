@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Text;
 using CentralServer.BridgeServer;
 using EvoS.Framework.DataAccess;
+using EvoS.Framework.Misc;
 using WebSocketSharp;
 
 namespace CentralServer.LobbyServer
@@ -167,6 +168,7 @@ namespace CentralServer.LobbyServer
                 characterComponent.LastSelectedLoadout = update.LastSelectedLoadout.Value;
             }
             DB.Get().AccountDao.UpdateAccount(account);
+            LobbyServerPlayerInfo playerInfo = SessionManager.UpdateLobbyServerPlayerInfo(AccountId);
 
 
             if (request.GameType != null && request.GameType.HasValue)
@@ -174,21 +176,9 @@ namespace CentralServer.LobbyServer
 
             if (playerInfoUpdate.CharacterType != null && playerInfoUpdate.CharacterType.HasValue)
             {
-                SetCharacterType(playerInfoUpdate.CharacterType.Value);
-                LobbyServerPlayerInfo playerInfo = SessionManager.GetPlayerInfo(this.AccountId);
-
-                PersistedAccountData accountData = DB.Get().AccountDao.GetAccount(AccountId);
-                // should be automatic when account gets its data from database, but for now we modify the needed things here
-                // accountData.AccountComponent.LastCharacter = playerInfo.CharacterInfo.CharacterType;
-                // accountData.AccountComponent.SelectedBackgroundBannerID = playerInfo.BannerID;
-                // accountData.AccountComponent.SelectedForegroundBannerID = playerInfo.EmblemID;
-                // accountData.AccountComponent.SelectedRibbonID = playerInfo.RibbonID;
-                // accountData.AccountComponent.SelectedTitleID = playerInfo.TitleID;
-                // end "should be automatic"
-
                 PlayerAccountDataUpdateNotification updateNotification = new PlayerAccountDataUpdateNotification()
                 {
-                    AccountData = accountData
+                    AccountData = account.CloneForClient()
                 };
                 Send(updateNotification);
 
@@ -204,17 +194,6 @@ namespace CentralServer.LobbyServer
 
             if (playerInfoUpdate.AllyDifficulty != null && playerInfoUpdate.AllyDifficulty.HasValue)
                 SetAllyDifficulty(playerInfoUpdate.AllyDifficulty.Value);
-            if (playerInfoUpdate.CharacterAbilityVfxSwaps != null && playerInfoUpdate.CharacterAbilityVfxSwaps.HasValue)
-                SetCharacterAbilityVfxSwaps(playerInfoUpdate.CharacterAbilityVfxSwaps.Value);
-            if (playerInfoUpdate.CharacterCards != null && playerInfoUpdate.CharacterCards.HasValue)
-                SetCharacterCards(playerInfoUpdate.CharacterCards.Value);
-            if (playerInfoUpdate.CharacterLoadoutChanges != null && playerInfoUpdate.CharacterLoadoutChanges.HasValue)
-                SetCharacterLoadoutChanges(playerInfoUpdate.CharacterLoadoutChanges.Value);
-            if (playerInfoUpdate.CharacterMods != null && playerInfoUpdate.CharacterMods.HasValue)
-                SetCharacterMods(playerInfoUpdate.CharacterMods.Value);
-            if (playerInfoUpdate.CharacterSkin != null && playerInfoUpdate.CharacterSkin.HasValue)
-                SetCharacterSkin(playerInfoUpdate.CharacterSkin.Value);
-
             if (playerInfoUpdate.ContextualReadyState != null && playerInfoUpdate.ContextualReadyState.HasValue)
                 SetContextualReadyState(playerInfoUpdate.ContextualReadyState.Value);
             if (playerInfoUpdate.EnemyDifficulty != null && playerInfoUpdate.EnemyDifficulty.HasValue)

@@ -1,14 +1,8 @@
-﻿using CentralServer.LobbyServer.Character;
+﻿using System.Collections.Concurrent;
 using EvoS.Framework.Constants.Enums;
-using EvoS.Framework.Logging;
+using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading;
-using EvoS.Framework.DataAccess;
 
 namespace CentralServer.LobbyServer.Session
 {
@@ -24,11 +18,27 @@ namespace CentralServer.LobbyServer.Session
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(clientRequest.AuthInfo.AccountId);
 
             client.AccountId = account.AccountId;
-            client.SessionToken = clientRequest.SessionInfo.SessionToken;  // we are kinda supposed to validate it
+            LobbySessionInfo sessionInfo = clientRequest.SessionInfo;
+            client.SessionToken = sessionInfo.SessionToken;  // we are kinda supposed to validate it
             client.UserName = account.UserName;
             client.SelectedGameType = GameType.PvP;
             client.SelectedSubTypeMask = 0;
 
+            sessionInfo.AccountId = account.AccountId;
+            sessionInfo.UserName = account.UserName;
+            sessionInfo.Handle = account.Handle;
+
+            LobbyServerPlayerInfo playerInfo = UpdateLobbyServerPlayerInfo(account.AccountId);
+            SessionTokenAccountIDCache.TryAdd(client.SessionToken, playerInfo.AccountId);
+            ActiveConnections.TryAdd(client.AccountId, client);
+            ActiveSessions.TryAdd(client.AccountId, sessionInfo);
+
+            return playerInfo;
+        }
+
+        public static LobbyServerPlayerInfo UpdateLobbyServerPlayerInfo(long accountId)
+        {
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
             LobbyServerPlayerInfo playerInfo = new LobbyServerPlayerInfo
             {
                 AccountId = account.AccountId,
@@ -49,12 +59,7 @@ namespace CentralServer.LobbyServer.Session
                 TitleID = account.AccountComponent.SelectedTitleID,
                 TitleLevel = 1
             };
-
-            ActivePlayers.TryAdd(client.AccountId, playerInfo);
-            SessionTokenAccountIDCache.TryAdd(client.SessionToken, playerInfo.AccountId);
-            ActiveConnections.TryAdd(client.AccountId, client);
-            ActiveSessions.TryAdd(client.AccountId, clientRequest.SessionInfo);
-
+            ActivePlayers.AddOrUpdate(playerInfo.AccountId, playerInfo, (k, v) => playerInfo);
             return playerInfo;
         }
 

@@ -57,8 +57,15 @@ namespace EvoS.Framework
             return GetInstance().Database;
         }
 
+        public enum DBType
+        {
+            None,
+            Mongo,
+        }
+
         public class DBConfig
         {
+            public DBType Type = DBType.None;
             public string URI = "localhost";
             public string User = "user";
             public string Password = "password";

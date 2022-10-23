@@ -14,22 +14,29 @@ namespace CentralServer.LobbyServer.Account
         public static PersistedAccountData CreateAccount(AssignGameClientRequest request)
         {
             long accountId = request.AuthInfo.AccountId;
-            PersistedAccountData accountData = new PersistedAccountData()
+            PersistedAccountData accountData = new PersistedAccountData
             {
-                AccountComponent = GetAccountComponent(Database.Account.GetByAccountId(accountId)),
+                AccountComponent = GetAccountComponent(accountId),
                 AccountId = accountId,
                 BankComponent = Bank.GetBankComponent(accountId),
                 CharacterData = CharacterManager.GetPersistedCharacterData(accountId),
                 Handle = request.AuthInfo.Handle,
                 InventoryComponent = InventoryManager.GetInventoryComponent(accountId),
-                QuestComponent = new QuestComponent() { ActiveSeason = 0 },
+                QuestComponent = new QuestComponent()
+                {
+                    ActiveSeason = 9,
+                    SeasonExperience = new Dictionary<int, ExperienceComponent>()
+                    {
+                        {9, new ExperienceComponent()}
+                    }
+                },
                 SchemaVersion = new SchemaVersion<AccountSchemaChange>(0x1FFFF),
                 UserName = request.AuthInfo.UserName
             };
 
             return accountData;
         }
-        public static AccountComponent GetAccountComponent(Database.Account account)
+        public static AccountComponent GetAccountComponent(long accountId)
         {
             AccountComponent accountComponent = new AccountComponent()
             {
@@ -38,22 +45,22 @@ namespace CentralServer.LobbyServer.Account
                 DisplayDevTag = false,
                 FactionCompetitionData = new Dictionary<int, PlayerFactionCompetitionData>(),
                 FreeRotationCharacters = new CharacterType[] { },
-                LastCharacter = account.LastCharacter,
-                SelectedBackgroundBannerID = account.BannerID,
-                SelectedForegroundBannerID = account.EmblemID,
-                SelectedRibbonID = account.RibbonID,
-                SelectedTitleID = account.TitleID,
-                UnlockedBannerIDs = InventoryManager.GetUnlockedBannerIDs(account.AccountId),
+                LastCharacter = Config.ConfigManager.DefaultCharacterType,
+                SelectedBackgroundBannerID = -1,
+                SelectedForegroundBannerID = -1,
+                SelectedRibbonID = -1,
+                SelectedTitleID = -1,
+                UnlockedBannerIDs = InventoryManager.GetUnlockedBannerIDs(accountId),
                 UIStates = new Dictionary<AccountComponent.UIStateIdentifier, int>
                 {
                     { AccountComponent.UIStateIdentifier.HasViewedFluxHighlight, 1 },
                     { AccountComponent.UIStateIdentifier.HasViewedGGHighlight, 1 }
                 },
-                UnlockedEmojiIDs = InventoryManager.GetUnlockedEmojiIDs(account.AccountId),
-                UnlockedLoadingScreenBackgroundIdsToActivatedState = InventoryManager.GetActivatedLoadingScreenBackgroundIds(account.AccountId),
-                UnlockedOverconIDs = InventoryManager.GetUnlockedOverconIDs(account.AccountId),
-                UnlockedTitleIDs = InventoryManager.GetUnlockedTitleIDs(account.AccountId),
-                UnlockedRibbonIDs = InventoryManager.GetUnlockedRibbonIDs(account.AccountId)
+                UnlockedEmojiIDs = InventoryManager.GetUnlockedEmojiIDs(accountId),
+                UnlockedLoadingScreenBackgroundIdsToActivatedState = InventoryManager.GetActivatedLoadingScreenBackgroundIds(accountId),
+                UnlockedOverconIDs = InventoryManager.GetUnlockedOverconIDs(accountId),
+                UnlockedTitleIDs = InventoryManager.GetUnlockedTitleIDs(accountId),
+                UnlockedRibbonIDs = InventoryManager.GetUnlockedRibbonIDs(accountId)
             };
 
             return accountComponent;

@@ -1,4 +1,5 @@
 using EvoS.Framework.DataAccess.Daos;
+using EvoS.Framework.Logging;
 using EvoS.Framework.Network.Static;
 
 namespace EvoS.Framework.DataAccess.Mongo
@@ -16,6 +17,7 @@ namespace EvoS.Framework.DataAccess.Mongo
 
         public void CreateAccount(PersistedAccountData data)
         {
+            Log.Print(LogType.Lobby, $"New player {data.AccountId}: {data}");
             UpdateAccount(data);
         }
 

@@ -16,10 +16,12 @@ namespace CentralServer.LobbyServer.Character
             {
                 if (characterConfig.AllowForPlayers)
                 {
-                    PersistedCharacterData persistedCharacterData = new PersistedCharacterData(characterConfig.CharacterType);
-                    persistedCharacterData.CharacterComponent = GetCharacterComponent(accountId, characterConfig.CharacterType);
-                    persistedCharacterData.CharacterType = characterConfig.CharacterType;
-                    persistedCharacterData.ExperienceComponent = new ExperienceComponent { Level = 50 };
+                    PersistedCharacterData persistedCharacterData = new PersistedCharacterData(characterConfig.CharacterType)
+                        {
+                            CharacterComponent = GetCharacterComponent(accountId, characterConfig.CharacterType),
+                            CharacterType = characterConfig.CharacterType,
+                            ExperienceComponent = new ExperienceComponent { Level = 1 }
+                        };
                     characterDatas.Add(characterConfig.CharacterType, persistedCharacterData);
                 }
             }
@@ -162,7 +164,6 @@ namespace CentralServer.LobbyServer.Character
                 AccountId = 0,
                 BannerID = -1,
                 BotCanTaunt = true,
-                // BotsMasqueradeAsHumans = false,
                 CharacterInfo = new LobbyCharacterInfo
                 {
                     CharacterType = CharacterType.PunchingDummy,

@@ -22,7 +22,6 @@ namespace EvoS.Framework.DataAccess.Mongo
 
         protected void insert(TKey id, TEntry entry)
         {
-            Log.Print(LogType.Lobby, $"New player {id}: {entry}");
             c.ReplaceOne(
                 filter: Key(id),
                 options: new ReplaceOptions { IsUpsert = true },
