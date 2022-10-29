@@ -13,7 +13,7 @@ namespace EvoS.Framework
         public string LobbyServerAddress = "127.0.0.1";
         public int LobbyServerPort = 6060;
         public string GameServerExecutable = "";
-        public DBConfig Database;
+        public DBConfig Database = new DBConfig();
 
         private static EvosConfiguration GetInstance()
         {
