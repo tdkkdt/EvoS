@@ -14,16 +14,13 @@ namespace CentralServer.LobbyServer.Character
 
             foreach (CharacterConfig characterConfig in CharacterConfigs.Characters.Values)
             {
-                if (characterConfig.AllowForPlayers)
+                PersistedCharacterData persistedCharacterData = new PersistedCharacterData(characterConfig.CharacterType)
                 {
-                    PersistedCharacterData persistedCharacterData = new PersistedCharacterData(characterConfig.CharacterType)
-                        {
-                            CharacterComponent = GetCharacterComponent(accountId, characterConfig.CharacterType),
-                            CharacterType = characterConfig.CharacterType,
-                            ExperienceComponent = new ExperienceComponent { Level = 1 }
-                        };
-                    characterDatas.Add(characterConfig.CharacterType, persistedCharacterData);
-                }
+                    CharacterComponent = GetCharacterComponent(accountId, characterConfig.CharacterType),
+                    CharacterType = characterConfig.CharacterType,
+                    ExperienceComponent = new ExperienceComponent { Level = 1 }
+                };
+                characterDatas.Add(characterConfig.CharacterType, persistedCharacterData);
             }
 
             return characterDatas;
