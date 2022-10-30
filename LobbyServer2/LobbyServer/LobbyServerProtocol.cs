@@ -135,8 +135,7 @@ namespace CentralServer.LobbyServer
         public void HandlePlayerInfoUpdateRequest(PlayerInfoUpdateRequest request)
         {
             LobbyPlayerInfoUpdate update = request.PlayerInfoUpdate;
-            LobbyPlayerInfoUpdate playerInfoUpdate = update;
-            
+
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
             if (update.CharacterType.HasValue)
             {
@@ -174,34 +173,34 @@ namespace CentralServer.LobbyServer
             if (request.GameType != null && request.GameType.HasValue)
                 SetGameType(request.GameType.Value);
 
-            if (playerInfoUpdate.CharacterType != null && playerInfoUpdate.CharacterType.HasValue)
+            if (update.CharacterType != null && update.CharacterType.HasValue)
             {
                 PlayerAccountDataUpdateNotification updateNotification = new PlayerAccountDataUpdateNotification()
                 {
                     AccountData = account.CloneForClient()
                 };
                 Send(updateNotification);
-
-                PlayerInfoUpdateResponse response = new PlayerInfoUpdateResponse()
-                {
-                    PlayerInfo = LobbyPlayerInfo.FromServer(playerInfo, 0, new MatchmakingQueueConfig()),
-                    CharacterInfo = playerInfo.CharacterInfo,
-                    OriginalPlayerInfoUpdate = update,
-                    ResponseId = request.RequestId
-                };
-                Send(response);
             }
 
-            if (playerInfoUpdate.AllyDifficulty != null && playerInfoUpdate.AllyDifficulty.HasValue)
-                SetAllyDifficulty(playerInfoUpdate.AllyDifficulty.Value);
-            if (playerInfoUpdate.ContextualReadyState != null && playerInfoUpdate.ContextualReadyState.HasValue)
-                SetContextualReadyState(playerInfoUpdate.ContextualReadyState.Value);
-            if (playerInfoUpdate.EnemyDifficulty != null && playerInfoUpdate.EnemyDifficulty.HasValue)
-                SetEnemyDifficulty(playerInfoUpdate.EnemyDifficulty.Value);
-            if (playerInfoUpdate.LastSelectedLoadout != null && playerInfoUpdate.LastSelectedLoadout.HasValue)
-                SetLastSelectedLoadout(playerInfoUpdate.LastSelectedLoadout.Value);
+            if (update.AllyDifficulty != null && update.AllyDifficulty.HasValue)
+                SetAllyDifficulty(update.AllyDifficulty.Value);
+            if (update.ContextualReadyState != null && update.ContextualReadyState.HasValue)
+                SetContextualReadyState(update.ContextualReadyState.Value);
+            if (update.EnemyDifficulty != null && update.EnemyDifficulty.HasValue)
+                SetEnemyDifficulty(update.EnemyDifficulty.Value);
+            if (update.LastSelectedLoadout != null && update.LastSelectedLoadout.HasValue)
+                SetLastSelectedLoadout(update.LastSelectedLoadout.Value);
 
             //Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
+            
+            PlayerInfoUpdateResponse response = new PlayerInfoUpdateResponse()
+            {
+                PlayerInfo = LobbyPlayerInfo.FromServer(playerInfo, 0, new MatchmakingQueueConfig()),
+                CharacterInfo = playerInfo.CharacterInfo,
+                OriginalPlayerInfoUpdate = update,
+                ResponseId = request.RequestId
+            };
+            Send(response);
         }
 
         public void HandleCheckAccountStatusRequest(CheckAccountStatusRequest request)
