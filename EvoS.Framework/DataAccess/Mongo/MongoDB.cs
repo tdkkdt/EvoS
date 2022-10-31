@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using EvoS.Framework.Misc;
-using MongoDB.Bson.IO;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Bson.Serialization.Options;
@@ -105,18 +105,32 @@ namespace EvoS.Framework.DataAccess.Mongo
     {
         public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, T value)
         {
-            context.Writer.WriteStartDocument();
-            context.Writer.WriteName("json");
-            context.Writer.WriteString(DefaultJsonSerializer.Serialize(value));
-            context.Writer.WriteEndDocument();
+            IBsonSerializer serializer = BsonSerializer.LookupSerializer(typeof(BsonDocument));
+            string json = DefaultJsonSerializer.Serialize(value);
+            try
+            {
+                BsonDocument bsonDocument = BsonDocument.Parse(json);
+                serializer.Serialize(context, bsonDocument.AsBsonValue);
+            }
+            catch (FormatException e)
+            {
+                context.Writer.WriteString(json);
+            }
         }
 
         public override T Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
         {
-            context.Reader.ReadStartDocument();
-            context.Reader.ReadName("json");
-            string json = context.Reader.ReadString();
-            context.Reader.ReadEndDocument();
+            IBsonSerializer serializer = BsonSerializer.LookupSerializer(typeof(BsonDocument));
+            string json;
+            if (context.Reader.CurrentBsonType == BsonType.String)
+            {
+                json = context.Reader.ReadString();
+            }
+            else
+            {
+                json = serializer.Deserialize(context, args).ToBsonDocument().ToJson();
+            }
+            
             return DefaultJsonSerializer.Deserialize<T>(json);
         }
     }
