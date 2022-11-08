@@ -1,20 +1,19 @@
+using System;
+using System.IO;
+using System.Net;
+using CentralServer.LobbyServer.Account;
+using EvoS.Framework;
+using EvoS.Framework.Constants.Enums;
+using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
-using EvoS.Framework.Constants.Enums;
+using log4net;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
-using System;
-using System.IO;
-using System.Net;
-using CentralServer.LobbyServer.Account;
 using Newtonsoft.Json;
-using EvoS.Framework.Logging;
-using EvoS.Framework.DataAccess;
-using EvoS.Framework.Network;
-using EvoS.Framework;
 
 namespace EvoS.DirectoryServer
 {
@@ -40,10 +39,12 @@ namespace EvoS.DirectoryServer
 
     public class DirectoryServer
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(DirectoryServer));
+        
         public void Configure(IApplicationBuilder app)
         {
             var serverAddressesFeature = app.ServerFeatures.Get<IServerAddressesFeature>();
-            Log.Print(LogType.Server, "Started DirectoryServer on '0.0.0.0:6050'");
+            log.Info("Started DirectoryServer on '0.0.0.0:6050'");
 
             app.Run((context) =>
             {
@@ -69,29 +70,29 @@ namespace EvoS.DirectoryServer
                     account = DB.Get().AccountDao.GetAccount(request.AuthInfo.AccountId);
                     if (account == null)
                     {
-                        Log.Print(LogType.Warning, $"Player {request.AuthInfo.AccountId} doesnt exists");
+                        log.Info($"Player {request.AuthInfo.AccountId} doesnt exists");
                         DB.Get().AccountDao.CreateAccount(NewAccount(request));
                         account = DB.Get().AccountDao.GetAccount(request.AuthInfo.AccountId);
                         if (account != null)
                         {
-                            Log.Print(LogType.Debug, $"Successfully Registered {account.Handle}/{account.AccountId}");
+                            log.Info($"Successfully Registered {account.Handle}/{account.AccountId}");
                         }
                         else
                         {
-                            Log.Print(LogType.Error, $"Error creating a new account for player '{request.AuthInfo.UserName}'/{request.AuthInfo.AccountId}");
+                            log.Error($"Error creating a new account for player '{request.AuthInfo.UserName}'/{request.AuthInfo.AccountId}");
                             account = NewAccount(request);
-                            Log.Print(LogType.Error, $"Temp user {account.Handle}/{account.AccountId}");
+                            log.Error($"Temp user {account.Handle}/{account.AccountId}");
                         }
                     }
                     else
                     {
-                        Log.Print(LogType.Lobby, $"Player {account.Handle}/{request.AuthInfo.AccountId} logged in");
+                        log.Info($"Player {account.Handle}/{request.AuthInfo.AccountId} logged in");
                     }
                 }
                 catch (Exception e)
                 {
                     account = NewAccount(request);
-                    Log.Print(LogType.Error, $"Temp user {account.Handle}/{account.AccountId}: {e}");
+                    log.Error($"Temp user {account.Handle}/{account.AccountId}: {e}");
                 }
 
                 request.SessionInfo.SessionToken = 0;

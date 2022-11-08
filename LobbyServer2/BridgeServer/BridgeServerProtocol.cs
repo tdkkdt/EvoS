@@ -5,18 +5,20 @@ using System.Reflection;
 using CentralServer.LobbyServer;
 using CentralServer.LobbyServer.Session;
 using EvoS.Framework.Constants.Enums;
-using EvoS.Framework.Logging;
 using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using EvoS.Framework.Network.Unity;
+using log4net;
 using WebSocketSharp;
 using WebSocketSharp.Server;
 
 namespace CentralServer.BridgeServer
 {
-    public class BridgeServerProtocol : WebSocketBehavior
+    public class BridgeServerProtocol : WebSocketBehaviorBase
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(BridgeServerProtocol));
+        
         public string Address;
         public int Port;
         private LobbyGameInfo GameInfo;
@@ -46,13 +48,18 @@ namespace CentralServer.BridgeServer
             null, // typeof(JoinGameServerResponse),
             null, // typeof(JoinGameAsObserverResponse)
         };
-
+        
         protected List<Type> GetMessageTypes()
         {
             return BridgeMessageTypes;
         }
 
-        protected override void OnMessage(MessageEventArgs e)
+        protected override string GetConnContext()
+        {
+            return $"S {Address}:{Port}";
+        }
+
+        protected override void HandleMessage(MessageEventArgs e)
         {
             NetworkReader networkReader = new NetworkReader(e.RawData);
             short messageType = networkReader.ReadInt16();
@@ -60,7 +67,7 @@ namespace CentralServer.BridgeServer
             List<Type> messageTypes = GetMessageTypes();
             if (messageType >= messageTypes.Count)
             {
-                Log.Print(LogType.Error, $"Unknown bridge message type {messageType}");
+                log.Error($"Unknown bridge message type {messageType}");
                 return;
             }
 
@@ -69,6 +76,7 @@ namespace CentralServer.BridgeServer
             if (type == typeof(RegisterGameServerRequest))
             {
                 RegisterGameServerRequest request = Deserialize<RegisterGameServerRequest>(networkReader);
+                log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
                 string data = request.SessionInfo.ConnectionAddress;
                 Address = data.Split(":")[0];
                 Port = Convert.ToInt32(data.Split(":")[1]);
@@ -83,7 +91,8 @@ namespace CentralServer.BridgeServer
             else if (type == typeof(ServerGameSummaryNotification))
             {
                 ServerGameSummaryNotification request = Deserialize<ServerGameSummaryNotification>(networkReader);
-                Log.Print(LogType.Game, $"Game {GameInfo.Name} at {request.GameSummary.GameServerAddress} finished " +
+                log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
+                log.Info($"Game {GameInfo.Name} at {request.GameSummary.GameServerAddress} finished " +
                                         $"({request.GameSummary.NumOfTurns} turns), " +
                                         $"{request.GameSummary.GameResult} {request.GameSummary.TeamAPoints}-{request.GameSummary.TeamBPoints}");
                 foreach (LobbyServerProtocolBase client in clients)
@@ -99,12 +108,13 @@ namespace CentralServer.BridgeServer
             else if (type == typeof(ServerGameStatusNotification))
             {
                 ServerGameStatusNotification request = Deserialize<ServerGameStatusNotification>(networkReader);
-                Log.Print(LogType.Game, $"Game {GameInfo.Name} {request.GameStatus}");
+                log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
+                log.Info($"Game {GameInfo.Name} {request.GameStatus}");
                 GameStatus = request.GameStatus;
             }
             else
             {
-                Log.Print(LogType.Game, $"Received unhandled bridge message type {(type != null ? type.Name : "id_" + messageType)}");
+                log.Warn($"Received unhandled bridge message type {(type != null ? type.Name : "id_" + messageType)}");
             }
         }
 
@@ -116,9 +126,8 @@ namespace CentralServer.BridgeServer
             return o;
         }
 
-        protected override void OnClose(CloseEventArgs e)
+        protected override void HandleClose(CloseEventArgs e)
         {
-            base.OnClose(e);
             ServerManager.RemoveServer(this.ID);
         }
 
@@ -165,8 +174,11 @@ namespace CentralServer.BridgeServer
             if (messageType >= 0)
             {
                 Send(messageType, msg, originalCallbackId);
+                log.Debug($"> {msg.GetType().Name} {DefaultJsonSerializer.Serialize(msg)}");
                 return true;
             }
+            log.Error($"No sender for {msg.GetType().Name}");
+            log.Debug($">X {msg.GetType().Name} {DefaultJsonSerializer.Serialize(msg)}");
 
             return false;
         }
@@ -186,7 +198,7 @@ namespace CentralServer.BridgeServer
             short num = (short)GetMessageTypes().IndexOf(msg.GetType());
             if (num < 0)
             {
-                Log.Print(LogType.Error, $"Message type {msg.GetType().Name} is not in the MonitorGameServerInsightMessages MessageTypes list and doesnt have a type");
+                log.Error($"Message type {msg.GetType().Name} is not in the MonitorGameServerInsightMessages MessageTypes list and doesnt have a type");
             }
 
             return num;

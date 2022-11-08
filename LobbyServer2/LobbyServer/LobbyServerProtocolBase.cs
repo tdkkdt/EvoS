@@ -1,32 +1,30 @@
-﻿using CentralServer.LobbyServer.Account;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Character;
+using CentralServer.LobbyServer.Config;
 using CentralServer.LobbyServer.Friend;
 using CentralServer.LobbyServer.Gamemode;
 using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Quest;
-using CentralServer.LobbyServer.Session;
 using EvoS.Framework.Constants.Enums;
-using EvoS.Framework.Logging;
+using EvoS.Framework.DataAccess;
+using EvoS.Framework.Misc;
 using EvoS.Framework.Network;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using EvoS.Framework.Network.WebSocket;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using CentralServer.BridgeServer;
-using EvoS.Framework.DataAccess;
+using log4net;
 using WebSocketSharp;
-using WebSocketSharp.Server;
 
 namespace CentralServer.LobbyServer
 {
-    public class LobbyServerProtocolBase : WebSocketBehavior
+    public class LobbyServerProtocolBase : WebSocketBehaviorBase
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(LobbyServerProtocolBase));
         private Dictionary<Type, EvosMessageDelegate<WebSocketMessage>> messageHandlers = new Dictionary<Type, EvosMessageDelegate<WebSocketMessage>>();
         public long AccountId;
         public long SessionToken;
@@ -37,7 +35,12 @@ namespace CentralServer.LobbyServer
 
         public BridgeServerProtocol CurrentServer { get; set; }
 
-        protected override void OnMessage(MessageEventArgs e)
+        protected override string GetConnContext()
+        {
+            return "C " + AccountId;
+        }
+
+        protected override void HandleMessage(MessageEventArgs e)
         {
             MemoryStream stream = new MemoryStream(e.RawData);
             WebSocketMessage deserialized = null;
@@ -48,7 +51,7 @@ namespace CentralServer.LobbyServer
             }
             catch (NullReferenceException nullEx)
             {
-                Log.Print(LogType.Error, "No message handler registered for data:\n" + BitConverter.ToString(e.RawData));
+                log.Error("No message handler registered for data: " + BitConverter.ToString(e.RawData));
             }
 
             if (deserialized != null)
@@ -56,14 +59,12 @@ namespace CentralServer.LobbyServer
                 EvosMessageDelegate<WebSocketMessage> handler = GetHandler(deserialized.GetType());
                 if (handler != null)
                 {
-                    #if DEBUG
-                    Log.Print(LogType.Network, "Received " + deserialized.GetType().Name);
-                    #endif
+                    log.Debug($"< {deserialized.GetType().Name} {DefaultJsonSerializer.Serialize(deserialized)}");
                     handler.Invoke(deserialized);
                 }
                 else
                 {
-                    Log.Print(LogType.Error, "No handler for " + deserialized.GetType().Name + "\n" + Newtonsoft.Json.JsonConvert.SerializeObject(deserialized, Newtonsoft.Json.Formatting.Indented));
+                    log.Error("No handler for " + deserialized.GetType().Name + "\n" + DefaultJsonSerializer.Serialize(deserialized));
                 }
             }
         }
@@ -81,7 +82,7 @@ namespace CentralServer.LobbyServer
             }
             catch (KeyNotFoundException e)
             {
-                Log.Print(LogType.Lobby, "No handler found for type " + type.Name);
+                log.Error("No handler found for type " + type.Name);
                 return null;
             }
         }
@@ -91,6 +92,7 @@ namespace CentralServer.LobbyServer
             MemoryStream stream = new MemoryStream();
             EvosSerializer.Instance.Serialize(stream, message);
             this.Send(stream.ToArray());
+            log.Debug($"> {message.GetType().Name} {DefaultJsonSerializer.Serialize(message)}");
         }
 
         public void SendErrorResponse(WebSocketResponseMessage response, int requestId, string message)
@@ -98,7 +100,7 @@ namespace CentralServer.LobbyServer
             response.Success = false;
             response.ErrorMessage = message;
             response.ResponseId = requestId;
-            Log.Print(LogType.Error, message);
+            log.Error(message);
             Send(response);
         }
 
@@ -107,7 +109,7 @@ namespace CentralServer.LobbyServer
             response.Success = false;
             response.ErrorMessage = error.Message;
             response.ResponseId = requestId;
-            Log.Print(LogType.Error, error.Message);
+            log.Error(error.Message);
             Console.WriteLine(error);
             Send(response);
         }
@@ -137,7 +139,7 @@ namespace CentralServer.LobbyServer
         {
             return new ServerQueueConfigurationUpdateNotification
             {
-                FreeRotationAdditions = new Dictionary<CharacterType, EvoS.Framework.Network.Static.RequirementCollection>(),
+                FreeRotationAdditions = new Dictionary<CharacterType, RequirementCollection>(),
                 GameTypeAvailabilies = GameModeManager.GetGameTypeAvailabilities(),
                 TierInstanceNames = new List<LocalizationPayload>(),
                 AllowBadges = true,
@@ -165,11 +167,11 @@ namespace CentralServer.LobbyServer
         {
             return new ServerMessageOverrides
             {
-                MOTDPopUpText = Config.ConfigManager.MOTDPopUpText, // Popup message when client connects to lobby
-                MOTDText = Config.ConfigManager.MOTDText, // "alert" text
-                ReleaseNotesHeader = Config.ConfigManager.PatchNotesHeader,
-                ReleaseNotesDescription = Config.ConfigManager.PatchNotesDescription,
-                ReleaseNotesText = Config.ConfigManager.PatchNotesText,
+                MOTDPopUpText = ConfigManager.MOTDPopUpText, // Popup message when client connects to lobby
+                MOTDText = ConfigManager.MOTDText, // "alert" text
+                ReleaseNotesHeader = ConfigManager.PatchNotesHeader,
+                ReleaseNotesDescription = ConfigManager.PatchNotesDescription,
+                ReleaseNotesText = ConfigManager.PatchNotesText,
             };
         }
 
@@ -213,7 +215,7 @@ namespace CentralServer.LobbyServer
         }
         protected void SetContextualReadyState(ContextualReadyState contextualReadyState)
         {
-            Log.Print(LogType.Debug, "SetContextualReadyState");
+            log.Debug("SetContextualReadyState");
             MatchmakingManager.StartPractice(this);
         }
         protected void SetEnemyDifficulty(BotDifficulty difficulty)
@@ -222,7 +224,7 @@ namespace CentralServer.LobbyServer
         }
         protected void SetLastSelectedLoadout(int lastSelectedLoadout)
         {
-            Log.Print(LogType.Debug, "last selected loadout changed to " + lastSelectedLoadout);
+            log.Debug("last selected loadout changed to " + lastSelectedLoadout);
         }
 
     }

@@ -1,26 +1,26 @@
-using CentralServer.LobbyServer.Account;
+using System;
+using System.Collections.Generic;
+using CentralServer.LobbyServer.Character;
+using CentralServer.LobbyServer.Config;
 using CentralServer.LobbyServer.Friend;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Store;
 using EvoS.Framework.Constants.Enums;
-using EvoS.Framework.Logging;
+using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
+using log4net;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using CentralServer.BridgeServer;
-using EvoS.Framework.DataAccess;
-using EvoS.Framework.Misc;
 using WebSocketSharp;
 
 namespace CentralServer.LobbyServer
 {
     public class LobbyServerProtocol : LobbyServerProtocolBase
     {
-        protected override void OnOpen()
+        private static readonly ILog log = LogManager.GetLogger(typeof(LobbyServerProtocol));
+        
+        protected override void HandleOpen()
         {
             RegisterHandler(new EvosMessageDelegate<RegisterGameClientRequest>(HandleRegisterGame));
             RegisterHandler(new EvosMessageDelegate<OptionsNotification>(HandleOptionsNotification));
@@ -50,12 +50,12 @@ namespace CentralServer.LobbyServer
             */
         }
 
-        protected override void OnClose(CloseEventArgs e)
+        protected override void HandleClose(CloseEventArgs e)
         {
             LobbyServerPlayerInfo playerInfo = SessionManager.GetPlayerInfo(this.AccountId);
             if (playerInfo != null)
             {
-                Log.Print(LogType.Lobby, string.Format(Config.Messages.PlayerDisconnected, this.UserName));
+                log.Info(string.Format(Messages.PlayerDisconnected, this.UserName));
                 SessionManager.OnPlayerDisconnect(this);
             }
         }
@@ -68,7 +68,7 @@ namespace CentralServer.LobbyServer
 
                 if (playerInfo != null)
                 {
-                    Log.Print(LogType.Lobby, string.Format(Config.Messages.LoginSuccess, this.UserName));
+                    log.Info(string.Format(Messages.LoginSuccess, this.UserName));
                     RegisterGameClientResponse response = new RegisterGameClientResponse
                     {
                         AuthInfo = request.AuthInfo,
@@ -82,7 +82,7 @@ namespace CentralServer.LobbyServer
                 }
                 else
                 {
-                    SendErrorResponse(new RegisterGameClientResponse(), request.RequestId, Config.Messages.LoginFailed);
+                    SendErrorResponse(new RegisterGameClientResponse(), request.RequestId, Messages.LoginFailed);
                 }
             }
             catch (Exception e)
@@ -108,7 +108,7 @@ namespace CentralServer.LobbyServer
 
         public void HandlePlayerUpdateStatusRequest(PlayerUpdateStatusRequest request)
         {
-            Log.Print(LogType.Lobby, $"{this.UserName} is now {request.StatusString}");
+            log.Info($"{this.UserName} is now {request.StatusString}");
             PlayerUpdateStatusResponse response = FriendManager.OnPlayerUpdateStatusRequest(this, request);
 
             Send(response);
@@ -118,7 +118,7 @@ namespace CentralServer.LobbyServer
         {
             PlayerMatchDataResponse response = new PlayerMatchDataResponse()
             {
-                MatchData = new List<EvoS.Framework.Network.Static.PersistedCharacterMatchData>(),
+                MatchData = new List<PersistedCharacterMatchData>(),
                 ResponseId = request.RequestId
             };
 
@@ -253,7 +253,7 @@ namespace CentralServer.LobbyServer
             };
             Send(response);
 
-            Character.SkinHelper sk = new Character.SkinHelper();
+            SkinHelper sk = new SkinHelper();
             sk.AddSkin(request.CharacterType, request.SkinId, request.TextureId, request.TintId);
             sk.Save();
         }
@@ -281,11 +281,10 @@ namespace CentralServer.LobbyServer
                 CurrentServer = null; // we will probably want to save it somewhere for reconnection
             }
         }
-
-
+        
         public void HandleJoinMatchmakingQueueRequest(JoinMatchmakingQueueRequest request)
         {
-            Log.Print(LogType.Lobby, $"{this.UserName} joined {request.GameType} queue ");
+            log.Info($"{this.UserName} joined {request.GameType} queue ");
 
             // Send response to the calling request
             Send(new JoinMatchmakingQueueResponse { LocalizedFailure = null, ResponseId = request.RequestId });
@@ -296,7 +295,7 @@ namespace CentralServer.LobbyServer
 
         public void HandleLeaveMatchmakingQueueRequest(LeaveMatchmakingQueueRequest request)
         {
-            Log.Print(LogType.Error, "Code not implented yet for LeaveMatchmakingQueueRequest, must remove from queue");
+            log.Error("Code not implemented yet for LeaveMatchmakingQueueRequest, must remove from queue");
             Send(new LeaveMatchmakingQueueResponse() { ResponseId = request.RequestId });
         }
     }

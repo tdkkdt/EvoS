@@ -1,7 +1,7 @@
 using System;
+using System.IO;
 using System.Threading;
-using EvoS.Framework.Assets;
-using EvoS.Framework.Logging;
+using log4net.Config;
 using McMaster.Extensions.CommandLineUtils;
 
 namespace EvoS.Sandbox
@@ -10,15 +10,12 @@ namespace EvoS.Sandbox
     {
         public static int Main(string[] args)
         {
+            XmlConfigurator.Configure(new FileInfo("log4net.xml"));
             CommandLineApplication.Execute<Program>(args);
             Console.ReadLine();
             return 0;
         }
         
-        
-        [Option(Description = "Path to AtlasReactor_Data", ShortName = "D")]
-        public string Assets { get; }
-
         private void OnExecute()
         {
             Banner.PrintBanner();

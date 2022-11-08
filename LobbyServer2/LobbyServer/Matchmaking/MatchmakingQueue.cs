@@ -5,14 +5,16 @@ using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Gamemode;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
-using EvoS.Framework.Logging;
 using EvoS.Framework.Network.Static;
+using log4net;
 using WebSocketSharp;
 
 namespace CentralServer.LobbyServer.Matchmaking
 {
     class MatchmakingQueue
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(MatchmakingQueue));
+        
         Dictionary<string, LobbyGameInfo> Games = new Dictionary<string, LobbyGameInfo>();
         SynchronizedCollection<LobbyServerProtocolBase> Players = new SynchronizedCollection<LobbyServerProtocolBase>();
         public LobbyMatchmakingQueueInfo MatchmakingQueueInfo;
@@ -47,7 +49,7 @@ namespace CentralServer.LobbyServer.Matchmaking
         public void Update()
         {
             RemoveDisconnectedPlayers();
-            Log.Print(LogType.Game, $"{Players.Count} players in {GameType} queue");
+            log.Info($"{Players.Count} players in {GameType} queue");
 
             foreach (GameSubType subType in MatchmakingQueueInfo.GameConfig.SubTypes)
             {
@@ -56,7 +58,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 {
                     if (!CheckGameServerAvailable())
                     {
-                        Log.Print(LogType.Error, "No available game server to start a match");
+                        log.Warn("No available game server to start a match");
                         return;
                     }
 
@@ -78,7 +80,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 LobbyServerProtocolBase connection = Players[i];
                 if (connection.State != WebSocketState.Open)
                 {
-                    Log.Print(LogType.Game, $"Removing disconnected player {connection.AccountId} from {GameType} queue");
+                    log.Info($"Removing disconnected player {connection.AccountId} from {GameType} queue");
                     Players.RemoveAt(i--);
                 }
             }
@@ -100,7 +102,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             string gameServer = EvosConfiguration.GetGameServerExecutable();
             if (gameServer.IsNullOrEmpty()) return false;
             
-            // TODO: this will start a new game server eveerytime the queue is runned, which can cause multiple server that aren't needed to start
+            // TODO: this will start a new game server every time the queue is run, which can cause multiple server that aren't needed to start
             using (var process = new Process())
             {
                 try
@@ -112,7 +114,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 }
                 catch(Exception e)
                 {
-                    Log.Print(LogType.Error, e.ToString());
+                    log.Error("Failed to start a game server", e);
                     return false;
                 }   
             }

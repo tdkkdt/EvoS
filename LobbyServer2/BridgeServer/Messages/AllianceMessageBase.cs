@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Reflection;
-using EvoS.Framework.Logging;
 using EvoS.Framework.Network.Unity;
+using log4net;
 using Newtonsoft.Json;
 
 public class AllianceMessageBase : MessageBase
 {
+	private static readonly ILog log = LogManager.GetLogger(typeof(AllianceMessageBase));
+	
 	public const int INVALID_ID = 0;
 
 	public int RequestId;
@@ -23,7 +25,7 @@ public class AllianceMessageBase : MessageBase
 
 	public virtual void DeserializeNested(NetworkReader reader)
 	{
-		Log.Print(LogType.Error, "Nested messages must implement DeserializeNested to avoid calling into the base Deserialize");
+		log.Error("Nested messages must implement DeserializeNested to avoid calling into the base Deserialize");
 	}
 
 	// rogues + custom json fallback

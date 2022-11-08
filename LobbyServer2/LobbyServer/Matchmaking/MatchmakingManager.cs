@@ -6,10 +6,10 @@ using CentralServer.LobbyServer.Character;
 using CentralServer.LobbyServer.Gamemode;
 using CentralServer.LobbyServer.Session;
 using EvoS.Framework.Constants.Enums;
-using EvoS.Framework.Logging;
 using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
+using log4net;
 
 namespace CentralServer.LobbyServer.Matchmaking
 {
@@ -19,6 +19,8 @@ namespace CentralServer.LobbyServer.Matchmaking
     /// </summary>
     public static class MatchmakingManager
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(MatchmakingManager));
+        
         // List of matchmaking queues by game mode (practive, coop, pvp, ranked and custom)
         private static Dictionary<GameType, MatchmakingQueue> Queues = new Dictionary<GameType, MatchmakingQueue>()
         {
@@ -106,7 +108,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             BridgeServerProtocol server = ServerManager.GetServer(practiceGameInfo, teamInfo);
             if (server == null)
             {
-                Log.Print(LogType.Error, "No available server for practice gamemode");
+                log.Warn("No available server for practice gamemode");
             }
             else
             {
@@ -140,7 +142,7 @@ namespace CentralServer.LobbyServer.Matchmaking
 
         public static void StartGame(List<LobbyServerProtocolBase> clients, GameType gameType)
         {
-            Log.Print(LogType.Lobby, $"Starting {gameType} game...");
+            log.Info($"Starting {gameType} game...");
             MatchmakingQueueConfig queueConfig = new MatchmakingQueueConfig();
 
             MatchmakingQueue lobbyQueue = Queues[gameType];
@@ -154,7 +156,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 LobbyServerPlayerInfo playerInfo = SessionManager.GetPlayerInfo(client.AccountId);
                 playerInfo.TeamId = Team.TeamA;
                 playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
-                Log.Print(LogType.Game, $"adding player {client.UserName}, {client.AccountId} to team A");
+                log.Info($"adding player {client.UserName}, {client.AccountId} to team A");
                 teamInfo.TeamPlayerInfo.Add(playerInfo);
             }
 
@@ -165,7 +167,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 LobbyServerPlayerInfo playerInfo = SessionManager.GetPlayerInfo(client.AccountId);
                 playerInfo.TeamId = Team.TeamB;
                 playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
-                Log.Print(LogType.Game, $"adding player {client.UserName}, {client.AccountId} to team B");
+                log.Info($"adding player {client.UserName}, {client.AccountId} to team B");
                 teamInfo.TeamPlayerInfo.Add(playerInfo);
             }
 
@@ -198,7 +200,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             BridgeServerProtocol server = ServerManager.GetServer(gameInfo, teamInfo);
             if (server == null)
             {
-                Log.Print(LogType.Error, $"No available server for {gameType} gamemode");
+                log.Info($"No available server for {gameType} gamemode");
                 return;
             }
             else
@@ -241,7 +243,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                     client.Send(notification);
                 }
 
-                Log.Print(LogType.Error, $"Game {gameType} started");
+                log.Info($"Game {gameType} started");
             }
         }
 
@@ -296,7 +298,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             BridgeServerProtocol server = ServerManager.GetServer(gameInfo, teamInfo);
             if (server == null)
             {
-                Log.Print(LogType.Error, "No available server for practice gamemode");
+                log.Warn("No available server for practice gamemode");
             }
             else
             {
