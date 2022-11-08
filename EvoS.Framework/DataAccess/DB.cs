@@ -1,12 +1,14 @@
 using EvoS.Framework.DataAccess.Daos;
 using EvoS.Framework.DataAccess.Mock;
 using EvoS.Framework.DataAccess.Mongo;
-using EvoS.Framework.Logging;
+using log4net;
 
 namespace EvoS.Framework.DataAccess
 {
     public class DB
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(DB));
+        
         private static DB Instance;
         public readonly AccountDao AccountDao;
 
@@ -15,11 +17,11 @@ namespace EvoS.Framework.DataAccess
             switch (EvosConfiguration.GetDBConfig().Type)
             {
                 case EvosConfiguration.DBType.Mongo:
-                    Log.Print(LogType.Server, "Using MongoDB");
+                    log.Info("Using MongoDB");
                     AccountDao = new AccountDaoCached(new AccountMongoDao());
                     break;
                 case EvosConfiguration.DBType.None:
-                    Log.Print(LogType.Server, "Not using any database, no data will be persisted");
+                    log.Info("Not using any database, no data will be persisted");
                     AccountDao = new AccountDaoCached(new AccountMockDao());
                     break;
             }

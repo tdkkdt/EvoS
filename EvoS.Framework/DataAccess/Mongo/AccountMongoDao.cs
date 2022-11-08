@@ -1,11 +1,13 @@
 using EvoS.Framework.DataAccess.Daos;
-using EvoS.Framework.Logging;
 using EvoS.Framework.Network.Static;
+using log4net;
 
 namespace EvoS.Framework.DataAccess.Mongo
 {
     public class AccountMongoDao : MongoDao<long, PersistedAccountData>, AccountDao
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(AccountMongoDao));
+        
         public AccountMongoDao() : base("accounts")
         {
         }
@@ -17,7 +19,7 @@ namespace EvoS.Framework.DataAccess.Mongo
 
         public void CreateAccount(PersistedAccountData data)
         {
-            Log.Print(LogType.Lobby, $"New player {data.AccountId}: {data}");
+            log.Info($"New player {data.AccountId}: {data}");
             UpdateAccount(data);
         }
 

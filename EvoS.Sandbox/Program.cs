@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading;
+using EvoS.Framework.DataAccess;
 using log4net.Config;
 using McMaster.Extensions.CommandLineUtils;
 
@@ -19,6 +20,7 @@ namespace EvoS.Sandbox
         private void OnExecute()
         {
             Banner.PrintBanner();
+            DB.Get();
 
             // Start Directory Server
             new Thread(() => StartDirServer()).Start();
