@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace CentralServer.LobbyServer.Character
 {
-    class SkinHelper
+    public class SkinHelper
     {
         Dictionary<CharacterType, Dictionary<int, Dictionary<int, List<int>>>> CharacterSkins;
 

@@ -1,9 +1,7 @@
-﻿using EvoS.Framework.Network.Static;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
+using EvoS.Framework.Network.Static;
 
-namespace CentralServer.LobbyServer.Inventory
+namespace EvoS.DirectoryServer.Inventory
 {
     class InventoryManager
     {

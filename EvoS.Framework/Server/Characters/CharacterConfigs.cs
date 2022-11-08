@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace CentralServer.LobbyServer.Character
 {
-    class CharacterConfigs
+    public class CharacterConfigs
     {
 
         public static Dictionary<CharacterType, CharacterConfig> Characters = new Dictionary<CharacterType, CharacterConfig>()

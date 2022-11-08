@@ -1,16 +1,25 @@
-﻿using CentralServer.LobbyServer.Character;
-using CentralServer.LobbyServer.Inventory;
+﻿using System.Collections.Generic;
+using EvoS.DirectoryServer.Character;
+using EvoS.DirectoryServer.Inventory;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace CentralServer.LobbyServer.Account
+namespace EvoS.DirectoryServer.Account
 {
     public class AccountManager
     {
+        public static int DefaultISOAmount = 100000;
+        public static int DefaultFluxAmount = 50000;
+        public static int DefaultGGAmount = 508;
+        public static int DefaultRankedCurrencyAmount = 3;
+
+        public static bool DailyQuestsAvailable = true;
+
+        public static CharacterType DefaultCharacterType = CharacterType.Tracker;
+        public static GameType DefaultGameType = GameType.PvP;
+        
+        
         public static PersistedAccountData CreateAccount(AssignGameClientRequest request)
         {
             long accountId = request.AuthInfo.AccountId;
@@ -18,7 +27,7 @@ namespace CentralServer.LobbyServer.Account
             {
                 AccountComponent = GetAccountComponent(accountId),
                 AccountId = accountId,
-                BankComponent = Bank.GetBankComponent(accountId),
+                BankComponent = CreateBankComponent(accountId),
                 CharacterData = CharacterManager.GetPersistedCharacterData(accountId),
                 Handle = request.AuthInfo.Handle,
                 InventoryComponent = InventoryManager.GetInventoryComponent(accountId),
@@ -41,11 +50,11 @@ namespace CentralServer.LobbyServer.Account
             AccountComponent accountComponent = new AccountComponent()
             {
                 AppliedEntitlements = new Dictionary<string, int>(),
-                DailyQuestsAvailable = Config.ConfigManager.DailyQuestsAvailable,
+                DailyQuestsAvailable = DailyQuestsAvailable,
                 DisplayDevTag = false,
                 FactionCompetitionData = new Dictionary<int, PlayerFactionCompetitionData>(),
                 FreeRotationCharacters = new CharacterType[] { },
-                LastCharacter = Config.ConfigManager.DefaultCharacterType,
+                LastCharacter = DefaultCharacterType,
                 SelectedBackgroundBannerID = -1,
                 SelectedForegroundBannerID = -1,
                 SelectedRibbonID = -1,
@@ -64,6 +73,26 @@ namespace CentralServer.LobbyServer.Account
             };
 
             return accountComponent;
+        }
+        
+        public static BankComponent CreateBankComponent(long accountId)
+        {
+            // TODO
+            BankComponent bank = new BankComponent()
+            {
+                CurrentAmounts = new CurrencyWallet()
+                {
+                    Data = new List<CurrencyData>()
+                    {
+                        new CurrencyData() { Type = CurrencyType.ISO, Amount = DefaultISOAmount },
+                        new CurrencyData() { Type = CurrencyType.FreelancerCurrency, Amount = DefaultFluxAmount },
+                        new CurrencyData() { Type = CurrencyType.GGPack, Amount = DefaultGGAmount },
+                        new CurrencyData() { Type = CurrencyType.RankedCurrency, Amount = DefaultRankedCurrencyAmount }
+                    }
+                }
+            };
+
+            return bank;
         }
     }
 }

@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Net;
-using CentralServer.LobbyServer.Account;
+using EvoS.DirectoryServer.Account;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
@@ -124,7 +124,7 @@ namespace EvoS.DirectoryServer
 
         private static PersistedAccountData NewAccount(AssignGameClientRequest request)
         {
-            return AccountManager.CreateAccount(request);  // TODO move to DirectoryServer
+            return AccountManager.CreateAccount(request);
         }
     }
 }
