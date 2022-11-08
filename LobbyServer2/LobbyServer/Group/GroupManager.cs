@@ -1,9 +1,7 @@
-﻿using CentralServer.LobbyServer.Account;
+﻿using System.Collections.Generic;
 using CentralServer.LobbyServer.Session;
+using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.Static;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace CentralServer.LobbyServer.Group
 {
@@ -22,7 +20,10 @@ namespace CentralServer.LobbyServer.Group
                 //IsLeader = true,
                 Members = new List<UpdateGroupMemberData>(),
             };
-
+            
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
+            groupInfo.SetCharacterInfo(LobbyCharacterInfo.Of(account.CharacterData[account.AccountComponent.LastCharacter]));
+            
             return groupInfo;
         }
     }

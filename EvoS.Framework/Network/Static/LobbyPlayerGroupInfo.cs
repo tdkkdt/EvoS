@@ -25,5 +25,11 @@ namespace EvoS.Framework.Network.Static
         public string MemberDisplayName;
         [EvosMessage(385)]
         public List<UpdateGroupMemberData> Members;
+        public LobbyCharacterInfo ChararacterInfo => m_ChararacterInfo;
+
+        public void SetCharacterInfo(LobbyCharacterInfo newInfo, bool isFromServerResponse = false)
+        {
+            m_ChararacterInfo = newInfo;
+        }
     }
 }
