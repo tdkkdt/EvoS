@@ -19,8 +19,8 @@ namespace EvoS.Framework.Network.NetworkMessages
         [EvosMessage(375)]
         public enum JoinType
         {
-            Unicode001D,
-            Unicode000E
+            InviteToFormGroup,
+            RequestToJoinGroup
         }
     }
 }

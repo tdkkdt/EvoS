@@ -32,6 +32,8 @@ namespace CentralServer.LobbyServer
         
         public GameType SelectedGameType;
         public ushort SelectedSubTypeMask;
+        public BotDifficulty AllyDifficulty;
+        public BotDifficulty EnemyDifficulty;
 
         public BridgeServerProtocol CurrentServer { get; set; }
 
@@ -220,16 +222,11 @@ namespace CentralServer.LobbyServer
 
         protected void SetAllyDifficulty(BotDifficulty difficulty)
         {
-            // TODO
-        }
-        protected void SetContextualReadyState(ContextualReadyState contextualReadyState)
-        {
-            log.Debug("SetContextualReadyState");
-            MatchmakingManager.StartPractice(this);
+            AllyDifficulty = difficulty;
         }
         protected void SetEnemyDifficulty(BotDifficulty difficulty)
         {
-            // TODO
+            EnemyDifficulty = difficulty;
         }
         protected void SetLastSelectedLoadout(int lastSelectedLoadout)
         {

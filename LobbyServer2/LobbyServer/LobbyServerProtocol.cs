@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using CentralServer.LobbyServer.Character;
 using CentralServer.LobbyServer.Config;
 using CentralServer.LobbyServer.Friend;
+using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Store;
@@ -21,6 +22,8 @@ namespace CentralServer.LobbyServer
     public class LobbyServerProtocol : LobbyServerProtocolBase
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(LobbyServerProtocol));
+        
+        public bool IsReady { get; private set; }
         
         protected override void HandleOpen()
         {
@@ -41,8 +44,10 @@ namespace CentralServer.LobbyServer
             RegisterHandler(new EvosMessageDelegate<JoinMatchmakingQueueRequest>(HandleJoinMatchmakingQueueRequest));
             RegisterHandler(new EvosMessageDelegate<LeaveMatchmakingQueueRequest>(HandleLeaveMatchmakingQueueRequest));
             RegisterHandler(new EvosMessageDelegate<ChatNotification>(HandleChatNotification));
-
-
+            RegisterHandler(new EvosMessageDelegate<GroupInviteRequest>(HandleGroupInviteRequest));
+            RegisterHandler(new EvosMessageDelegate<GroupConfirmationResponse>(HandleGroupConfirmationResponse));
+            RegisterHandler(new EvosMessageDelegate<GroupLeaveRequest>(HandleGroupLeaveRequest));
+            
             /*
             RegisterHandler(new EvosMessageDelegate<PurchaseModResponse>(HandlePurchaseModRequest));
             RegisterHandler(new EvosMessageDelegate<PurchaseTauntRequest>(HandlePurchaseTauntRequest));
@@ -61,6 +66,12 @@ namespace CentralServer.LobbyServer
                 log.Info(string.Format(Messages.PlayerDisconnected, this.UserName));
                 SessionManager.OnPlayerDisconnect(this);
             }
+            BroadcastRefreshFriendList();
+            GroupManager.LeaveGroup(AccountId, false);
+        }
+
+        public void BroadcastRefreshFriendList()
+        {
             foreach (IWebSocketSession session in Sessions.Sessions)
             {
                 ((LobbyServerProtocol)session)?.RefreshFriendList();
@@ -70,6 +81,30 @@ namespace CentralServer.LobbyServer
         public void RefreshFriendList()
         {
             Send(FriendManager.GetFriendStatusNotification(AccountId));
+        }
+
+        public void BroadcastRefreshGroup()
+        {
+            GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
+            if (group == null)
+            {
+                RefreshGroup();
+            }
+            else
+            {
+                foreach (long groupMember in group.Members)
+                {
+                    SessionManager.GetClientConnection(groupMember)?.RefreshGroup();
+                }
+            }
+        }
+
+        public void RefreshGroup()
+        {
+            Send(new LobbyServerReadyNotification
+            {
+                GroupInfo = GroupManager.GetGroupInfo(AccountId)
+            });
         }
 
         public void HandleRegisterGame(RegisterGameClientRequest request)
@@ -221,6 +256,7 @@ namespace CentralServer.LobbyServer
                 ResponseId = request.RequestId
             };
             Send(response);
+            BroadcastRefreshGroup();
         }
 
         public void HandleCheckAccountStatusRequest(CheckAccountStatusRequest request)
@@ -302,6 +338,21 @@ namespace CentralServer.LobbyServer
             }
         }
         
+        protected void SetContextualReadyState(ContextualReadyState contextualReadyState)
+        {
+            log.Info($"SetContextualReadyState {contextualReadyState.ReadyState} {contextualReadyState.GameProcessCode}");
+            GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
+            IsReady = contextualReadyState.ReadyState == ReadyState.Ready;
+            if (group == null)
+            {
+                MatchmakingManager.StartPractice(this);
+            }
+            else
+            {
+                BroadcastRefreshGroup();
+            }
+        }
+        
         public void HandleJoinMatchmakingQueueRequest(JoinMatchmakingQueueRequest request)
         {
             log.Info($"{this.UserName} joined {request.GameType} queue ");
@@ -368,6 +419,101 @@ namespace CentralServer.LobbyServer
                     log.Info(DefaultJsonSerializer.Serialize(notification));
                     break;
             }
+        }
+        
+        public void HandleGroupInviteRequest(GroupInviteRequest request)
+        {
+            long? friendAccountId = SessionManager.GetOnlinePlayerByHandle(request.FriendHandle);
+            if (!friendAccountId.HasValue)
+            {
+                log.Warn($"Failed to find player {request.FriendHandle} invited to group by {AccountId}");
+                Send(new GroupInviteResponse
+                {
+                    FriendHandle = request.FriendHandle,
+                    ResponseId = request.RequestId,
+                    Success = false
+                });
+                return;
+            }
+            
+            GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
+            GroupConfirmationRequest.JoinType joinType;
+            if (group == null)
+            {
+                joinType = GroupConfirmationRequest.JoinType.InviteToFormGroup;
+                GroupManager.CreateGroup(AccountId);
+                group = GroupManager.GetPlayerGroup(AccountId);
+                log.Info($"{AccountId} created group {group.GroupId}");
+            }
+            else
+            {
+                joinType = group.Members.Count == 1
+                    ? GroupConfirmationRequest.JoinType.InviteToFormGroup
+                    : GroupConfirmationRequest.JoinType.RequestToJoinGroup;
+            }
+
+            PersistedAccountData requester = DB.Get().AccountDao.GetAccount(AccountId);
+            PersistedAccountData leader = DB.Get().AccountDao.GetAccount(group.Leader);
+            LobbyServerProtocol friend = SessionManager.GetClientConnection((long) friendAccountId);
+            friend.Send(new GroupConfirmationRequest
+            {
+                GroupId = group.GroupId,
+                LeaderName = leader.Handle,
+                LeaderFullHandle = leader.Handle,
+                JoinerName = requester.Handle,
+                JoinerAccountId = AccountId,
+                ConfirmationNumber = GroupManager.CreateGroupRequest(AccountId, friend.AccountId, group.GroupId),
+                ExpirationTime = TimeSpan.FromSeconds(20),
+                Type = joinType,
+                // RequestId = TODO
+            });
+            
+            log.Info($"{AccountId}/{requester.Handle} invited {friend.AccountId}/{request.FriendHandle} to group {group.GroupId}");
+            Send(new GroupInviteResponse
+            {
+                FriendHandle = request.FriendHandle,
+                ResponseId = request.RequestId,
+                Success = true
+            });
+        }
+
+        public void HandleGroupConfirmationResponse(GroupConfirmationResponse response)
+        {
+            switch (response.Acceptance)
+            {
+                case GroupInviteResponseType.PlayerRejected:
+                case GroupInviteResponseType.OfferExpired:
+                case GroupInviteResponseType.RequestorSpamming:
+                case GroupInviteResponseType.PlayerInCustomMatch:
+                case GroupInviteResponseType.PlayerStillAwaitingPreviousQuery:
+                    log.Info($"Player {AccountId} rejected request {response.ConfirmationNumber} " +
+                             $"to join group {response.GroupId} by {response.JoinerAccountId}: {response.Acceptance}");
+                    // TODO send message
+                    break;
+                case GroupInviteResponseType.PlayerAccepted:
+                    log.Info($"Player {AccountId} accepted request {response.ConfirmationNumber} " +
+                             $"to join group {response.GroupId} by {response.JoinerAccountId}: {response.Acceptance}");
+                    // TODO validation
+                    GroupManager.JoinGroup(response.GroupId, AccountId);
+                    BroadcastRefreshFriendList(); // TODO update friend status
+                    break;
+            }
+        }
+        
+        public void HandleGroupLeaveRequest(GroupLeaveRequest request)
+        {
+            GroupManager.LeaveGroup(AccountId);
+        }
+
+        public void OnLeaveGroup()
+        {
+            RefreshGroup();
+            IsReady = false;
+        }
+
+        public void OnJoinGroup()
+        {
+            IsReady = false;
         }
     }
 }

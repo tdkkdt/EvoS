@@ -11,12 +11,6 @@ namespace CentralServer.LobbyServer.Group
         public readonly long GroupId;
         public readonly List<long> Members;
         public long Leader { get; private set; }
-        
-        public GameType GameType;
-        public ushort SubTypeMask;
-        public BotDifficulty AllyDifficulty;
-        public BotDifficulty EnemyDifficulty;
-        public long CreateGameTimestamp;
 
         public GroupInfo(long id)
         {
@@ -27,7 +21,7 @@ namespace CentralServer.LobbyServer.Group
 
         public bool IsEmpty()
         {
-            return Members.Count == 0;
+            return Members.Count <= 1;
         }
 
         public bool IsLeader(long accountId)
