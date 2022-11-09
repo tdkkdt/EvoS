@@ -2,7 +2,11 @@
 using EvoS.Framework.Network.Static;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using CentralServer.LobbyServer.Session;
+using EvoS.Framework.Constants.Enums;
+using EvoS.Framework.DataAccess;
 
 namespace CentralServer.LobbyServer.Friend
 {
@@ -20,9 +24,27 @@ namespace CentralServer.LobbyServer.Friend
 
         public static FriendList GetFriendList(long accountId)
         {
-            FriendList friendList = new FriendList()
+            FriendList friendList = new FriendList
             {
-                Friends = new Dictionary<long, FriendInfo>(), // TODO
+                // TODO We are all friends here for now
+                Friends = SessionManager.GetOnlinePlayers()
+                    .Where(id => id != accountId)
+                    .Select(id => DB.Get().AccountDao.GetAccount(id))
+                    .ToDictionary(acc => acc.AccountId,
+                        acc => new FriendInfo()
+                        {
+                            FriendAccountId = acc.AccountId,
+                            FriendHandle = acc.Handle,
+                            FriendStatus = FriendStatus.Friend,
+                            IsOnline = true,
+                            // StatusString = 
+                            // FriendNote = 
+                            BannerID = acc.AccountComponent.SelectedBackgroundBannerID,
+                            EmblemID = acc.AccountComponent.SelectedForegroundBannerID,
+                            TitleID = acc.AccountComponent.SelectedTitleID,
+                            TitleLevel = acc.AccountComponent.TitleLevels.GetValueOrDefault(acc.AccountComponent.SelectedTitleID, 0),
+                            RibbonID = acc.AccountComponent.SelectedRibbonID,
+                        }),
                 IsDelta = false
             };
 

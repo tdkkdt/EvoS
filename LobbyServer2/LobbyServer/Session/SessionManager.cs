@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using EvoS.DirectoryServer.Account;
 using EvoS.Framework.Constants.Enums;
@@ -109,6 +110,11 @@ namespace CentralServer.LobbyServer.Session
         public static long? GetOnlinePlayerByHandle(string handle)
         {
             return ActivePlayers.Values.FirstOrDefault(lspi => lspi.Handle == handle)?.AccountId;
+        }
+
+        public static HashSet<long> GetOnlinePlayers()
+        {
+            return new HashSet<long>(ActivePlayers.Keys);
         }
         
     }

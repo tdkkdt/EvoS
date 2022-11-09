@@ -14,6 +14,7 @@ using EvoS.Framework.Network.Static;
 using log4net;
 using Newtonsoft.Json;
 using WebSocketSharp;
+using WebSocketSharp.Server;
 
 namespace CentralServer.LobbyServer
 {
@@ -60,6 +61,15 @@ namespace CentralServer.LobbyServer
                 log.Info(string.Format(Messages.PlayerDisconnected, this.UserName));
                 SessionManager.OnPlayerDisconnect(this);
             }
+            foreach (IWebSocketSession session in Sessions.Sessions)
+            {
+                ((LobbyServerProtocol)session)?.RefreshFriendList();
+            }
+        }
+
+        public void RefreshFriendList()
+        {
+            Send(FriendManager.GetFriendStatusNotification(AccountId));
         }
 
         public void HandleRegisterGame(RegisterGameClientRequest request)
@@ -94,6 +104,10 @@ namespace CentralServer.LobbyServer
             catch (Exception e)
             {
                 SendErrorResponse(new RegisterGameClientResponse(), request.RequestId, e);
+            }
+            foreach (IWebSocketSession session in Sessions.Sessions)
+            {
+                ((LobbyServerProtocol)session)?.RefreshFriendList();
             }
         }
 
