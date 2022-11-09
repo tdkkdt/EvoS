@@ -15,29 +15,37 @@ namespace CentralServer.LobbyServer.Session
         private static ConcurrentDictionary<long, long> SessionTokenAccountIDCache = new ConcurrentDictionary<long, long>(); // key: SessionToken, value: AccountID
         private static ConcurrentDictionary<long, LobbyServerProtocol> ActiveConnections = new ConcurrentDictionary<long, LobbyServerProtocol>();
         private static ConcurrentDictionary<long, LobbySessionInfo> ActiveSessions = new ConcurrentDictionary<long, LobbySessionInfo>();
-        
+
         public static LobbyServerPlayerInfo OnPlayerConnect(LobbyServerProtocol client, RegisterGameClientRequest clientRequest)
         {
-            long accountId = LoginManager.Login(clientRequest.AuthInfo);
-            PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
+            lock (ActiveSessions)
+            {
+                long accountId = LoginManager.Login(clientRequest.AuthInfo);
+                if (ActiveConnections.ContainsKey(accountId))
+                {
+                    return null;
+                }
+            
+                PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
 
-            client.AccountId = account.AccountId;
-            LobbySessionInfo sessionInfo = clientRequest.SessionInfo;
-            client.SessionToken = sessionInfo.SessionToken;  // we are kinda supposed to validate it
-            client.UserName = account.UserName;
-            client.SelectedGameType = GameType.PvP;
-            client.SelectedSubTypeMask = 0;
+                client.AccountId = account.AccountId;
+                LobbySessionInfo sessionInfo = clientRequest.SessionInfo;
+                client.SessionToken = sessionInfo.SessionToken;  // we are kinda supposed to validate it
+                client.UserName = account.UserName;
+                client.SelectedGameType = GameType.PvP;
+                client.SelectedSubTypeMask = 0;
 
-            sessionInfo.AccountId = account.AccountId;
-            sessionInfo.UserName = account.UserName;
-            sessionInfo.Handle = account.Handle;
+                sessionInfo.AccountId = account.AccountId;
+                sessionInfo.UserName = account.UserName;
+                sessionInfo.Handle = account.Handle;
 
-            LobbyServerPlayerInfo playerInfo = UpdateLobbyServerPlayerInfo(account.AccountId);
-            SessionTokenAccountIDCache.TryAdd(client.SessionToken, playerInfo.AccountId);
-            ActiveConnections.TryAdd(client.AccountId, client);
-            ActiveSessions.TryAdd(client.AccountId, sessionInfo);
+                LobbyServerPlayerInfo playerInfo = UpdateLobbyServerPlayerInfo(account.AccountId);
+                SessionTokenAccountIDCache.TryAdd(client.SessionToken, playerInfo.AccountId);
+                ActiveConnections.TryAdd(client.AccountId, client);
+                ActiveSessions.TryAdd(client.AccountId, sessionInfo);
 
-            return playerInfo;
+                return playerInfo;
+            }
         }
 
         public static LobbyServerPlayerInfo UpdateLobbyServerPlayerInfo(long accountId)
@@ -69,10 +77,13 @@ namespace CentralServer.LobbyServer.Session
 
         public static void OnPlayerDisconnect(LobbyServerProtocol client)
         {
-            ActivePlayers.TryRemove(client.AccountId, out _);
-            SessionTokenAccountIDCache.TryRemove(client.SessionToken, out _);
-            ActiveConnections.TryRemove(client.AccountId, out _);
-            ActiveSessions.TryRemove(client.AccountId, out _);
+            lock (ActiveSessions)
+            {
+                ActivePlayers.TryRemove(client.AccountId, out _);
+                SessionTokenAccountIDCache.TryRemove(client.SessionToken, out _);
+                ActiveConnections.TryRemove(client.AccountId, out _);
+                ActiveSessions.TryRemove(client.AccountId, out _);
+            }
         }
 
         public static LobbyServerPlayerInfo GetPlayerInfo(long accountId)

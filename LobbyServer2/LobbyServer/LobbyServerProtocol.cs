@@ -134,11 +134,13 @@ namespace CentralServer.LobbyServer
                 else
                 {
                     SendErrorResponse(new RegisterGameClientResponse(), request.RequestId, Messages.LoginFailed);
+                    WebSocket.Close();
                 }
             }
             catch (Exception e)
             {
                 SendErrorResponse(new RegisterGameClientResponse(), request.RequestId, e);
+                WebSocket.Close();
             }
             foreach (IWebSocketSession session in Sessions.Sessions)
             {
