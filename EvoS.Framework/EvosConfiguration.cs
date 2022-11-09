@@ -70,6 +70,7 @@ namespace EvoS.Framework
             public string User = "user";
             public string Password = "password";
             public string Database = "atlas";
+            public string Salt = "salt";
         }
     }
 }

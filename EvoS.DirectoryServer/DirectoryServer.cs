@@ -1,10 +1,12 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Threading;
 using EvoS.DirectoryServer.Account;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
+using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using log4net;
@@ -40,6 +42,7 @@ namespace EvoS.DirectoryServer
     public class DirectoryServer
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(DirectoryServer));
+        private static long _nextTmpAccountId = 1;
         
         public void Configure(IApplicationBuilder app)
         {
@@ -52,11 +55,20 @@ namespace EvoS.DirectoryServer
                 MemoryStream ms = new MemoryStream();
                 context.Request.Body.CopyTo(ms);
                 ms.Position = 0;
-                string requestBody = new StreamReader(ms).ReadToEnd(); ;
+                string requestBody = new StreamReader(ms).ReadToEnd();
                 ms.Dispose();
 
                 AssignGameClientRequest request = JsonConvert.DeserializeObject<AssignGameClientRequest>(requestBody);
-                AssignGameClientResponse response = new AssignGameClientResponse
+                log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
+                AssignGameClientResponse response = ProcessRequest(request);
+                log.Debug($"> {response.GetType().Name} {DefaultJsonSerializer.Serialize(response)}");
+                return context.Response.WriteAsync(JsonConvert.SerializeObject(response));
+            });
+        }
+
+        private static AssignGameClientResponse ProcessRequest(AssignGameClientRequest request)
+        {
+            AssignGameClientResponse response = new AssignGameClientResponse
                 {
                     RequestId = request.RequestId,
                     ResponseId = request.ResponseId,
@@ -64,67 +76,94 @@ namespace EvoS.DirectoryServer
                     ErrorMessage = ""
                 };
 
-                PersistedAccountData account;
-                try
+            string username = request.AuthInfo.UserName;
+            string password = request.AuthInfo._Password;
+
+            if (username == null || password == null)
+            {
+                return Fail(request, "No credentials provided");
+            }
+
+            long accountId;
+            try
+            {
+                accountId = LoginManager.RegisterOrLogin(request.AuthInfo);
+            }
+            catch (ArgumentException e)
+            {
+                return Fail(request, e.Message);
+            }
+            catch (ApplicationException e)
+            {
+                return Fail(request, e.Message);
+            }
+
+            PersistedAccountData account;
+            try
+            {
+                account = DB.Get().AccountDao.GetAccount(accountId);
+                if (account == null)
                 {
-                    account = DB.Get().AccountDao.GetAccount(request.AuthInfo.AccountId);
-                    if (account == null)
+                    log.Info($"Player {accountId} does not exist");
+                    DB.Get().AccountDao.CreateAccount(AccountManager.CreateAccount(accountId, username));
+                    account = DB.Get().AccountDao.GetAccount(accountId);
+                    if (account != null)
                     {
-                        log.Info($"Player {request.AuthInfo.AccountId} doesnt exists");
-                        DB.Get().AccountDao.CreateAccount(NewAccount(request));
-                        account = DB.Get().AccountDao.GetAccount(request.AuthInfo.AccountId);
-                        if (account != null)
-                        {
-                            log.Info($"Successfully Registered {account.Handle}/{account.AccountId}");
-                        }
-                        else
-                        {
-                            log.Error($"Error creating a new account for player '{request.AuthInfo.UserName}'/{request.AuthInfo.AccountId}");
-                            account = NewAccount(request);
-                            log.Error($"Temp user {account.Handle}/{account.AccountId}");
-                        }
+                        log.Info($"Successfully Registered {account.Handle}/{account.AccountId}");
                     }
                     else
                     {
-                        log.Info($"Player {account.Handle}/{request.AuthInfo.AccountId} logged in");
+                        log.Error($"Error creating a new account for player '{username}'/{accountId}");
+                        account = AccountManager.CreateAccount(accountId, username);
+                        log.Error($"Temp user {account.Handle}/{account.AccountId}");
                     }
                 }
-                catch (Exception e)
+                else
                 {
-                    account = NewAccount(request);
-                    log.Error($"Temp user {account.Handle}/{account.AccountId}: {e}");
+                    log.Info($"Player {account.Handle}/{account.AccountId} logged in");
                 }
+            }
+            catch (Exception e)
+            {
+                long tmpAccId = Interlocked.Increment(ref _nextTmpAccountId);
+                account = AccountManager.CreateAccount(tmpAccId, "temp_user#" + tmpAccId);
+                log.Error($"Temp user {account.Handle}/{account.AccountId}: {e}");
+            }
 
-                request.SessionInfo.SessionToken = 0;
+            request.SessionInfo.SessionToken = 0;
 
-                response.SessionInfo = request.SessionInfo;
-                response.SessionInfo.AccountId = account.AccountId;
-                response.SessionInfo.Handle = account.UserName;
-                response.SessionInfo.ConnectionAddress = "127.0.0.1";
-                response.SessionInfo.ProcessCode = "";
-                response.SessionInfo.FakeEntitlements = "";
-                response.SessionInfo.LanguageCode = "EN"; // Needs to be uppercase
+            response.SessionInfo = request.SessionInfo;
+            response.SessionInfo.AccountId = account.AccountId;
+            response.SessionInfo.Handle = account.Handle;
+            response.SessionInfo.ConnectionAddress = "127.0.0.1";
+            response.SessionInfo.ProcessCode = "";
+            response.SessionInfo.FakeEntitlements = "";
+            response.SessionInfo.LanguageCode = "EN"; // Needs to be uppercase
 
-                response.LobbyServerAddress = EvosConfiguration.GetLobbyServerAddress();
+            response.LobbyServerAddress = EvosConfiguration.GetLobbyServerAddress();
 
-                LobbyGameClientProxyInfo proxyInfo = new LobbyGameClientProxyInfo
-                {
-                    AccountId = response.SessionInfo.AccountId,
-                    SessionToken = request.SessionInfo.SessionToken,
-                    AssignmentTime = 1565574095,
-                    Handle = request.SessionInfo.Handle,
-                    Status = ClientProxyStatus.Assigned
-                };
+            LobbyGameClientProxyInfo proxyInfo = new LobbyGameClientProxyInfo
+            {
+                AccountId = response.SessionInfo.AccountId,
+                SessionToken = request.SessionInfo.SessionToken,
+                AssignmentTime = 1565574095,
+                Handle = request.SessionInfo.Handle,
+                Status = ClientProxyStatus.Assigned
+            };
 
-                response.ProxyInfo = proxyInfo;
-
-                return context.Response.WriteAsync(JsonConvert.SerializeObject(response));
-            });
+            response.ProxyInfo = proxyInfo;
+            return response;
         }
 
-        private static PersistedAccountData NewAccount(AssignGameClientRequest request)
+        private static AssignGameClientResponse Fail(AssignGameClientRequest request, string reason)
         {
-            return AccountManager.CreateAccount(request);
+            return new AssignGameClientResponse
+            {
+                RequestId = request.RequestId,
+                ResponseId = request.ResponseId,
+                Success = false,
+                ErrorMessage = reason
+            };
         }
     }
 }

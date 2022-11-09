@@ -20,16 +20,15 @@ namespace EvoS.DirectoryServer.Account
         public static GameType DefaultGameType = GameType.PvP;
         
         
-        public static PersistedAccountData CreateAccount(AssignGameClientRequest request)
+        public static PersistedAccountData CreateAccount(long accountId, string username)
         {
-            long accountId = request.AuthInfo.AccountId;
             PersistedAccountData accountData = new PersistedAccountData
             {
                 AccountComponent = GetAccountComponent(accountId),
                 AccountId = accountId,
                 BankComponent = CreateBankComponent(accountId),
                 CharacterData = CharacterManager.GetPersistedCharacterData(accountId),
-                Handle = request.AuthInfo.Handle,
+                Handle = $"{username}#{accountId % 900 + 100}",
                 InventoryComponent = InventoryManager.GetInventoryComponent(accountId),
                 QuestComponent = new QuestComponent()
                 {
@@ -40,7 +39,7 @@ namespace EvoS.DirectoryServer.Account
                     }
                 },
                 SchemaVersion = new SchemaVersion<AccountSchemaChange>(0x1FFFF),
-                UserName = request.AuthInfo.UserName
+                UserName = username
             };
 
             return accountData;

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Linq;
+using EvoS.DirectoryServer.Account;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.NetworkMessages;
@@ -16,7 +17,8 @@ namespace CentralServer.LobbyServer.Session
         
         public static LobbyServerPlayerInfo OnPlayerConnect(LobbyServerProtocol client, RegisterGameClientRequest clientRequest)
         {
-            PersistedAccountData account = DB.Get().AccountDao.GetAccount(clientRequest.AuthInfo.AccountId);
+            long accountId = LoginManager.Login(clientRequest.AuthInfo);
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
 
             client.AccountId = account.AccountId;
             LobbySessionInfo sessionInfo = clientRequest.SessionInfo;

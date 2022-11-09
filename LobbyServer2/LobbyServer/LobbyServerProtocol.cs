@@ -73,7 +73,11 @@ namespace CentralServer.LobbyServer
                     log.Info(string.Format(Messages.LoginSuccess, this.UserName));
                     RegisterGameClientResponse response = new RegisterGameClientResponse
                     {
-                        AuthInfo = request.AuthInfo,
+                        AuthInfo = new AuthInfo()
+                        {
+                            AccountId = AccountId,
+                            Handle = playerInfo.Handle
+                        },
                         SessionInfo = SessionManager.GetSessionInfo(request.AuthInfo.AccountId),
                         ResponseId = request.RequestId
                     };
