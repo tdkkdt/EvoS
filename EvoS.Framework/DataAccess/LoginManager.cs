@@ -97,14 +97,17 @@ namespace EvoS.DirectoryServer.Account
 
         private static string Hash(string password)
         {
-            byte[] bytes = Encoding.UTF8.GetBytes(EvosConfiguration.GetDBConfig().Salt + password);
-            byte[] hashBytes = algorithm.ComputeHash(bytes);
-            StringBuilder sb = new StringBuilder();
-            foreach (byte b in hashBytes)
+            lock (algorithm)
             {
-                sb.Append(b.ToString("X2"));
+                byte[] bytes = Encoding.UTF8.GetBytes(EvosConfiguration.GetDBConfig().Salt + password);
+                byte[] hashBytes = algorithm.ComputeHash(bytes);
+                StringBuilder sb = new StringBuilder();
+                foreach (byte b in hashBytes)
+                {
+                    sb.Append(b.ToString("X2"));
+                }
+                return sb.ToString();
             }
-            return sb.ToString();
         }
         
         
