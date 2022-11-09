@@ -1,13 +1,12 @@
 using System;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using EvoS.Framework;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.DataAccess.Daos;
-using EvoS.Framework.Logging;
 using EvoS.Framework.Network.Static;
 using log4net;
-using ILog = log4net.ILog;
 
 namespace EvoS.DirectoryServer.Account
 {
@@ -15,6 +14,7 @@ namespace EvoS.DirectoryServer.Account
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(LoginManager));
         private static readonly HashAlgorithm algorithm = SHA256.Create();
+        private static readonly Regex re = new Regex(@"^[A-Za-z][A-Za-z_\-0-9]{3,}$");
 
         public static long RegisterOrLogin(AuthInfo authInfo)
         {
@@ -36,6 +36,13 @@ namespace EvoS.DirectoryServer.Account
             }
             else
             {
+                if (!re.IsMatch(authInfo.UserName))
+                {
+                    log.Info($"Attempt to register as \"{authInfo.UserName}\"");
+                    throw new ArgumentException("Invalid username. " + 
+                        "Please use only latin characters, numbers, underscore and dash, and start with a letter. " +
+                        "4 symbols or more.");
+                }
                 long accountId = GenerateAccountId(authInfo.UserName);
                 for (int i = 0; loginDao.Find(accountId) != null; ++i)
                 {
@@ -99,5 +106,7 @@ namespace EvoS.DirectoryServer.Account
             }
             return sb.ToString();
         }
+        
+        
     }
 }
