@@ -8,6 +8,7 @@ using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Store;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
+using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using log4net;
@@ -38,6 +39,7 @@ namespace CentralServer.LobbyServer
             RegisterHandler(new EvosMessageDelegate<LeaveGameRequest>(HandleLeaveGameRequest));
             RegisterHandler(new EvosMessageDelegate<JoinMatchmakingQueueRequest>(HandleJoinMatchmakingQueueRequest));
             RegisterHandler(new EvosMessageDelegate<LeaveMatchmakingQueueRequest>(HandleLeaveMatchmakingQueueRequest));
+            RegisterHandler(new EvosMessageDelegate<ChatNotification>(HandleChatNotification));
 
 
             /*
@@ -297,6 +299,57 @@ namespace CentralServer.LobbyServer
         {
             log.Error("Code not implemented yet for LeaveMatchmakingQueueRequest, must remove from queue");
             Send(new LeaveMatchmakingQueueResponse() { ResponseId = request.RequestId });
+        }
+
+        public void HandleChatNotification(ChatNotification notification)
+        {
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+            ChatNotification message = new ChatNotification
+            {
+                Text = notification.Text,
+                ConsoleMessageType = notification.ConsoleMessageType,
+                CharacterType = account.AccountComponent.LastCharacter, // TODO in-game info
+                DisplayDevTag = false,
+                EmojisAllowed = new List<int>(), // TODO emoji
+                SenderAccountId = AccountId,
+                SenderHandle = account.Handle,
+                SenderTeam = Team.Invalid, // TODO in-game info
+                ResponseId = notification.RequestId
+            };
+            switch (notification.ConsoleMessageType)
+            {
+                case ConsoleMessageType.GlobalChat:
+                    Broadcast(message);
+                    break;
+                case ConsoleMessageType.WhisperChat:
+                    long? accountId = SessionManager.GetOnlinePlayerByHandle(notification.RecipientHandle);
+                    if (accountId.HasValue)
+                    {
+                        SessionManager.GetClientConnection((long)accountId).Send(message);
+                    }
+                    else
+                    {
+                        log.Warn($"{AccountId} {account.Handle} failed to whisper to {notification.RecipientHandle}");
+                    }
+                    break;
+                case ConsoleMessageType.GameChat:
+                case ConsoleMessageType.GroupChat:
+                case ConsoleMessageType.TeamChat:
+                    log.Error($"Console message type {notification.ConsoleMessageType} is not supported yet!");
+                    log.Info(DefaultJsonSerializer.Serialize(notification));
+                    Send(new ChatNotification
+                    {
+                        SenderHandle = "system",
+                        Text = $"Sorry, {notification.ConsoleMessageType} is not supported yet!",
+                        ConsoleMessageType = ConsoleMessageType.WhisperChat,
+                        ResponseId = notification.RequestId
+                    });
+                    break;
+                default:
+                    log.Error($"Console message type {notification.ConsoleMessageType} is not supported yet!");
+                    log.Info(DefaultJsonSerializer.Serialize(notification));
+                    break;
+            }
         }
     }
 }

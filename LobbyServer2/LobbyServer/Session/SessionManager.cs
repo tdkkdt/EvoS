@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Linq;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.NetworkMessages;
@@ -102,5 +103,11 @@ namespace CentralServer.LobbyServer.Session
             ActiveSessions.TryGetValue(accountId, out sessionInfo);
             return sessionInfo;
         }
+
+        public static long? GetOnlinePlayerByHandle(string handle)
+        {
+            return ActivePlayers.Values.FirstOrDefault(lspi => lspi.Handle == handle)?.AccountId;
+        }
+        
     }
 }

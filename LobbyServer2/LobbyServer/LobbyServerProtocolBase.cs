@@ -95,6 +95,15 @@ namespace CentralServer.LobbyServer
             log.Debug($"> {message.GetType().Name} {DefaultJsonSerializer.Serialize(message)}");
         }
 
+        public void Broadcast(WebSocketMessage message)
+        {
+            MemoryStream stream = new MemoryStream();
+            EvosSerializer.Instance.Serialize(stream, message);
+            Sessions.Broadcast(stream.ToArray());
+            log.Debug($">> {message.GetType().Name} {DefaultJsonSerializer.Serialize(message)}");
+        }
+
+
         public void SendErrorResponse(WebSocketResponseMessage response, int requestId, string message)
         {
             response.Success = false;
