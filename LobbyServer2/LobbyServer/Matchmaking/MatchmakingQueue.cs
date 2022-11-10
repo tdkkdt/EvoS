@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Gamemode;
+using CentralServer.LobbyServer.Group;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.Network.Static;
@@ -16,7 +18,7 @@ namespace CentralServer.LobbyServer.Matchmaking
         private static readonly ILog log = LogManager.GetLogger(typeof(MatchmakingQueue));
         
         Dictionary<string, LobbyGameInfo> Games = new Dictionary<string, LobbyGameInfo>();
-        SynchronizedCollection<LobbyServerProtocolBase> Players = new SynchronizedCollection<LobbyServerProtocolBase>();
+        SynchronizedCollection<long> QueuedGroups = new SynchronizedCollection<long>();
         public LobbyMatchmakingQueueInfo MatchmakingQueueInfo;
         GameType GameType => MatchmakingQueueInfo.GameType;
         
@@ -38,59 +40,77 @@ namespace CentralServer.LobbyServer.Matchmaking
             };
         }
 
-        public LobbyMatchmakingQueueInfo AddPlayer(LobbyServerProtocolBase connection)
+        public LobbyMatchmakingQueueInfo AddGroup(long groupId)
         {
-            Players.Add(connection);
-            MatchmakingQueueInfo.QueuedPlayers = Players.Count;
+            QueuedGroups.Add(groupId);
+            MatchmakingQueueInfo.QueuedPlayers = GetPlayerCount();
 
             return MatchmakingQueueInfo;
         }
 
+        public int GetPlayerCount()
+        {
+            return QueuedGroups
+                .Select(GroupManager.GetGroup)
+                .Sum(group => group?.Members.Count ?? 0);
+        }
+
         public void Update()
         {
-            RemoveDisconnectedPlayers();
-            log.Info($"{Players.Count} players in {GameType} queue");
+            log.Info($"{GetPlayerCount()} players in {GameType} queue");
 
             foreach (GameSubType subType in MatchmakingQueueInfo.GameConfig.SubTypes)
             {
-                int FullGamePlayers = subType.TeamAPlayers + subType.TeamBPlayers;
-                if (Players.Count >= FullGamePlayers)
+                // full greed for now
+                lock (GroupManager.Lock)
                 {
-                    if (!CheckGameServerAvailable())
+                    List<GroupInfo> groups = QueuedGroups
+                        .Select(GroupManager.GetGroup)
+                        .Where(group => group != null)
+                        .ToList();
+                    List<GroupInfo> teamA = new List<GroupInfo>();
+                    List<GroupInfo> teamB = new List<GroupInfo>();
+                    int teamANum = 0;
+                    int teamBNum = 0;
+                    foreach (GroupInfo group in groups)
                     {
-                        log.Warn("No available game server to start a match");
-                        return;
+                        if (teamANum + group.Members.Count <= subType.TeamAPlayers)
+                        {
+                            teamANum += group.Members.Count;
+                            teamA.Add(group);
+                        }
+                        else if (teamBNum + group.Members.Count <= subType.TeamBPlayers)
+                        {
+                            teamBNum += group.Members.Count;
+                            teamB.Add(group);
+                        }
+                        if (teamANum == subType.TeamAPlayers && teamBNum == subType.TeamBPlayers)
+                        {
+                            break;
+                        }
                     }
 
-                    List<LobbyServerProtocolBase> clients = new List<LobbyServerProtocolBase>();
-                    for (int i = 0; i < FullGamePlayers; i++)
+                    if (teamANum == subType.TeamAPlayers && teamBNum == subType.TeamBPlayers)
                     {
-                        LobbyServerProtocolBase client = Players[i];
-                        clients.Add(client);
+                        if (!CheckGameServerAvailable())
+                        {
+                            log.Warn("No available game server to start a match");
+                            return;
+                        }
+                        foreach (GroupInfo group in teamA)
+                        {
+                            QueuedGroups.Remove(group.GroupId);
+                        }
+                        foreach (GroupInfo group in teamB)
+                        {
+                            QueuedGroups.Remove(group.GroupId);
+                        }
+                        MatchmakingManager.StartGame(
+                            teamA.SelectMany(group => group.Members).ToList(), 
+                            teamB.SelectMany(group => group.Members).ToList(), 
+                            GameType);
                     }
-                    MatchmakingManager.StartGame(clients, GameType);
                 }
-            }
-        }
-
-        public void RemoveDisconnectedPlayers()
-        {
-            for (int i = 0; i < Players.Count; i++)
-            {
-                LobbyServerProtocolBase connection = Players[i];
-                if (connection.State != WebSocketState.Open)
-                {
-                    log.Info($"Removing disconnected player {connection.AccountId} from {GameType} queue");
-                    Players.RemoveAt(i--);
-                }
-            }
-        }
-
-        public void RemovePlayers(List<LobbyServerProtocolBase> playerList)
-        {
-            foreach (LobbyServerProtocolBase player in playerList)
-            {
-                Players.Remove(player);
             }
         }
 

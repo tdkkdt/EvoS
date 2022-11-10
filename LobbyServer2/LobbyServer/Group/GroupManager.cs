@@ -4,6 +4,7 @@ using System.Linq;
 using CentralServer.LobbyServer.Session;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.Static;
+using EvoS.Framework.Network.WebSocket;
 using log4net;
 
 namespace CentralServer.LobbyServer.Group
@@ -19,6 +20,13 @@ namespace CentralServer.LobbyServer.Group
         private static long _nextGroupRequestId = 0;
         private static readonly object _lock = new object();
 
+        public static object Lock => _lock;
+        
+        public static GroupInfo GetGroup(long groupId)
+        {
+            return ActiveGroups.GetValueOrDefault(groupId);
+        }
+        
         public static GroupInfo GetPlayerGroup(long accountId)
         {
             lock (_lock)
@@ -86,6 +94,7 @@ namespace CentralServer.LobbyServer.Group
             {
                 OnLeaveGroup(accountId);
                 BroadcastUpdate(leftGroup);
+                // TODO cancel readiness / remove from queue
             }
         }
 
@@ -112,6 +121,7 @@ namespace CentralServer.LobbyServer.Group
             {
                 OnJoinGroup(accountId);
                 BroadcastUpdate(joinedGroup);
+                // TODO cancel readiness / remove from queue
             }
         }
 
@@ -200,6 +210,14 @@ namespace CentralServer.LobbyServer.Group
         private static void BroadcastUpdate(GroupInfo groupInfo)
         {
             SessionManager.GetClientConnection(groupInfo.Leader)?.BroadcastRefreshGroup();
+        }
+
+        public static void Broadcast(GroupInfo group, WebSocketMessage message)
+        {
+            foreach (long groupMember in group.Members)
+            {
+                SessionManager.GetClientConnection(groupMember)?.Send(message);
+            }
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Character;
 using CentralServer.LobbyServer.Gamemode;
+using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Session;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.Misc;
@@ -45,18 +46,18 @@ namespace CentralServer.LobbyServer.Matchmaking
         /// <summary>
         /// Adds a player to a queue
         /// </summary>
-        /// <param name="gameType">player's selected gamemode</param>
-        /// <param name="client">client</param>
-        public static void AddToQueue(GameType gameType, LobbyServerProtocolBase client)
+        /// <param name="gameType">selected gamemode</param>
+        /// <param name="group">group</param>
+        public static void AddGroupToQueue(GameType gameType, GroupInfo group)
         {
             // Get the queue
             MatchmakingQueue queue = Queues[gameType];
 
             // Add player to the queue
-            LobbyMatchmakingQueueInfo info = queue.AddPlayer(client);
+            LobbyMatchmakingQueueInfo info = queue.AddGroup(group.GroupId);
 
-            // Send 'Assigned to queue notification' to the player
-            client.Send(new MatchmakingQueueAssignmentNotification() { MatchmakingQueueInfo = info });
+            // Send 'Assigned to queue notification' to the players
+            GroupManager.Broadcast(group, new MatchmakingQueueAssignmentNotification() { MatchmakingQueueInfo = info });
 
             // Update the queue
             queue.Update();
@@ -140,7 +141,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             }
         }
 
-        public static void StartGame(List<LobbyServerProtocolBase> clients, GameType gameType)
+        public static void StartGame(List<long> teamA, List<long> teamB, GameType gameType)
         {
             log.Info($"Starting {gameType} game...");
             MatchmakingQueueConfig queueConfig = new MatchmakingQueueConfig();
@@ -148,11 +149,17 @@ namespace CentralServer.LobbyServer.Matchmaking
             MatchmakingQueue lobbyQueue = Queues[gameType];
             GameSubType subType = lobbyQueue.MatchmakingQueueInfo.GameConfig.SubTypes[0];
             LobbyServerTeamInfo teamInfo = new LobbyServerTeamInfo { TeamPlayerInfo = new List<LobbyServerPlayerInfo>() };
-
+            List<LobbyServerProtocolBase> clients = new List<LobbyServerProtocolBase>();
             // Fill team A
-            for (int i = 0; i < subType.TeamAPlayers; i++)
+            foreach (long accountId in teamA)
             {
-                LobbyServerProtocolBase client = clients[i];
+                LobbyServerProtocolBase client = SessionManager.GetClientConnection(accountId);
+                if (client == null)
+                {
+                    log.Error($"Tried to add {accountId} to a game but they are not connected!");
+                    continue;
+                }
+                clients.Add(client);
                 LobbyServerPlayerInfo playerInfo = SessionManager.GetPlayerInfo(client.AccountId);
                 playerInfo.TeamId = Team.TeamA;
                 playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
@@ -161,9 +168,15 @@ namespace CentralServer.LobbyServer.Matchmaking
             }
 
             // Fill team B
-            for (int i = 0; i < subType.TeamBPlayers; i++)
+            foreach (long accountId in teamB)
             {
-                LobbyServerProtocolBase client = clients[subType.TeamAPlayers + i];
+                LobbyServerProtocolBase client = SessionManager.GetClientConnection(accountId);
+                if (client == null)
+                {
+                    log.Error($"Tried to add {accountId} to a game but they are not connected!");
+                    continue;
+                }
+                clients.Add(client);
                 LobbyServerPlayerInfo playerInfo = SessionManager.GetPlayerInfo(client.AccountId);
                 playerInfo.TeamId = Team.TeamB;
                 playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
@@ -205,7 +218,6 @@ namespace CentralServer.LobbyServer.Matchmaking
             }
             else
             {
-                lobbyQueue.RemovePlayers(clients);
                 server.clients = clients;
                 gameInfo.GameServerAddress = server.URI;
                 gameInfo.GameServerProcessCode = server.ProcessCode;

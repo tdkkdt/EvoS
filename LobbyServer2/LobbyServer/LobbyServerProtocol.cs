@@ -83,6 +83,37 @@ namespace CentralServer.LobbyServer
             Send(FriendManager.GetFriendStatusNotification(AccountId));
         }
 
+        public void UpdateGroupReadyState()
+        {
+            GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
+            if (group == null)
+            {
+                log.Error($"Attempted to update group ready state of {AccountId} who is not in a group");
+                return;
+            }
+            LobbyServerProtocol leader = null;
+            bool allAreReady = true;
+            foreach (long groupMember in group.Members)
+            {
+                LobbyServerProtocol conn = SessionManager.GetClientConnection(groupMember);
+                allAreReady &= conn?.IsReady ?? false;
+                if (group.IsLeader(groupMember))
+                {
+                    leader = conn;
+                }
+            }
+
+            if (allAreReady)
+            {
+                if (leader == null)
+                {
+                    log.Error($"Attempted to update group {group.GroupId} ready state with not connected leader {group.Leader}");
+                    return;
+                }
+                MatchmakingManager.AddGroupToQueue(leader.SelectedGameType, group);
+            }
+        }
+
         public void BroadcastRefreshGroup()
         {
             GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
@@ -347,19 +378,33 @@ namespace CentralServer.LobbyServer
             }
             else
             {
+                UpdateGroupReadyState();
                 BroadcastRefreshGroup();
             }
         }
         
         public void HandleJoinMatchmakingQueueRequest(JoinMatchmakingQueueRequest request)
         {
-            log.Info($"{this.UserName} joined {request.GameType} queue ");
+            try
+            {
+                // TODO isn't it just for solos?
+                GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
+                if (group.IsLeader(AccountId))
+                {
+                    log.Warn($"{UserName} attempted to join {request.GameType} queue " +
+                             $"while not being the leader of their group");
+                    Send(new JoinMatchmakingQueueResponse { Success = false, ResponseId = request.RequestId });
+                    return;
+                }
 
-            // Send response to the calling request
-            Send(new JoinMatchmakingQueueResponse { LocalizedFailure = null, ResponseId = request.RequestId });
-
-            // Add player to the selected queue
-            MatchmakingManager.AddToQueue(request.GameType, this);
+                MatchmakingManager.AddGroupToQueue(request.GameType, group);
+                Send(new JoinMatchmakingQueueResponse { Success = true, ResponseId = request.RequestId });
+            }
+            catch (Exception e)
+            {
+                Send(new JoinMatchmakingQueueResponse { Success = false, ResponseId = request.RequestId });
+                log.Error("Failed to process join queue request", e);
+            }
         }
 
         public void HandleLeaveMatchmakingQueueRequest(LeaveMatchmakingQueueRequest request)
