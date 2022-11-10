@@ -21,7 +21,12 @@ namespace CentralServer.LobbyServer.Group
 
         public bool IsEmpty()
         {
-            return Members.Count <= 1;
+            return Members.Count == 0;
+        }
+
+        public bool IsSolo()
+        {
+            return Members.Count == 1;
         }
 
         public bool IsLeader(long accountId)

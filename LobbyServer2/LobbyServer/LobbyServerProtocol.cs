@@ -126,9 +126,8 @@ namespace CentralServer.LobbyServer
                         SessionInfo = SessionManager.GetSessionInfo(request.AuthInfo.AccountId),
                         ResponseId = request.RequestId
                     };
-
+                    GroupManager.CreateGroup(AccountId);
                     Send(response);
-
                     SendLobbyServerReadyNotification();
                 }
                 else
@@ -142,10 +141,7 @@ namespace CentralServer.LobbyServer
                 SendErrorResponse(new RegisterGameClientResponse(), request.RequestId, e);
                 WebSocket.Close();
             }
-            foreach (IWebSocketSession session in Sessions.Sessions)
-            {
-                ((LobbyServerProtocol)session)?.RefreshFriendList();
-            }
+            BroadcastRefreshFriendList();
         }
 
         public void HandleOptionsNotification(OptionsNotification notification)
@@ -449,7 +445,7 @@ namespace CentralServer.LobbyServer
             }
             else
             {
-                joinType = group.Members.Count == 1
+                joinType = group.IsSolo()
                     ? GroupConfirmationRequest.JoinType.InviteToFormGroup
                     : GroupConfirmationRequest.JoinType.RequestToJoinGroup;
             }

@@ -71,7 +71,6 @@ namespace CentralServer.LobbyServer.Group
                     log.Info($"Removed {accountId} from group {groupId}");
                     if (groupInfo.IsEmpty())
                     {
-                        PlayerToGroup.Remove(groupInfo.Leader);
                         ActiveGroups.Remove(groupId);
                         log.Info($"Group {groupId} disbanded");
                     }
@@ -160,7 +159,7 @@ namespace CentralServer.LobbyServer.Group
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
             LobbyServerProtocol client = SessionManager.GetClientConnection(accountId);
             LobbyPlayerGroupInfo response;
-            if (groupInfo == null)
+            if (groupInfo == null || groupInfo.IsSolo())
             {
                 response = new LobbyPlayerGroupInfo
                 {
