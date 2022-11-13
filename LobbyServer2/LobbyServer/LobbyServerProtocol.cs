@@ -112,6 +112,10 @@ namespace CentralServer.LobbyServer
                 }
                 MatchmakingManager.AddGroupToQueue(leader.SelectedGameType, group);
             }
+            else
+            {
+                MatchmakingManager.RemoveGroupFromQueue(group);
+            }
         }
 
         public void BroadcastRefreshGroup()
@@ -389,7 +393,7 @@ namespace CentralServer.LobbyServer
             {
                 // TODO isn't it just for solos?
                 GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
-                if (group.IsLeader(AccountId))
+                if (!group.IsLeader(AccountId))
                 {
                     log.Warn($"{UserName} attempted to join {request.GameType} queue " +
                              $"while not being the leader of their group");
@@ -545,7 +549,7 @@ namespace CentralServer.LobbyServer
         
         public void HandleGroupLeaveRequest(GroupLeaveRequest request)
         {
-            GroupManager.LeaveGroup(AccountId);
+            GroupManager.CreateGroup(AccountId);
         }
 
         public void OnLeaveGroup()

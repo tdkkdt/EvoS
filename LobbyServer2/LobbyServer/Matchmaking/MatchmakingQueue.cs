@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -18,7 +19,7 @@ namespace CentralServer.LobbyServer.Matchmaking
         private static readonly ILog log = LogManager.GetLogger(typeof(MatchmakingQueue));
         
         Dictionary<string, LobbyGameInfo> Games = new Dictionary<string, LobbyGameInfo>();
-        SynchronizedCollection<long> QueuedGroups = new SynchronizedCollection<long>();
+        ConcurrentDictionary<long, byte> QueuedGroups = new ConcurrentDictionary<long, byte>();
         public LobbyMatchmakingQueueInfo MatchmakingQueueInfo;
         GameType GameType => MatchmakingQueueInfo.GameType;
         
@@ -42,15 +43,20 @@ namespace CentralServer.LobbyServer.Matchmaking
 
         public LobbyMatchmakingQueueInfo AddGroup(long groupId)
         {
-            QueuedGroups.Add(groupId);
+            QueuedGroups.TryAdd(groupId, 0);
             MatchmakingQueueInfo.QueuedPlayers = GetPlayerCount();
 
             return MatchmakingQueueInfo;
         }
 
+        public bool RemoveGroup(long groupId)
+        {
+            return QueuedGroups.TryRemove(groupId, out _);
+        }
+
         public int GetPlayerCount()
         {
-            return QueuedGroups
+            return QueuedGroups.Keys
                 .Select(GroupManager.GetGroup)
                 .Sum(group => group?.Members.Count ?? 0);
         }
@@ -64,7 +70,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 // full greed for now
                 lock (GroupManager.Lock)
                 {
-                    List<GroupInfo> groups = QueuedGroups
+                    List<GroupInfo> groups = QueuedGroups.Keys
                         .Select(GroupManager.GetGroup)
                         .Where(group => group != null)
                         .ToList();
@@ -99,11 +105,11 @@ namespace CentralServer.LobbyServer.Matchmaking
                         }
                         foreach (GroupInfo group in teamA)
                         {
-                            QueuedGroups.Remove(group.GroupId);
+                            RemoveGroup(group.GroupId);
                         }
                         foreach (GroupInfo group in teamB)
                         {
-                            QueuedGroups.Remove(group.GroupId);
+                            RemoveGroup(group.GroupId);
                         }
                         MatchmakingManager.StartGame(
                             teamA.SelectMany(group => group.Members).ToList(), 

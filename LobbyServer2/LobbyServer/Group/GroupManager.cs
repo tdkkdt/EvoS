@@ -175,8 +175,8 @@ namespace CentralServer.LobbyServer.Group
                 {
                     SelectedQueueType = client.SelectedGameType,
                     MemberDisplayName = account.Handle,
-                    InAGroup = false,
-                    IsLeader = true,
+                    // InAGroup = false,
+                    // IsLeader = true,
                     Members = new List<UpdateGroupMemberData>(),
                 };
             }

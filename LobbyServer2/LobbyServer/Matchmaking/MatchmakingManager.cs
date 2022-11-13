@@ -63,6 +63,19 @@ namespace CentralServer.LobbyServer.Matchmaking
             queue.Update();
         }
 
+        public static void RemoveGroupFromQueue(GroupInfo group)
+        {
+            bool removed = false;
+            foreach (MatchmakingQueue queue in Queues.Values)
+            {
+                removed |= queue.RemoveGroup(group.GroupId);
+            }
+            if (!removed)
+            {
+                log.Warn($"Attempted to remove group {group.GroupId} by {group.Leader} from the queue but failed");
+            }
+        }
+
         public static void StartPractice(LobbyServerProtocolBase client)
         {
             MatchmakingQueueConfig queueConfig = new MatchmakingQueueConfig();
