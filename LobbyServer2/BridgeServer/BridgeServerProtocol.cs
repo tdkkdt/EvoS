@@ -23,7 +23,7 @@ namespace CentralServer.BridgeServer
         public int Port;
         private LobbyGameInfo GameInfo;
         private LobbyServerTeamInfo TeamInfo;
-        public List<LobbyServerProtocolBase> clients = new List<LobbyServerProtocolBase>();
+        public List<LobbyServerProtocol> clients = new List<LobbyServerProtocol>();
         public string URI => "ws://" + Address + ":" + Port;
         public GameStatus GameStatus { get; private set; } = GameStatus.Stopped;
         public string ProcessCode { get; } = "Artemis" + DateTime.Now.Ticks;

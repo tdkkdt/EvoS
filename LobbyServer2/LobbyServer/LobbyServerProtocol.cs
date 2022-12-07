@@ -391,7 +391,6 @@ namespace CentralServer.LobbyServer
         {
             try
             {
-                // TODO isn't it just for solos?
                 GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
                 if (!group.IsLeader(AccountId))
                 {
@@ -401,8 +400,8 @@ namespace CentralServer.LobbyServer
                     return;
                 }
 
-                MatchmakingManager.AddGroupToQueue(request.GameType, group);
                 Send(new JoinMatchmakingQueueResponse { Success = true, ResponseId = request.RequestId });
+                MatchmakingManager.AddGroupToQueue(request.GameType, group);
             }
             catch (Exception e)
             {
@@ -559,6 +558,11 @@ namespace CentralServer.LobbyServer
         }
 
         public void OnJoinGroup()
+        {
+            IsReady = false;
+        }
+
+        public void OnStartGame()
         {
             IsReady = false;
         }

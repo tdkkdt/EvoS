@@ -162,11 +162,11 @@ namespace CentralServer.LobbyServer.Matchmaking
             MatchmakingQueue lobbyQueue = Queues[gameType];
             GameSubType subType = lobbyQueue.MatchmakingQueueInfo.GameConfig.SubTypes[0];
             LobbyServerTeamInfo teamInfo = new LobbyServerTeamInfo { TeamPlayerInfo = new List<LobbyServerPlayerInfo>() };
-            List<LobbyServerProtocolBase> clients = new List<LobbyServerProtocolBase>();
+            List<LobbyServerProtocol> clients = new List<LobbyServerProtocol>();
             // Fill team A
             foreach (long accountId in teamA)
             {
-                LobbyServerProtocolBase client = SessionManager.GetClientConnection(accountId);
+                LobbyServerProtocol client = SessionManager.GetClientConnection(accountId);
                 if (client == null)
                 {
                     log.Error($"Tried to add {accountId} to a game but they are not connected!");
@@ -183,7 +183,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             // Fill team B
             foreach (long accountId in teamB)
             {
-                LobbyServerProtocolBase client = SessionManager.GetClientConnection(accountId);
+                LobbyServerProtocol client = SessionManager.GetClientConnection(accountId);
                 if (client == null)
                 {
                     log.Error($"Tried to add {accountId} to a game but they are not connected!");
@@ -267,6 +267,8 @@ namespace CentralServer.LobbyServer.Matchmaking
 
                     client.Send(notification);
                 }
+
+                clients.ForEach(c => c.OnStartGame());
 
                 log.Info($"Game {gameType} started");
             }
