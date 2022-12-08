@@ -45,13 +45,21 @@ namespace CentralServer.LobbyServer.Matchmaking
         {
             QueuedGroups.TryAdd(groupId, 0);
             MatchmakingQueueInfo.QueuedPlayers = GetPlayerCount();
+            log.Info($"Added group {groupId} to {GameType} queue");
+            log.Info($"{GetPlayerCount()} players in {GameType} queue ({QueuedGroups.Count} groups)");
 
             return MatchmakingQueueInfo;
         }
 
         public bool RemoveGroup(long groupId)
         {
-            return QueuedGroups.TryRemove(groupId, out _);
+            bool removed = QueuedGroups.TryRemove(groupId, out _);
+            if (removed)
+            {
+                log.Info($"Removed group {groupId} from {GameType} queue");
+                log.Info($"{GetPlayerCount()} players in {GameType} queue ({QueuedGroups.Count} groups)");
+            }
+            return removed;
         }
 
         public int GetPlayerCount()
@@ -63,7 +71,7 @@ namespace CentralServer.LobbyServer.Matchmaking
 
         public void Update()
         {
-            log.Info($"{GetPlayerCount()} players in {GameType} queue");
+            log.Info($"{GetPlayerCount()} players in {GameType} queue ({QueuedGroups.Count} groups)");
 
             foreach (GameSubType subType in MatchmakingQueueInfo.GameConfig.SubTypes)
             {
@@ -135,15 +143,13 @@ namespace CentralServer.LobbyServer.Matchmaking
                 {
                     process.StartInfo = new ProcessStartInfo(gameServer, EvosConfiguration.GetGameServerExecutableArgs());
                     process.Start();
-
-                    return true;
                 }
                 catch(Exception e)
                 {
                     log.Error("Failed to start a game server", e);
-                    return false;
                 }   
             }
+            return false;
         }
 
         public LobbyGameInfo CreateGameInfo()

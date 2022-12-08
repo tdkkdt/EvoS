@@ -401,6 +401,7 @@ namespace CentralServer.LobbyServer
                 }
 
                 Send(new JoinMatchmakingQueueResponse { Success = true, ResponseId = request.RequestId });
+                IsReady = true;
                 MatchmakingManager.AddGroupToQueue(request.GameType, group);
             }
             catch (Exception e)
@@ -412,8 +413,26 @@ namespace CentralServer.LobbyServer
 
         public void HandleLeaveMatchmakingQueueRequest(LeaveMatchmakingQueueRequest request)
         {
-            log.Error("Code not implemented yet for LeaveMatchmakingQueueRequest, must remove from queue");
-            Send(new LeaveMatchmakingQueueResponse() { ResponseId = request.RequestId });
+            try
+            {
+                GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
+                if (!group.IsLeader(AccountId))
+                {
+                    log.Warn($"{UserName} attempted to leave queue " +
+                             $"while not being the leader of their group");
+                    Send(new LeaveMatchmakingQueueResponse { Success = false, ResponseId = request.RequestId });
+                    return;
+                }
+
+                Send(new LeaveMatchmakingQueueResponse { Success = true, ResponseId = request.RequestId });
+                IsReady = false;
+                MatchmakingManager.RemoveGroupFromQueue(group);
+            }
+            catch (Exception e)
+            {
+                Send(new LeaveMatchmakingQueueResponse { Success = false, ResponseId = request.RequestId });
+                log.Error("Failed to process join queue request", e);
+            }
         }
 
         public void HandleChatNotification(ChatNotification notification)
