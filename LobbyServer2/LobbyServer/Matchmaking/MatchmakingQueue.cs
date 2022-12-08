@@ -133,7 +133,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             {
                 try
                 {
-                    process.StartInfo = new ProcessStartInfo(gameServer);
+                    process.StartInfo = new ProcessStartInfo(gameServer, EvosConfiguration.GetGameServerExecutableArgs());
                     process.Start();
 
                     return true;
