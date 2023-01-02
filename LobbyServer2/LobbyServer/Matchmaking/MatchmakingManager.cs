@@ -154,7 +154,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             }
         }
 
-        public static void StartGame(List<long> teamA, List<long> teamB, GameType gameType)
+        public static void StartGame(List<long> teamA, List<long> teamB, GameType gameType, GameSubType gameSubType)
         {
             log.Info($"Starting {gameType} game...");
             MatchmakingQueueConfig queueConfig = new MatchmakingQueueConfig();
@@ -211,7 +211,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                     GameType = gameType,
                     InstanceSubTypeBit = 1,
                     IsActive = true,
-                    Map = Maps.Skyway_Deathmatch,
+                    Map = MatchmakingQueue.SelectMap(gameSubType),
                     ResolveTimeoutLimit = 1600, // TODO ?
                     RoomName = "",
                     Spectators = 0,
