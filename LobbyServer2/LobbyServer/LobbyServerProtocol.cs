@@ -447,25 +447,42 @@ namespace CentralServer.LobbyServer
             {
                 SenderAccountId = AccountId,
                 SenderHandle = account.Handle,
-                SenderTeam = Team.Invalid, // TODO in-game info
-                RecipientHandle = notification.RecipientHandle,
                 ResponseId = notification.RequestId,
-                CharacterType = account.AccountComponent.LastCharacter, // TODO in-game info
+                CharacterType = account.AccountComponent.LastCharacter,
                 ConsoleMessageType = notification.ConsoleMessageType,
                 Text = notification.Text,
                 EmojisAllowed = new List<int>(), // TODO emoji
                 DisplayDevTag = false,
             };
+
+            LobbyServerPlayerInfo lobbyServerPlayerInfo = null;
+            if (CurrentServer != null)
+            {
+                lobbyServerPlayerInfo = CurrentServer.GetServerPlayerInfo(AccountId);
+                if (lobbyServerPlayerInfo != null)
+                {
+                    message.SenderTeam = lobbyServerPlayerInfo.TeamId;
+                }
+                else
+                {
+                    log.Error($"{AccountId} {account.Handle} attempted to use {notification.ConsoleMessageType} but they are not in the game they are supposed to be in");
+                }
+            }
+            
             switch (notification.ConsoleMessageType)
             {
                 case ConsoleMessageType.GlobalChat:
+                {
                     Broadcast(message);
                     break;
+                }
                 case ConsoleMessageType.WhisperChat:
-                    long? accountId = SessionManager.GetOnlinePlayerByHandle(message.RecipientHandle);
+                {
+                    long? accountId = SessionManager.GetOnlinePlayerByHandle(notification.RecipientHandle);
                     if (accountId.HasValue)
                     {
-                        SessionManager.GetClientConnection((long)accountId).Send(message);
+                        message.RecipientHandle = notification.RecipientHandle;
+                        SessionManager.GetClientConnection((long)accountId)?.Send(message);
                         Send(message);
                     }
                     else
@@ -473,23 +490,58 @@ namespace CentralServer.LobbyServer
                         log.Warn($"{AccountId} {account.Handle} failed to whisper to {notification.RecipientHandle}");
                     }
                     break;
+                }
                 case ConsoleMessageType.GameChat:
-                case ConsoleMessageType.GroupChat:
-                case ConsoleMessageType.TeamChat:
-                    log.Error($"Console message type {notification.ConsoleMessageType} is not supported yet!");
-                    log.Info(DefaultJsonSerializer.Serialize(notification));
-                    Send(new ChatNotification
+                {
+                    if (CurrentServer == null)
                     {
-                        SenderHandle = "system",
-                        Text = $"Sorry, {notification.ConsoleMessageType} is not supported yet!",
-                        ConsoleMessageType = ConsoleMessageType.WhisperChat,
-                        ResponseId = notification.RequestId
-                    });
+                        log.Warn($"{AccountId} {account.Handle} attempted to use {notification.ConsoleMessageType} while not in game");
+                        break;
+                    }
+                    foreach (long accountId in CurrentServer.GetPlayers())
+                    {
+                        SessionManager.GetClientConnection(accountId)?.Send(message);
+                    }
                     break;
+                }
+                case ConsoleMessageType.GroupChat:
+                {
+                    LobbyPlayerGroupInfo group = GroupManager.GetGroupInfo(AccountId);
+                    if (CurrentServer == null)
+                    {
+                        log.Error($"{AccountId} {account.Handle} attempted to use {notification.ConsoleMessageType} while not in a group");
+                        break;
+                    }
+                    foreach (UpdateGroupMemberData member in group.Members)
+                    {
+                        SessionManager.GetClientConnection(member.AccountID)?.Send(message);
+                    }
+                    break;
+                }
+                case ConsoleMessageType.TeamChat:
+                {
+                    if (CurrentServer == null)
+                    {
+                        log.Warn($"{AccountId} {account.Handle} attempted to use {notification.ConsoleMessageType} while not in game");
+                        break;
+                    }
+                    if (lobbyServerPlayerInfo == null)
+                    {
+                        log.Error($"{AccountId} {account.Handle} attempted to use {notification.ConsoleMessageType} but they are not in the game they are supposed to be in");
+                        break;
+                    }
+                    foreach (long teammateAccountId in CurrentServer.GetPlayers(lobbyServerPlayerInfo.TeamId))
+                    {
+                        SessionManager.GetClientConnection(teammateAccountId)?.Send(message);
+                    }
+                    break;
+                }
                 default:
+                {
                     log.Error($"Console message type {notification.ConsoleMessageType} is not supported yet!");
                     log.Info(DefaultJsonSerializer.Serialize(notification));
                     break;
+                }
             }
         }
         

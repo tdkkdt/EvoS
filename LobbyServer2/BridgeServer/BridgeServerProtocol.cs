@@ -28,6 +28,21 @@ namespace CentralServer.BridgeServer
         public GameStatus GameStatus { get; private set; } = GameStatus.Stopped;
         public string ProcessCode { get; } = "Artemis" + DateTime.Now.Ticks;
 
+        public LobbyServerPlayerInfo GetServerPlayerInfo(long accountId)
+        {
+            return TeamInfo.TeamPlayerInfo.Find(p => p.AccountId == accountId);
+        }
+
+        public IEnumerable<long> GetPlayers(Team team)
+        {
+            return from p in TeamInfo.TeamInfo(team) select p.AccountId;
+        }
+
+        public IEnumerable<long> GetPlayers()
+        {
+            return from p in TeamInfo.TeamPlayerInfo select p.AccountId;
+        }
+
         public static readonly List<Type> BridgeMessageTypes = new List<Type>
         {
             typeof(RegisterGameServerRequest),
