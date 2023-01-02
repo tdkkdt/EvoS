@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace CentralServer.LobbyServer.Config
+﻿namespace CentralServer.LobbyServer.Config
 {
     static class ConfigManager
     {
@@ -11,16 +7,9 @@ namespace CentralServer.LobbyServer.Config
 
         public static string PatchNotesHeader = "Evos Emulator v0.1";
         public static string PatchNotesDescription = "The resurrection";
-        public static string PatchNotesText = "" +
-            "- Queue: only practice for the moment\n" +
-            "- <b>Groups</b>: not <color=#ff0000>implemented</color> yet\n" +
-            "- Friends: not <size=72>implemented</size> yet\n" +
-            "- Game Server: work in progress\n" +
-            "- Inventory: not implemented yet\n" +
-            "- Collection Store: not implemented yet \n" +
-            "";
+        public static string PatchNotesText = "";
 
-        public static bool GameTypePracticeAvailable = true;
+        public static bool GameTypePracticeAvailable = false;
         public static bool GameTypeCoopAvailable = false;
         public static bool GameTypePvPAvailable = true;
         public static bool GameTypeRankedAvailable = false;
