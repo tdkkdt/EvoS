@@ -445,15 +445,16 @@ namespace CentralServer.LobbyServer
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
             ChatNotification message = new ChatNotification
             {
-                Text = notification.Text,
-                ConsoleMessageType = notification.ConsoleMessageType,
-                CharacterType = account.AccountComponent.LastCharacter, // TODO in-game info
-                DisplayDevTag = false,
-                EmojisAllowed = new List<int>(), // TODO emoji
                 SenderAccountId = AccountId,
                 SenderHandle = account.Handle,
                 SenderTeam = Team.Invalid, // TODO in-game info
-                ResponseId = notification.RequestId
+                RecipientHandle = notification.RecipientHandle,
+                ResponseId = notification.RequestId,
+                CharacterType = account.AccountComponent.LastCharacter, // TODO in-game info
+                ConsoleMessageType = notification.ConsoleMessageType,
+                Text = notification.Text,
+                EmojisAllowed = new List<int>(), // TODO emoji
+                DisplayDevTag = false,
             };
             switch (notification.ConsoleMessageType)
             {
@@ -461,10 +462,11 @@ namespace CentralServer.LobbyServer
                     Broadcast(message);
                     break;
                 case ConsoleMessageType.WhisperChat:
-                    long? accountId = SessionManager.GetOnlinePlayerByHandle(notification.RecipientHandle);
+                    long? accountId = SessionManager.GetOnlinePlayerByHandle(message.RecipientHandle);
                     if (accountId.HasValue)
                     {
                         SessionManager.GetClientConnection((long)accountId).Send(message);
+                        Send(message);
                     }
                     else
                     {
