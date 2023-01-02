@@ -25,6 +25,40 @@ namespace EvoS.Framework.Network.Static
             this.LastSelectedRankedLoadout = -1;
         }
 
+        public void UnlockSkinsAndTaunts()
+        {
+            Unlocked = true;
+            Taunts = new List<PlayerTauntData>();
+            for (int i = 0; i < 9; i++)
+            {
+                Taunts.Add(new PlayerTauntData() { Unlocked = true });
+            }
+            Skins = new List<PlayerSkinData>();
+            for (int i = 0; i < 5; i++)
+            {
+                PlayerSkinData playerSkinData = new PlayerSkinData
+                {
+                    Unlocked = true,
+                    Patterns = new List<PlayerPatternData>()
+                };
+                for (int j = 0; j < 4; j++)
+                {
+                    PlayerPatternData playerPatternData = new PlayerPatternData()
+                    {
+                        Unlocked = true,
+                        Colors = new List<PlayerColorData>()
+                    };
+                    for (int k = 0; k < 17; k++)
+                    {
+                        playerPatternData.Colors.Add(new PlayerColorData() { Unlocked = true });
+                    }
+                    playerSkinData.Patterns.Add(playerPatternData);
+                }
+
+                Skins.Add(playerSkinData);
+            }
+        }
+
         public bool Unlocked { get; set; }
 
         public CharacterVisualInfo LastSkin { get; set; }

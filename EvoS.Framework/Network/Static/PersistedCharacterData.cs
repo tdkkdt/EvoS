@@ -12,6 +12,7 @@ namespace EvoS.Framework.Network.Static
             CharacterType = characterType;
             SchemaVersion = new SchemaVersion<CharacterSchemaChange>();
             CharacterComponent = new CharacterComponent();
+            CharacterComponent.UnlockSkinsAndTaunts();
             ExperienceComponent = new ExperienceComponent();
         }
 
