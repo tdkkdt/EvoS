@@ -114,28 +114,33 @@ namespace CentralServer.LobbyServer
             }
             else
             {
-                MatchmakingManager.RemoveGroupFromQueue(group);
+                MatchmakingManager.RemoveGroupFromQueue(group, true);
             }
         }
 
-        public void BroadcastRefreshGroup()
+        public void BroadcastRefreshGroup(bool resetReadyState = false)
         {
             GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
             if (group == null)
             {
-                RefreshGroup();
+                RefreshGroup(resetReadyState);
             }
             else
             {
                 foreach (long groupMember in group.Members)
                 {
-                    SessionManager.GetClientConnection(groupMember)?.RefreshGroup();
+                    SessionManager.GetClientConnection(groupMember)?.RefreshGroup(resetReadyState);
                 }
             }
         }
 
-        public void RefreshGroup()
+        public void RefreshGroup(bool resetReadyState = false)
         {
+            if (resetReadyState)
+            {
+                IsReady = false;
+                UpdateGroupReadyState();
+            }
             Send(new LobbyServerReadyNotification
             {
                 GroupInfo = GroupManager.GetGroupInfo(AccountId)

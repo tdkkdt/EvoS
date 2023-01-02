@@ -63,14 +63,14 @@ namespace CentralServer.LobbyServer.Matchmaking
             queue.Update();
         }
 
-        public static void RemoveGroupFromQueue(GroupInfo group)
+        public static void RemoveGroupFromQueue(GroupInfo group, bool suppressWarnings = false)
         {
             bool removed = false;
             foreach (MatchmakingQueue queue in Queues.Values)
             {
                 removed |= queue.RemoveGroup(group.GroupId);
             }
-            if (!removed)
+            if (!removed && !suppressWarnings)
             {
                 log.Warn($"Attempted to remove group {group.GroupId} by {group.Leader} from the queue but failed");
             }
