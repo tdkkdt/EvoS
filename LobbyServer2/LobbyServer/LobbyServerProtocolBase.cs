@@ -34,8 +34,20 @@ namespace CentralServer.LobbyServer
         public ushort SelectedSubTypeMask;
         public BotDifficulty AllyDifficulty;
         public BotDifficulty EnemyDifficulty;
+        private BridgeServerProtocol _currentServer;
 
-        public BridgeServerProtocol CurrentServer { get; set; }
+        public BridgeServerProtocol CurrentServer
+        {
+            get => _currentServer;
+            set
+            {
+                _currentServer = value;
+                
+                // TODO update player status (in game/online)
+            }
+        }
+
+        public bool IsInGame() => CurrentServer != null;
 
         protected override string GetConnContext()
         {

@@ -40,7 +40,7 @@ namespace CentralServer.BridgeServer
             null, // typeof(ReconnectPlayerRequest),
             null, // typeof(MonitorHeartbeatResponse),
             typeof(ServerGameSummaryNotification),
-            null, // typeof(PlayerDisconnectedNotification),
+            typeof(PlayerDisconnectedNotification),
             null, // typeof(ServerGameMetricsNotification),
             typeof(ServerGameStatusNotification),
             null, // typeof(MonitorHeartbeatNotification),
@@ -105,12 +105,34 @@ namespace CentralServer.BridgeServer
                     client.Send(response);
                 }
             }
+            else if (type == typeof(PlayerDisconnectedNotification))
+            {
+                PlayerDisconnectedNotification request = Deserialize<PlayerDisconnectedNotification>(networkReader);
+                log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
+                log.Info($"Player {request.PlayerInfo.AccountId} left game {GameInfo.GameServerProcessCode}");
+                
+                foreach (LobbyServerProtocol client in clients)
+                {
+                    if (client.AccountId == request.PlayerInfo.AccountId)
+                    {
+                        client.CurrentServer = null;
+                        break;
+                    }
+                }
+            }
             else if (type == typeof(ServerGameStatusNotification))
             {
                 ServerGameStatusNotification request = Deserialize<ServerGameStatusNotification>(networkReader);
                 log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
                 log.Info($"Game {GameInfo.Name} {request.GameStatus}");
                 GameStatus = request.GameStatus;
+                if (GameStatus == GameStatus.Stopped)
+                {
+                    foreach (LobbyServerProtocol client in clients)
+                    {
+                        client.CurrentServer = null;
+                    }
+                }
             }
             else
             {
