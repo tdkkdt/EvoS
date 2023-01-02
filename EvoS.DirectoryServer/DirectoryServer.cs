@@ -83,10 +83,6 @@ namespace EvoS.DirectoryServer
             {
                 return Fail(request, "No credentials provided");
             }
-            if (username.ToLower() == "user" || username.ToLower() == "username" || password.ToLower() == "password")
-            {
-                return Fail(request, "Please set your credentials in the config file");
-            }
 
             long accountId;
             try
