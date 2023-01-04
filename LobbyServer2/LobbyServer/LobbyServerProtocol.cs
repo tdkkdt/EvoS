@@ -649,9 +649,9 @@ namespace CentralServer.LobbyServer
             // Update the account
             DB.Get().AccountDao.UpdateAccount(account);
 
-            // TODO Update friend list and group
-
-
+            BroadcastRefreshFriendList();
+            BroadcastRefreshGroup();
+            
             // Send response
             Send(new SelectBannerResponse()
             {
