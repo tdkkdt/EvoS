@@ -12,6 +12,7 @@ using EvoS.Framework.DataAccess;
 using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
+using EvoS.DirectoryServer.Inventory;
 using log4net;
 using Newtonsoft.Json;
 using WebSocketSharp;
@@ -47,7 +48,9 @@ namespace CentralServer.LobbyServer
             RegisterHandler(new EvosMessageDelegate<GroupInviteRequest>(HandleGroupInviteRequest));
             RegisterHandler(new EvosMessageDelegate<GroupConfirmationResponse>(HandleGroupConfirmationResponse));
             RegisterHandler(new EvosMessageDelegate<GroupLeaveRequest>(HandleGroupLeaveRequest));
-            
+            RegisterHandler(new EvosMessageDelegate<SelectBannerRequest>(HandleSelectBannerRequest));
+
+
             /*
             RegisterHandler(new EvosMessageDelegate<PurchaseModResponse>(HandlePurchaseModRequest));
             RegisterHandler(new EvosMessageDelegate<PurchaseTauntRequest>(HandlePurchaseTauntRequest));
@@ -627,6 +630,35 @@ namespace CentralServer.LobbyServer
         public void HandleGroupLeaveRequest(GroupLeaveRequest request)
         {
             GroupManager.CreateGroup(AccountId);
+        }
+
+        public void HandleSelectBannerRequest(SelectBannerRequest request)
+        {
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+
+            //  Modify the correct type of banner
+            if(InventoryManager.BannerIsForeground(request.BannerID))
+            {
+                account.AccountComponent.SelectedForegroundBannerID = request.BannerID;
+            }
+            else
+            {
+                account.AccountComponent.SelectedBackgroundBannerID = request.BannerID; 
+            }
+
+            // Update the account
+            DB.Get().AccountDao.UpdateAccount(account);
+
+            // TODO Update friend list and group
+
+
+            // Send response
+            Send(new SelectBannerResponse()
+            {
+                BackgroundBannerID = account.AccountComponent.SelectedBackgroundBannerID,
+                ForegroundBannerID = account.AccountComponent.SelectedForegroundBannerID,
+                ResponseId = request.RequestId
+            });
         }
 
         public void OnLeaveGroup()
