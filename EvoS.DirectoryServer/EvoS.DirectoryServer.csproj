@@ -15,4 +15,8 @@
     <ProjectReference Include="..\EvoS.Framework\EvoS.Framework.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Inventory" />
+  </ItemGroup>
+
 </Project>

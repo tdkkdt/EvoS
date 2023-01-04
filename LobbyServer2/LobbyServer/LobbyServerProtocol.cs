@@ -49,6 +49,7 @@ namespace CentralServer.LobbyServer
             RegisterHandler(new EvosMessageDelegate<GroupConfirmationResponse>(HandleGroupConfirmationResponse));
             RegisterHandler(new EvosMessageDelegate<GroupLeaveRequest>(HandleGroupLeaveRequest));
             RegisterHandler(new EvosMessageDelegate<SelectBannerRequest>(HandleSelectBannerRequest));
+            RegisterHandler(new EvosMessageDelegate<SelectTitleRequest>(HandleSelectTitleRequest));
 
 
             /*
@@ -657,6 +658,26 @@ namespace CentralServer.LobbyServer
             {
                 BackgroundBannerID = account.AccountComponent.SelectedBackgroundBannerID,
                 ForegroundBannerID = account.AccountComponent.SelectedForegroundBannerID,
+                ResponseId = request.RequestId
+            });
+        }
+
+        public void HandleSelectTitleRequest(SelectTitleRequest request)
+        {
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+
+            if (account.AccountComponent.UnlockedTitleIDs.Contains(request.TitleID))
+            {
+                account.AccountComponent.SelectedTitleID = request.TitleID;
+                DB.Get().AccountDao.UpdateAccount(account);
+            
+                BroadcastRefreshFriendList();
+                BroadcastRefreshGroup();
+            }
+            
+            Send(new SelectTitleResponse
+            {
+                CurrentTitleID = account.AccountComponent.SelectedTitleID,
                 ResponseId = request.RequestId
             });
         }

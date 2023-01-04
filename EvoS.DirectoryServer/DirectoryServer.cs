@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Threading;
 using EvoS.DirectoryServer.Account;
+using EvoS.DirectoryServer.Inventory;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
@@ -167,6 +168,12 @@ namespace EvoS.DirectoryServer
             {
                 persistedCharacterData.CharacterComponent.UnlockSkinsAndTaunts();
             }
+
+            account.AccountComponent.UnlockedEmojiIDs = InventoryManager.GetUnlockedEmojiIDs(account.AccountId);
+            account.AccountComponent.UnlockedLoadingScreenBackgroundIdsToActivatedState = InventoryManager.GetActivatedLoadingScreenBackgroundIds(account.AccountId);
+            account.AccountComponent.UnlockedOverconIDs = InventoryManager.GetUnlockedOverconIDs(account.AccountId);
+            account.AccountComponent.UnlockedTitleIDs = InventoryManager.GetUnlockedTitleIDs(account.AccountId);
+            account.AccountComponent.UnlockedBannerIDs = InventoryManager.GetUnlockedBannerIDs(account.AccountId);
             return true;
         }
 
