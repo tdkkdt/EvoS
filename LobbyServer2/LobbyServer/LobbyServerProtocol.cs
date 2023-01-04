@@ -454,7 +454,7 @@ namespace CentralServer.LobbyServer
                 CharacterType = account.AccountComponent.LastCharacter,
                 ConsoleMessageType = notification.ConsoleMessageType,
                 Text = notification.Text,
-                EmojisAllowed = new List<int>(), // TODO emoji
+                EmojisAllowed = InventoryManager.GetUnlockedEmojiIDs(AccountId),
                 DisplayDevTag = false,
             };
 
