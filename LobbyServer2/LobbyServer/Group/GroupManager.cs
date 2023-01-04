@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.Static;
@@ -93,7 +94,7 @@ namespace CentralServer.LobbyServer.Group
             if (leftGroup != null)
             {
                 OnLeaveGroup(accountId);
-                BroadcastUpdate(leftGroup);
+                OnGroupMembersUpdated(leftGroup);
                 // TODO cancel readiness / remove from queue
             }
         }
@@ -120,7 +121,7 @@ namespace CentralServer.LobbyServer.Group
             if (joinedGroup != null)
             {
                 OnJoinGroup(accountId);
-                BroadcastUpdate(joinedGroup);
+                OnGroupMembersUpdated(joinedGroup);
                 // TODO cancel readiness / remove from queue
             }
         }
@@ -207,9 +208,10 @@ namespace CentralServer.LobbyServer.Group
             SessionManager.GetClientConnection(accountId)?.OnLeaveGroup();
         }
 
-        private static void BroadcastUpdate(GroupInfo groupInfo)
+        private static void OnGroupMembersUpdated(GroupInfo groupInfo)
         {
-            SessionManager.GetClientConnection(groupInfo.Leader)?.BroadcastRefreshGroup();
+            MatchmakingManager.RemoveGroupFromQueue(groupInfo, true);
+            SessionManager.GetClientConnection(groupInfo.Leader)?.BroadcastRefreshGroup(true);
         }
 
         public static void Broadcast(GroupInfo group, WebSocketMessage message)

@@ -130,6 +130,12 @@ namespace EvoS.DirectoryServer
                 log.Error($"Temp user {account.Handle}/{account.AccountId}: {e}");
             }
 
+            // Someday we'll make a db migration tool but not today
+            if (PatchAccountData(account))
+            {
+                DB.Get().AccountDao.UpdateAccount(account);
+            }
+
             request.SessionInfo.SessionToken = 0;
 
             response.SessionInfo = request.SessionInfo;
@@ -153,6 +159,15 @@ namespace EvoS.DirectoryServer
 
             response.ProxyInfo = proxyInfo;
             return response;
+        }
+
+        private static bool PatchAccountData(PersistedAccountData account)
+        {
+            foreach (PersistedCharacterData persistedCharacterData in account.CharacterData.Values)
+            {
+                persistedCharacterData.CharacterComponent.UnlockSkinsAndTaunts();
+            }
+            return true;
         }
 
         private static AssignGameClientResponse Fail(AssignGameClientRequest request, string reason)

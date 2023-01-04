@@ -14,7 +14,9 @@ namespace EvoS.DirectoryServer.Account
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(LoginManager));
         private static readonly HashAlgorithm algorithm = SHA256.Create();
-        private static readonly Regex re = new Regex(@"^[A-Za-z][A-Za-z_\-0-9]{3,}$");
+        private static readonly Regex usernameRegex = new Regex(@"^[A-Za-z][A-Za-z_\-0-9]{3,}$");
+        private static readonly Regex bannedUsernameRegex = new Regex(@"^(?:(?:changeMeToYour)?user(?:name)?)$", RegexOptions.IgnoreCase);
+        private static readonly Regex bannedPasswordRegex = new Regex(@"^(?:(?:changeMeToYour)?password)$", RegexOptions.IgnoreCase);
 
         public static long RegisterOrLogin(AuthInfo authInfo)
         {
@@ -36,12 +38,22 @@ namespace EvoS.DirectoryServer.Account
             }
             else
             {
-                if (!re.IsMatch(authInfo.UserName))
+                if (!usernameRegex.IsMatch(authInfo.UserName))
                 {
                     log.Info($"Attempt to register as \"{authInfo.UserName}\"");
                     throw new ArgumentException("Invalid username. " + 
                         "Please use only latin characters, numbers, underscore and dash, and start with a letter. " +
                         "4 symbols or more.");
+                }
+                if (bannedUsernameRegex.IsMatch(authInfo.UserName))
+                {
+                    log.Info($"Attempt to register as \"{authInfo.UserName}\"");
+                    throw new ArgumentException("You cannot use this username. Please choose another.");
+                }
+                if (bannedPasswordRegex.IsMatch(authInfo.Password))
+                {
+                    log.Info($"Attempt to register with a bad password");
+                    throw new ArgumentException("You cannot use this password. Please choose another.");
                 }
                 long accountId = GenerateAccountId(authInfo.UserName);
                 for (int i = 0; loginDao.Find(accountId) != null; ++i)

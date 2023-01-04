@@ -63,14 +63,14 @@ namespace CentralServer.LobbyServer.Matchmaking
             queue.Update();
         }
 
-        public static void RemoveGroupFromQueue(GroupInfo group)
+        public static void RemoveGroupFromQueue(GroupInfo group, bool suppressWarnings = false)
         {
             bool removed = false;
             foreach (MatchmakingQueue queue in Queues.Values)
             {
                 removed |= queue.RemoveGroup(group.GroupId);
             }
-            if (!removed)
+            if (!removed && !suppressWarnings)
             {
                 log.Warn($"Attempted to remove group {group.GroupId} by {group.Leader} from the queue but failed");
             }
@@ -154,7 +154,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             }
         }
 
-        public static void StartGame(List<long> teamA, List<long> teamB, GameType gameType)
+        public static void StartGame(List<long> teamA, List<long> teamB, GameType gameType, GameSubType gameSubType)
         {
             log.Info($"Starting {gameType} game...");
             MatchmakingQueueConfig queueConfig = new MatchmakingQueueConfig();
@@ -211,7 +211,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                     GameType = gameType,
                     InstanceSubTypeBit = 1,
                     IsActive = true,
-                    Map = Maps.Skyway_Deathmatch,
+                    Map = MatchmakingQueue.SelectMap(gameSubType),
                     ResolveTimeoutLimit = 1600, // TODO ?
                     RoomName = "",
                     Spectators = 0,

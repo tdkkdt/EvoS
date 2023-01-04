@@ -122,7 +122,8 @@ namespace CentralServer.LobbyServer.Matchmaking
                         MatchmakingManager.StartGame(
                             teamA.SelectMany(group => group.Members).ToList(), 
                             teamB.SelectMany(group => group.Members).ToList(), 
-                            GameType);
+                            GameType,
+                            MatchmakingQueueInfo.GameConfig.SubTypes[0]);
                     }
                 }
             }
@@ -175,7 +176,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                     TeamABots = gameAvailability.TeamABots,
                     TeamBPlayers = gameAvailability.TeamBPlayers,
                     TeamBBots = gameAvailability.TeamBBots,
-                    Map = SelectMap(gameAvailability),
+                    Map = SelectMap(gameAvailability.SubTypes[0]),
                     ResolveTimeoutLimit = 1600,
                     Spectators = 0
                 },
@@ -192,12 +193,14 @@ namespace CentralServer.LobbyServer.Matchmaking
             return gameInfo;
         }
 
-        public string SelectMap(GameTypeAvailability gameTypeAvailability)
+        public static string SelectMap(GameSubType gameSubType)
         {
-            List<GameMapConfig> maps = gameTypeAvailability.SubTypes[0].GameMapConfigs;
+            List<GameMapConfig> maps = gameSubType.GameMapConfigs;
             Random rand = new Random();
             int index = rand.Next(0, maps.Count);
-            return maps[index].Map;
+            string selected = maps[index].Map;
+            log.Info($"Selected {selected} out of {maps.Count} maps");
+            return selected;
         }
 
         public void SetGameStatus(string roomName, GameStatus gameStatus)

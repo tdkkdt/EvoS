@@ -12,7 +12,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Support,
                     CharacterType = CharacterType.Archer,
                     Difficulty = 1,
@@ -194,7 +194,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Tank,
                     CharacterType = CharacterType.Manta,
                     Difficulty = 1,
@@ -220,7 +220,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Support,
                     CharacterType = CharacterType.NanoSmith,
                     Difficulty = 1,
@@ -337,7 +337,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Assassin,
                     CharacterType = CharacterType.Sniper,
                     Difficulty = 1,
@@ -350,7 +350,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Assassin,
                     CharacterType = CharacterType.Soldier,
                     Difficulty = 1,
@@ -363,7 +363,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Tank,
                     CharacterType = CharacterType.SpaceMarine,
                     Difficulty = 1,
@@ -389,7 +389,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Assassin,
                     CharacterType = CharacterType.TeleportingNinja,
                     Difficulty = 1,
