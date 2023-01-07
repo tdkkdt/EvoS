@@ -50,7 +50,7 @@ namespace CentralServer.BridgeServer
             typeof(LaunchGameRequest),
             typeof(JoinGameServerRequest),
             null, // typeof(JoinGameAsObserverRequest),
-            null, // typeof(ShutdownGameRequest),
+            typeof(ShutdownGameRequest),
             null, // typeof(DisconnectPlayerRequest),
             null, // typeof(ReconnectPlayerRequest),
             null, // typeof(MonitorHeartbeatResponse),
@@ -119,6 +119,8 @@ namespace CentralServer.BridgeServer
                     };
                     client.Send(response);
                 }
+
+                Send(new ShutdownGameRequest());
             }
             else if (type == typeof(PlayerDisconnectedNotification))
             {
