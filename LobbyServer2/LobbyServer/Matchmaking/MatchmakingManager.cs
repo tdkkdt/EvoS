@@ -48,22 +48,32 @@ namespace CentralServer.LobbyServer.Matchmaking
         /// </summary>
         /// <param name="gameType">selected gamemode</param>
         /// <param name="group">group</param>
-        public static void AddGroupToQueue(GameType gameType, GroupInfo group)
+        public static bool AddGroupToQueue(GameType gameType, GroupInfo group)
         {
             // Get the queue
             MatchmakingQueue queue = Queues[gameType];
 
             // Add player to the queue
-            LobbyMatchmakingQueueInfo info = queue.AddGroup(group.GroupId);
+            LobbyMatchmakingQueueInfo info = queue.AddGroup(group.GroupId, out bool added);
 
-            // Send 'Assigned to queue notification' to the players
-            GroupManager.Broadcast(group, new MatchmakingQueueAssignmentNotification() { MatchmakingQueueInfo = info });
+            if (added)
+            {
+                // Send 'Assigned to queue notification' to the players
+                GroupManager.Broadcast(group, new MatchmakingQueueAssignmentNotification() { MatchmakingQueueInfo = info });
 
-            // Update the queue
-            queue.Update();
+                // Update the queue
+                queue.Update();
+                
+                foreach (long member in group.Members)
+                {
+                    SessionManager.GetClientConnection(member)?.BroadcastRefreshFriendList();
+                }
+            }
+
+            return added;
         }
 
-        public static void RemoveGroupFromQueue(GroupInfo group, bool suppressWarnings = false)
+        public static bool RemoveGroupFromQueue(GroupInfo group, bool suppressWarnings = false)
         {
             bool removed = false;
             foreach (MatchmakingQueue queue in Queues.Values)
@@ -74,6 +84,30 @@ namespace CentralServer.LobbyServer.Matchmaking
             {
                 log.Warn($"Attempted to remove group {group.GroupId} by {group.Leader} from the queue but failed");
             }
+            if (removed)
+            {
+                foreach (long member in group.Members)
+                {
+                    SessionManager.GetClientConnection(member)?.BroadcastRefreshFriendList();
+                }
+            }
+            return removed;
+        }
+
+        public static bool IsQueued(GroupInfo group)
+        {
+            if (group == null)
+            {
+                return false;
+            }
+            foreach (MatchmakingQueue queue in Queues.Values)
+            {
+                if (queue.IsQueued(group.GroupId))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public static void StartPractice(LobbyServerProtocolBase client)
@@ -238,7 +272,7 @@ namespace CentralServer.LobbyServer.Matchmaking
 
                 for (int i = 0; i < clients.Count; i++)
                 {
-                    LobbyServerProtocolBase client = clients[i];
+                    LobbyServerProtocol client = clients[i];
                     GameAssignmentNotification notification = new GameAssignmentNotification
                     {
                         GameInfo = gameInfo,

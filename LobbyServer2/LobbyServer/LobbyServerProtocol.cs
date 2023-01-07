@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Character;
 using CentralServer.LobbyServer.Config;
 using CentralServer.LobbyServer.Friend;
@@ -23,6 +24,26 @@ namespace CentralServer.LobbyServer
     public class LobbyServerProtocol : LobbyServerProtocolBase
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(LobbyServerProtocol));
+        
+        private BridgeServerProtocol _currentServer;
+
+        public BridgeServerProtocol CurrentServer
+        {
+            get => _currentServer;
+            set
+            {
+                _currentServer = value;
+                BroadcastRefreshFriendList();
+            }
+        }
+
+        public bool IsInGame() => CurrentServer != null;
+
+        public bool IsInGroup() => !GroupManager.GetPlayerGroup(AccountId)?.IsSolo() ?? false;
+
+        public int GetGroupSize() => GroupManager.GetPlayerGroup(AccountId)?.Members.Count ?? 1;
+
+        public bool IsInQueue() => MatchmakingManager.IsQueued(GroupManager.GetPlayerGroup(AccountId));
         
         public bool IsReady { get; private set; }
         
@@ -107,7 +128,9 @@ namespace CentralServer.LobbyServer
                 }
             }
 
-            if (allAreReady)
+            bool isGroupQueued = MatchmakingManager.IsQueued(group);
+
+            if (allAreReady && !isGroupQueued)
             {
                 if (leader == null)
                 {
@@ -116,7 +139,7 @@ namespace CentralServer.LobbyServer
                 }
                 MatchmakingManager.AddGroupToQueue(leader.SelectedGameType, group);
             }
-            else
+            else if (!allAreReady && isGroupQueued)
             {
                 MatchmakingManager.RemoveGroupFromQueue(group, true);
             }
@@ -623,7 +646,7 @@ namespace CentralServer.LobbyServer
                              $"to join group {response.GroupId} by {response.JoinerAccountId}: {response.Acceptance}");
                     // TODO validation
                     GroupManager.JoinGroup(response.GroupId, AccountId);
-                    BroadcastRefreshFriendList(); // TODO update friend status
+                    BroadcastRefreshFriendList();
                     break;
             }
         }
@@ -631,6 +654,7 @@ namespace CentralServer.LobbyServer
         public void HandleGroupLeaveRequest(GroupLeaveRequest request)
         {
             GroupManager.CreateGroup(AccountId);
+            BroadcastRefreshFriendList();
         }
 
         public void HandleSelectBannerRequest(SelectBannerRequest request)

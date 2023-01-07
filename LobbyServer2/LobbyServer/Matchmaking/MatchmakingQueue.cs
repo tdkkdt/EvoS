@@ -41,9 +41,9 @@ namespace CentralServer.LobbyServer.Matchmaking
             };
         }
 
-        public LobbyMatchmakingQueueInfo AddGroup(long groupId)
+        public LobbyMatchmakingQueueInfo AddGroup(long groupId, out bool added)
         {
-            QueuedGroups.TryAdd(groupId, 0);
+            added = QueuedGroups.TryAdd(groupId, 0);
             MatchmakingQueueInfo.QueuedPlayers = GetPlayerCount();
             log.Info($"Added group {groupId} to {GameType} queue");
             log.Info($"{GetPlayerCount()} players in {GameType} queue ({QueuedGroups.Count} groups)");
@@ -60,6 +60,11 @@ namespace CentralServer.LobbyServer.Matchmaking
                 log.Info($"{GetPlayerCount()} players in {GameType} queue ({QueuedGroups.Count} groups)");
             }
             return removed;
+        }
+
+        public bool IsQueued(long groupId)
+        {
+            return QueuedGroups.ContainsKey(groupId);
         }
 
         public int GetPlayerCount()

@@ -1,12 +1,10 @@
-﻿using EvoS.Framework.Network.NetworkMessages;
-using EvoS.Framework.Network.Static;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using CentralServer.LobbyServer.Session;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
+using EvoS.Framework.Network.NetworkMessages;
+using EvoS.Framework.Network.Static;
 
 namespace CentralServer.LobbyServer.Friend
 {
@@ -37,7 +35,7 @@ namespace CentralServer.LobbyServer.Friend
                             FriendHandle = acc.Handle,
                             FriendStatus = FriendStatus.Friend,
                             IsOnline = true,
-                            // StatusString = 
+                            StatusString = GetStatusString(SessionManager.GetClientConnection(acc.AccountId)),
                             // FriendNote = 
                             BannerID = acc.AccountComponent.SelectedBackgroundBannerID,
                             EmblemID = acc.AccountComponent.SelectedForegroundBannerID,
@@ -49,6 +47,27 @@ namespace CentralServer.LobbyServer.Friend
             };
 
             return friendList;
+        }
+
+        private static string GetStatusString(LobbyServerProtocol client)
+        {
+            if (client == null)
+            {
+                return "Offline";
+            }
+            if (client.IsInGame())
+            {
+                return "In Game";
+            }
+            if (client.IsInQueue())
+            {
+                return "Queued";
+            }
+            if (client.IsInGroup())
+            {
+                return "GroupChatRoom";  // No localization for "In Group" status so we have to borrow this one
+            }
+            return string.Empty;
         }
 
         public static PlayerUpdateStatusResponse OnPlayerUpdateStatusRequest(LobbyServerProtocol client, PlayerUpdateStatusRequest request)
