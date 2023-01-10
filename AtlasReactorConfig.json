@@ -1,7 +1,13 @@
 {
-	"DirectoryServerAddress": "127.0.0.1:6050",
 	"EnableLogging": true,
+	"MinConsoleLogLevel": "Everything",
+	"MinFileLogLevel": "Everything",
+	"DevMode": false,
+	"AutoLaunchTutorial": false,
+	"DirectoryServerAddress": "127.0.0.1:6050",
 	"PlatformConfig": {
-		"AllowFakeTickets": true
-	}
+		"AllowRequestTickets": true
+	},
+	"PlatformUserName": "username",
+	"PlatformPassword": "password"
 }

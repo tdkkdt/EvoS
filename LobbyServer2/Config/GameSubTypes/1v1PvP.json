@@ -4,6 +4,30 @@
     {
       "Map": "Skyway_Deathmatch",
       "IsActive": true
+    },
+    {
+      "Map": "CargoShip_Deathmatch",
+      "IsActive": true
+    },
+    {
+      "Map": "Casino01_Deathmatch",
+      "IsActive": true
+    },
+    {
+      "Map": "EvosLab_Deathmatch",
+      "IsActive": true
+    },
+    {
+      "Map": "Oblivion_Deathmatch",
+      "IsActive": true
+    },
+    {
+      "Map": "Reactor_Deathmatch",
+      "IsActive": true
+    },
+    {
+      "Map": "RobotFactory_Deathmatch",
+      "IsActive": true
     }
   ],
   "TeamAPlayers": 1,
@@ -33,5 +57,8 @@
   "Mods": [
     "AllowPlayingLockedCharacters",
     "HumansHaveFirstSlots"
-  ]
+  ],
+  "GameOverrides": {
+	  "TurnTimeSpan": "00:00:20"
+  }
 }
