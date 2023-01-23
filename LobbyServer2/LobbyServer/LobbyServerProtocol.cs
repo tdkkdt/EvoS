@@ -196,13 +196,11 @@ namespace CentralServer.LobbyServer
                     log.Info(string.Format(Messages.LoginSuccess, this.UserName));
                     RegisterGameClientResponse response = new RegisterGameClientResponse
                     {
-                        // Note: If we send AuthInfo back, it will override the one currently set up on the client
-                        // which will cause issues if the client attempts to reconnect at some point.
-                        // AuthInfo = new AuthInfo()
-                        // {
-                        //     AccountId = AccountId,
-                        //     Handle = playerInfo.Handle
-                        // },
+                        AuthInfo = new AuthInfo()
+                        {
+                            AccountId = AccountId,
+                            Handle = playerInfo.Handle
+                        },
                         SessionInfo = SessionManager.GetSessionInfo(request.AuthInfo.AccountId),
                         ResponseId = request.RequestId
                     };
