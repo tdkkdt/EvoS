@@ -2,13 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Character;
 using CentralServer.LobbyServer.Config;
 using CentralServer.LobbyServer.Friend;
 using CentralServer.LobbyServer.Gamemode;
 using CentralServer.LobbyServer.Group;
-using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Quest;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
@@ -89,13 +87,23 @@ namespace CentralServer.LobbyServer
 
         public void Send(WebSocketMessage message)
         {
-            MemoryStream stream = new MemoryStream();
-            EvosSerializer.Instance.Serialize(stream, message);
-            this.Send(stream.ToArray());
-            log.Debug($"> {message.GetType().Name} {DefaultJsonSerializer.Serialize(message)}");
+            Wrap(SendImpl, message);
         }
 
         public void Broadcast(WebSocketMessage message)
+        {
+            Wrap(BroadcastImpl, message);
+        }
+
+        private void SendImpl(WebSocketMessage message)
+        {
+            MemoryStream stream = new MemoryStream();
+            EvosSerializer.Instance.Serialize(stream, message);
+            Send(stream.ToArray());
+            log.Debug($"> {message.GetType().Name} {DefaultJsonSerializer.Serialize(message)}");
+        }
+
+        private void BroadcastImpl(WebSocketMessage message)
         {
             MemoryStream stream = new MemoryStream();
             EvosSerializer.Instance.Serialize(stream, message);
@@ -134,8 +142,8 @@ namespace CentralServer.LobbyServer
                 CommerceURL = "http://127.0.0.1/AtlasCommerce",
                 EnvironmentType = EnvironmentType.External,
                 FactionCompetitionStatus = new FactionCompetitionNotification(),
-                FriendStatus = FriendManager.GetFriendStatusNotification(this.AccountId),
-                GroupInfo = GroupManager.GetGroupInfo(this.AccountId),
+                FriendStatus = FriendManager.GetFriendStatusNotification(AccountId),
+                GroupInfo = GroupManager.GetGroupInfo(AccountId),
                 SeasonChapterQuests = QuestManager.GetSeasonQuestDataNotification(),
                 ServerQueueConfiguration = GetServerQueueConfigurationUpdateNotification(),
                 Status = GetLobbyStatusNotification()
