@@ -96,7 +96,6 @@ namespace CentralServer.LobbyServer.Group
             {
                 OnLeaveGroup(accountId);
                 OnGroupMembersUpdated(leftGroup);
-                // TODO cancel readiness / remove from queue
             }
         }
 
@@ -123,7 +122,6 @@ namespace CentralServer.LobbyServer.Group
             {
                 OnJoinGroup(accountId);
                 OnGroupMembersUpdated(joinedGroup);
-                // TODO cancel readiness / remove from queue
             }
         }
 
