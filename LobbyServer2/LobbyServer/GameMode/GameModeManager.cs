@@ -1,17 +1,21 @@
-﻿using EvoS.Framework.Constants.Enums;
+﻿using System.Collections.Generic;
+using System.IO;
+using CentralServer.LobbyServer.Config;
+using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
-using CentralServer.LobbyServer.Config;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using Newtonsoft.Json;
-using System.IO;
 
 namespace CentralServer.LobbyServer.Gamemode
 {
     class GameModeManager
     {
+        private const string ConfigPath = @"Config\GameSubTypes\";
+        private static readonly Dictionary<GameType, string> ConfigFiles = new Dictionary<GameType, string>()
+        {
+            { GameType.PvP, "1v1PvP.json" }
+        };
+        
         public static Dictionary<GameType, GameTypeAvailability> GetGameTypeAvailabilities()
         {
             Dictionary<GameType, GameTypeAvailability> gameTypes = new Dictionary<GameType, GameTypeAvailability>();
@@ -105,8 +109,7 @@ namespace CentralServer.LobbyServer.Gamemode
             type.MaxWillFillPerTeam = 0;
             type.SubTypes = new List<GameSubType>()
             {
-                LoadGameSubType("1v1PvP.json")
-                //LoadGameSubType("GenericPvP.json")
+                LoadGameSubType(ConfigFiles[GameType.PvP])
             };
             return type;
         }
@@ -119,7 +122,7 @@ namespace CentralServer.LobbyServer.Gamemode
         private static GameSubType LoadGameSubType(string filename)
         {
             // TODO: this always read from file, it could be stored in a cache
-            JsonReader reader = new JsonTextReader(new StreamReader(@"Config\GameSubTypes\" + filename));
+            JsonReader reader = new JsonTextReader(new StreamReader(ConfigPath + filename));
             try
             {
                 return new JsonSerializer().Deserialize<GameSubType>(reader);

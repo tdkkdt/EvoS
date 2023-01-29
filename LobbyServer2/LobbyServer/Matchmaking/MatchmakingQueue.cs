@@ -36,9 +36,21 @@ namespace CentralServer.LobbyServer.Matchmaking
                 GameConfig = new LobbyGameConfig()
                 {
                     GameType = gameType,
-                    SubTypes = GameModeManager.GetGameTypeAvailabilities()[gameType].SubTypes
                 }
             };
+            ReloadConfig();
+        }
+
+        private void ReloadConfig()
+        {
+            GameType gameType = MatchmakingQueueInfo.GameConfig.GameType;
+            MatchmakingQueueInfo.GameConfig.SubTypes = GameModeManager.GetGameTypeAvailabilities()[gameType].SubTypes;
+        }
+
+        public void UpdateSettings()
+        {
+            ReloadConfig();
+            Update();
         }
 
         public LobbyMatchmakingQueueInfo AddGroup(long groupId, out bool added)
@@ -77,6 +89,9 @@ namespace CentralServer.LobbyServer.Matchmaking
         public void Update()
         {
             log.Info($"{GetPlayerCount()} players in {GameType} queue ({QueuedGroups.Count} groups)");
+            
+            // TODO UpdateSettings when file changes (and only then)
+            ReloadConfig();
 
             foreach (GameSubType subType in MatchmakingQueueInfo.GameConfig.SubTypes)
             {
@@ -200,7 +215,7 @@ namespace CentralServer.LobbyServer.Matchmaking
 
         public static string SelectMap(GameSubType gameSubType)
         {
-            List<GameMapConfig> maps = gameSubType.GameMapConfigs;
+            List<GameMapConfig> maps = gameSubType.GameMapConfigs.Where(x => x.IsActive).ToList();
             Random rand = new Random();
             int index = rand.Next(0, maps.Count);
             string selected = maps[index].Map;
