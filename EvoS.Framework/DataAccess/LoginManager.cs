@@ -38,6 +38,11 @@ namespace EvoS.DirectoryServer.Account
             }
             else
             {
+                if (!EvosConfiguration.GetAutoRegisterNewUsers())
+                {
+                    log.Info($"Attempt to login as \"{authInfo.UserName}\"");
+                    throw new ArgumentException("User does not exist");
+                }
                 if (!usernameRegex.IsMatch(authInfo.UserName))
                 {
                     log.Info($"Attempt to register as \"{authInfo.UserName}\"");

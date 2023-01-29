@@ -14,6 +14,7 @@ namespace EvoS.Framework
         public int LobbyServerPort = 6060;
         public string GameServerExecutable = "";
         public string GameServerExecutableArgs = "";
+        public bool AutoRegisterNewUsers = true;
         public DBConfig Database = new DBConfig();
 
         private static EvosConfiguration GetInstance()
@@ -56,6 +57,11 @@ namespace EvoS.Framework
         public static string GetGameServerExecutableArgs()
         {
             return GetInstance().GameServerExecutableArgs;
+        }
+        
+        public static bool GetAutoRegisterNewUsers()
+        {
+            return GetInstance().AutoRegisterNewUsers;
         }
         
         public static DBConfig GetDBConfig()
