@@ -302,7 +302,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                     client.Send(notification);
                 }
 
-                clients.ForEach(c => c.OnStartGame());
+                clients.ForEach(c => c.OnStartGame(server));
 
                 log.Info($"Game {gameType} started");
             }

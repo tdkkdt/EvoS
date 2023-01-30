@@ -793,9 +793,16 @@ namespace CentralServer.LobbyServer
             IsReady = false;
         }
 
-        public void OnStartGame()
+        public void OnStartGame(BridgeServerProtocol server)
         {
             IsReady = false;
+            Send(new ChatNotification
+            {
+                ConsoleMessageType = ConsoleMessageType.SystemMessage,
+                Text = $"You are playing on {server.Name} server. " +
+                       (server.BuildVersion != "" ? $"Build {server.BuildVersion}. " : "") +
+                       $"Game {new DateTime(server.GameInfo.CreateTimestamp):yyyy_MM_dd__HH_mm_ss}."
+            });
         }
     }
 }

@@ -21,12 +21,15 @@ namespace CentralServer.BridgeServer
         
         public string Address;
         public int Port;
-        private LobbyGameInfo GameInfo;
+        private LobbySessionInfo SessionInfo;
+        public LobbyGameInfo GameInfo { private set; get; }
         private LobbyServerTeamInfo TeamInfo;
         public List<LobbyServerProtocol> clients = new List<LobbyServerProtocol>();
         public string URI => "ws://" + Address + ":" + Port;
         public GameStatus GameStatus { get; private set; } = GameStatus.Stopped;
         public string ProcessCode { get; } = "Artemis" + DateTime.Now.Ticks;
+        public string Name => SessionInfo?.UserName ?? "ATLAS";
+        public string BuildVersion { get; private set; } = "";
 
         public LobbyServerPlayerInfo GetServerPlayerInfo(long accountId)
         {
@@ -95,6 +98,8 @@ namespace CentralServer.BridgeServer
                 string data = request.SessionInfo.ConnectionAddress;
                 Address = data.Split(":")[0];
                 Port = Convert.ToInt32(data.Split(":")[1]);
+                SessionInfo = request.SessionInfo;
+                BuildVersion = GetChangelistNumberFromFullVersionString(SessionInfo);
                 ServerManager.AddServer(this);
 
                 Send(new RegisterGameServerResponse
@@ -180,14 +185,14 @@ namespace CentralServer.BridgeServer
             GameInfo = gameInfo;
             TeamInfo = teamInfo;
             GameStatus = GameStatus.Assembling;
-            Dictionary<int, LobbySessionInfo> SessionInfo = teamInfo.TeamPlayerInfo
+            Dictionary<int, LobbySessionInfo> sessionInfos = teamInfo.TeamPlayerInfo
                 .ToDictionary(
                     playerInfo => playerInfo.PlayerId,
                     playerInfo => SessionManager.GetSessionInfo(playerInfo.AccountId) ?? new LobbySessionInfo());  // fallback for bots TODO something smarter
 
             foreach (LobbyServerPlayerInfo playerInfo in teamInfo.TeamPlayerInfo)
             {
-                LobbySessionInfo sessionInfo = SessionInfo[playerInfo.PlayerId];
+                LobbySessionInfo sessionInfo = sessionInfos[playerInfo.PlayerId];
                 JoinGameServerRequest request = new JoinGameServerRequest
                 {
                     OrigRequestId = 0,
@@ -202,7 +207,7 @@ namespace CentralServer.BridgeServer
             {
                 GameInfo = gameInfo,
                 TeamInfo = teamInfo,
-                SessionInfo = SessionInfo,
+                SessionInfo = sessionInfos,
                 GameplayOverrides = new LobbyGameplayOverrides()
             });
         }
@@ -241,6 +246,13 @@ namespace CentralServer.BridgeServer
             }
 
             return num;
+        }
+
+        private static string GetChangelistNumberFromFullVersionString(LobbySessionInfo sessionInfo)
+        {
+            // see BuildVersion#FullVersionString in hc
+            string[] buildVersionParts = sessionInfo.BuildVersion.Split('-', 5);
+            return buildVersionParts.Length >= 5 ? buildVersionParts[4] : "";
         }
     }
 }
