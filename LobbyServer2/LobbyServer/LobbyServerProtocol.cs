@@ -331,7 +331,7 @@ namespace CentralServer.LobbyServer
             
             PlayerInfoUpdateResponse response = new PlayerInfoUpdateResponse()
             {
-                PlayerInfo = LobbyPlayerInfo.FromServer(playerInfo, new MatchmakingQueueConfig()),
+                PlayerInfo = LobbyPlayerInfo.FromServer(playerInfo, 0, new MatchmakingQueueConfig()),
                 CharacterInfo = playerInfo.CharacterInfo,
                 OriginalPlayerInfoUpdate = update,
                 ResponseId = request.RequestId
@@ -408,7 +408,14 @@ namespace CentralServer.LobbyServer
 
             if (CurrentServer != null)
             {
-                CurrentServer.OnPlayerDisconnected(AccountId);
+                CurrentServer.clients.Remove(this);
+                GameStatusNotification notify = new GameStatusNotification()
+                {
+                    GameServerProcessCode = CurrentServer.ProcessCode,
+                    GameStatus = GameStatus.Stopped // TODO check if there is a better way to make client leave mid-game
+                };
+                Send(notify);
+                CurrentServer = null; // we will probably want to save it somewhere for reconnection
             }
         }
         
@@ -772,8 +779,6 @@ namespace CentralServer.LobbyServer
                         client.Send(useGGPackNotification);
                     }
                 }
-
-                CurrentServer.OnPlayerUsedGGPack(AccountId);
             }
         }
 
