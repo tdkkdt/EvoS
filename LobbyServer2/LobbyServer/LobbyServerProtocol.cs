@@ -14,6 +14,7 @@ using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using EvoS.DirectoryServer.Inventory;
+using EvoS.Framework;
 using log4net;
 using Newtonsoft.Json;
 using WebSocketSharp;
@@ -637,6 +638,16 @@ namespace CentralServer.LobbyServer
                 Type = joinType,
                 // RequestId = TODO
             });
+            if (EvosConfiguration.GetPingOnGroupRequest() && !friend.IsInGroup() && !friend.IsInGame())
+            {
+                friend.Send(new ChatNotification
+                {
+                    SenderAccountId = AccountId,
+                    SenderHandle = requester.Handle,
+                    ConsoleMessageType = ConsoleMessageType.WhisperChat,
+                    Text = "[Group request]"
+                });
+            }
             
             log.Info($"{AccountId}/{requester.Handle} invited {friend.AccountId}/{request.FriendHandle} to group {group.GroupId}");
             Send(new GroupInviteResponse
