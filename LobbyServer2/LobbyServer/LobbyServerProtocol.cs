@@ -77,7 +77,7 @@ namespace CentralServer.LobbyServer
             RegisterHandler(new EvosMessageDelegate<UpdateUIStateRequest>(HandleUpdateUIStateRequest));
             RegisterHandler(new EvosMessageDelegate<GroupChatRequest>(HandleGroupChatRequest));
 
-            /*
+            /* TODO: adding these to
             RegisterHandler(new EvosMessageDelegate<PurchaseModResponse>(HandlePurchaseModRequest));
             RegisterHandler(new EvosMessageDelegate<PurchaseTauntRequest>(HandlePurchaseTauntRequest));
             RegisterHandler(new EvosMessageDelegate<PurchaseBannerBackgroundRequest>(HandlePurchaseBannerRequest));
@@ -85,6 +85,9 @@ namespace CentralServer.LobbyServer
             RegisterHandler(new EvosMessageDelegate<PurchaseChatEmojiRequest>(HandlePurchaseChatEmoji));
             RegisterHandler(new EvosMessageDelegate<PurchaseLoadoutSlotRequest>(HandlePurchaseLoadoutSlot));
             */
+
+            RegisterHandler(new EvosMessageDelegate<PurchaseAbilityVfxRequest>(HandlePurchasAbilityVfx));
+            
         }
 
         protected override void HandleClose(CloseEventArgs e)
@@ -803,6 +806,77 @@ namespace CentralServer.LobbyServer
             log.Info($"Player {AccountId} requested UIState {request.UIState} {request.StateValue}");
             account.AccountComponent.UIStates.Add(request.UIState,request.StateValue);
             DB.Get().AccountDao.UpdateAccount(account);
+        }
+
+        private void HandlePurchasAbilityVfx(PurchaseAbilityVfxRequest request)
+        {
+            //Get the users account
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+
+            // Never trust the client double check plus we need this info to deduct it from account
+            int cost = InventoryManager.GetVfxCost(request.VfxId, request.AbilityId);
+
+            log.Info($"Player {AccountId} trying to purchase vfx {request.VfxId} with {request.CurrencyType} for character {request.CharacterType} and ability {request.AbilityId} for price {cost}");
+
+            if (account.BankComponent.CurrentAmounts.GetCurrentAmount(request.CurrencyType) < cost)
+            {
+                PurchaseAbilityVfxResponse failedResponse = new PurchaseAbilityVfxResponse()
+                {
+                    ResponseId = request.RequestId,
+                    Result = PurchaseResult.Failed,
+                    CurrencyType = request.CurrencyType,
+                    CharacterType = request.CharacterType,
+                    AbilityId = request.AbilityId,
+                    VfxId = request.VfxId
+                };
+
+                Send(failedResponse);
+
+                return;
+            }
+
+            PlayerAbilityVfxSwapData abilityVfxSwapData = new PlayerAbilityVfxSwapData() 
+            { 
+                AbilityId = request.AbilityId,
+                AbilityVfxSwapID = request.VfxId
+            };
+
+            account.CharacterData[request.CharacterType].CharacterComponent.AbilityVfxSwaps.Add(abilityVfxSwapData);
+
+            account.BankComponent.ChangeValue(request.CurrencyType, -cost, $"Purchase vfx");
+
+            DB.Get().AccountDao.UpdateAccount(account);
+
+            PurchaseAbilityVfxResponse response = new PurchaseAbilityVfxResponse()
+            {
+                ResponseId = request.RequestId,
+                Result = PurchaseResult.Success,
+                CurrencyType = request.CurrencyType,
+                CharacterType = request.CharacterType,
+                AbilityId = request.AbilityId,
+                VfxId = request.VfxId
+            };
+
+            Send(response);
+
+            // Notify in chat
+            Send(new ChatNotification
+            {
+                ConsoleMessageType = ConsoleMessageType.SystemMessage,
+                Text = "Purchase vfx succesfull."
+            });
+
+            // Update character
+            Send(new PlayerCharacterDataUpdateNotification()
+            {
+                CharacterData = account.CharacterData[request.CharacterType],
+            });
+
+            //Update account curency
+            Send(new PlayerAccountDataUpdateNotification()
+            {
+                AccountData = account,
+            });
         }
 
         public void HandleGroupChatRequest(GroupChatRequest request)
