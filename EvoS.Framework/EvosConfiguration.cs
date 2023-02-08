@@ -8,66 +8,44 @@ namespace EvoS.Framework
 {
     public class EvosConfiguration
     {
-        private static EvosConfiguration Instance = null;
         public int DirectoryServerPort = 6050;
         public string LobbyServerAddress = "127.0.0.1";
         public int LobbyServerPort = 6060;
         public string GameServerExecutable = "";
         public string GameServerExecutableArgs = "";
+        public string SteamWebApiKey = "";
         public bool AutoRegisterNewUsers = true;
         public DBConfig Database = new DBConfig();
 
-        private static EvosConfiguration GetInstance()
-        {
-            if (Instance == null)
-            {
-                var deserializer = new YamlDotNet.Serialization.DeserializerBuilder()
-                    .Build();
+        private static Lazy<EvosConfiguration> _instance = new Lazy<EvosConfiguration>(() =>
+            new YamlDotNet.Serialization.DeserializerBuilder().Build().Deserialize<EvosConfiguration>(File.ReadAllText("settings.yaml")));
 
-                Instance = deserializer.Deserialize<EvosConfiguration>(File.ReadAllText("settings.yaml"));
-            }
+        private static EvosConfiguration Instance => _instance.Value;
 
-            return Instance;
-        }
+        public static int GetDirectoryServerPort() => Instance.DirectoryServerPort;
 
-        public static int GetDirectoryServerPort()
-        {
-            return GetInstance().DirectoryServerPort;
-        }
+        public static string GetLobbyServerAddress() => Instance.LobbyServerAddress;
 
-        public static string GetLobbyServerAddress()
-        {
-            return GetInstance().LobbyServerAddress;
-        }
-
-        public static int GetLobbyServerPort()
-        {
-            return GetInstance().LobbyServerPort;
-        }
+        public static int GetLobbyServerPort() => Instance.LobbyServerPort;
 
         /// <summary>
         /// Full path to server's "AtlasReactor.exe"
         /// </summary>
         /// <returns></returns>
-        public static string GetGameServerExecutable()
-        {
-            return GetInstance().GameServerExecutable;
-        }
+        public static string GetGameServerExecutable() => Instance.GameServerExecutable;
+
+        public static string GetGameServerExecutableArgs() => Instance.GameServerExecutableArgs;
+
+        /// <summary>
+        /// You can get one from https://steamcommunity.com/dev/registerkey
+        /// </summary>
+        /// <returns></returns>
+        public static string GetSteamWebApiKey() => Instance.SteamWebApiKey;
+        public static bool SteamApiEnabled => !string.IsNullOrWhiteSpace(GetSteamWebApiKey());
+
+        public static bool GetAutoRegisterNewUsers() => Instance.AutoRegisterNewUsers;
         
-        public static string GetGameServerExecutableArgs()
-        {
-            return GetInstance().GameServerExecutableArgs;
-        }
-        
-        public static bool GetAutoRegisterNewUsers()
-        {
-            return GetInstance().AutoRegisterNewUsers;
-        }
-        
-        public static DBConfig GetDBConfig()
-        {
-            return GetInstance().Database;
-        }
+        public static DBConfig GetDBConfig() => Instance.Database;
 
         public enum DBType
         {

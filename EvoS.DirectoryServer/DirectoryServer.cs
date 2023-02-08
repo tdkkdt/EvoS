@@ -2,8 +2,11 @@ using System;
 using System.IO;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 using EvoS.DirectoryServer.Account;
+using EvoS.DirectoryServer.ARLauncher.Messages;
 using EvoS.DirectoryServer.Inventory;
+using EvoS.DirectoryServer.Launcher;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
@@ -17,6 +20,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace EvoS.DirectoryServer
 {
@@ -50,7 +54,7 @@ namespace EvoS.DirectoryServer
             var serverAddressesFeature = app.ServerFeatures.Get<IServerAddressesFeature>();
             log.Info("Started DirectoryServer on '0.0.0.0:6050'");
 
-            app.Run((context) =>
+            app.Run(async (context) =>
             {
                 context.Response.ContentType = "application/json";
                 MemoryStream ms = new MemoryStream();
@@ -59,11 +63,23 @@ namespace EvoS.DirectoryServer
                 string requestBody = new StreamReader(ms).ReadToEnd();
                 ms.Dispose();
 
-                AssignGameClientRequest request = JsonConvert.DeserializeObject<AssignGameClientRequest>(requestBody);
-                log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
-                AssignGameClientResponse response = ProcessRequest(request);
-                log.Debug($"> {response.GetType().Name} {DefaultJsonSerializer.Serialize(response)}");
-                return context.Response.WriteAsync(JsonConvert.SerializeObject(response));
+                var jObject = JsonConvert.DeserializeObject<JObject>(requestBody);
+                if (jObject.ContainsKey(LauncherRequest.NameofKeyField) && jObject[LauncherRequest.NameofKeyField].Value<bool>())
+                {
+                    var request = JsonConvert.DeserializeObject<LauncherRequest>(requestBody);
+                    log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
+                    var response = await LauncherHandler.ProcessRequestAsync(request);
+                    log.Debug($"> {response.GetType().Name} {DefaultJsonSerializer.Serialize(response)}");
+                    await context.Response.WriteAsync(JsonConvert.SerializeObject(response));
+                }
+                else
+                {
+                    AssignGameClientRequest request = JsonConvert.DeserializeObject<AssignGameClientRequest>(requestBody);
+                    log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
+                    AssignGameClientResponse response = ProcessRequest(request);
+                    log.Debug($"> {response.GetType().Name} {DefaultJsonSerializer.Serialize(response)}");
+                    await context.Response.WriteAsync(JsonConvert.SerializeObject(response));
+                }
             });
         }
 

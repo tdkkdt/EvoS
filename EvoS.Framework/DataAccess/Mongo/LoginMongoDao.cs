@@ -22,9 +22,26 @@ namespace EvoS.Framework.DataAccess.Mongo
             return findById(accountId);
         }
 
+        public LoginDao.LoginEntry FindBySteamId(ulong steamId)
+        {
+            return c.Find(f.Eq("SteamId", steamId)).FirstOrDefault();
+        }
+
         public void Save(LoginDao.LoginEntry entry)
         {
             log.Info($"New player {entry.AccountId}: {entry.Username}");
+            insert(entry.AccountId, entry);
+        }
+
+        public void UpdateHash(LoginDao.LoginEntry entry, string hash)
+        {
+            entry.Hash = hash;
+            insert(entry.AccountId, entry);
+        }
+
+        public void UpdateSteamId(LoginDao.LoginEntry entry, ulong newSteamId)
+        {
+            entry.SteamId = newSteamId;
             insert(entry.AccountId, entry);
         }
     }

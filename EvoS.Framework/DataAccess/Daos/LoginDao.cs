@@ -7,7 +7,10 @@ namespace EvoS.Framework.DataAccess.Daos
     {
         public LoginEntry? Find(string username);
         public LoginEntry? Find(long accountId);
+        public LoginEntry? FindBySteamId(ulong steamId);
         public void Save(LoginEntry entry);
+        public void UpdateSteamId(LoginEntry entry, ulong newSteamId);
+        public void UpdateHash(LoginEntry entry, string hash);
 
         public class LoginEntry
         {
@@ -15,6 +18,7 @@ namespace EvoS.Framework.DataAccess.Daos
             public long AccountId;
             public string Username;
             public string Hash;
+            public ulong SteamId;
         }
     }
 }
