@@ -14,6 +14,7 @@ using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using EvoS.DirectoryServer.Inventory;
+using EvoS.Framework;
 using log4net;
 using Newtonsoft.Json;
 using WebSocketSharp;
@@ -73,9 +74,10 @@ namespace CentralServer.LobbyServer
             RegisterHandler(new EvosMessageDelegate<SelectTitleRequest>(HandleSelectTitleRequest));
             RegisterHandler(new EvosMessageDelegate<UseOverconRequest>(HandleUseOverconRequest));
             RegisterHandler(new EvosMessageDelegate<UseGGPackRequest>(HandleUseGGPackRequest));
+            RegisterHandler(new EvosMessageDelegate<UpdateUIStateRequest>(HandleUpdateUIStateRequest));
+            RegisterHandler(new EvosMessageDelegate<GroupChatRequest>(HandleGroupChatRequest));
 
-
-            /*
+            /* TODO: adding these to
             RegisterHandler(new EvosMessageDelegate<PurchaseModResponse>(HandlePurchaseModRequest));
             RegisterHandler(new EvosMessageDelegate<PurchaseTauntRequest>(HandlePurchaseTauntRequest));
             RegisterHandler(new EvosMessageDelegate<PurchaseBannerBackgroundRequest>(HandlePurchaseBannerRequest));
@@ -83,6 +85,9 @@ namespace CentralServer.LobbyServer
             RegisterHandler(new EvosMessageDelegate<PurchaseChatEmojiRequest>(HandlePurchaseChatEmoji));
             RegisterHandler(new EvosMessageDelegate<PurchaseLoadoutSlotRequest>(HandlePurchaseLoadoutSlot));
             */
+
+            RegisterHandler(new EvosMessageDelegate<PurchaseAbilityVfxRequest>(HandlePurchasAbilityVfx));
+            
         }
 
         protected override void HandleClose(CloseEventArgs e)
@@ -636,6 +641,16 @@ namespace CentralServer.LobbyServer
                 Type = joinType,
                 // RequestId = TODO
             });
+            if (EvosConfiguration.GetPingOnGroupRequest() && !friend.IsInGroup() && !friend.IsInGame())
+            {
+                friend.Send(new ChatNotification
+                {
+                    SenderAccountId = AccountId,
+                    SenderHandle = requester.Handle,
+                    ConsoleMessageType = ConsoleMessageType.WhisperChat,
+                    Text = "[Group request]"
+                });
+            }
             
             log.Info($"{AccountId}/{requester.Handle} invited {friend.AccountId}/{request.FriendHandle} to group {group.GroupId}");
             Send(new GroupInviteResponse
@@ -781,6 +796,114 @@ namespace CentralServer.LobbyServer
                         client.Send(useGGPackNotification);
                     }
                 }
+            }
+        }
+
+        //Allows to get rid of the flashy New tag next to store for existing users
+        public void HandleUpdateUIStateRequest(UpdateUIStateRequest request)
+        {
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+            log.Info($"Player {AccountId} requested UIState {request.UIState} {request.StateValue}");
+            account.AccountComponent.UIStates.Add(request.UIState,request.StateValue);
+            DB.Get().AccountDao.UpdateAccount(account);
+        }
+
+        private void HandlePurchasAbilityVfx(PurchaseAbilityVfxRequest request)
+        {
+            //Get the users account
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+
+            // Never trust the client double check plus we need this info to deduct it from account
+            int cost = InventoryManager.GetVfxCost(request.VfxId, request.AbilityId);
+
+            log.Info($"Player {AccountId} trying to purchase vfx {request.VfxId} with {request.CurrencyType} for character {request.CharacterType} and ability {request.AbilityId} for price {cost}");
+
+            if (account.BankComponent.CurrentAmounts.GetCurrentAmount(request.CurrencyType) < cost)
+            {
+                PurchaseAbilityVfxResponse failedResponse = new PurchaseAbilityVfxResponse()
+                {
+                    ResponseId = request.RequestId,
+                    Result = PurchaseResult.Failed,
+                    CurrencyType = request.CurrencyType,
+                    CharacterType = request.CharacterType,
+                    AbilityId = request.AbilityId,
+                    VfxId = request.VfxId
+                };
+
+                Send(failedResponse);
+
+                return;
+            }
+
+            PlayerAbilityVfxSwapData abilityVfxSwapData = new PlayerAbilityVfxSwapData() 
+            { 
+                AbilityId = request.AbilityId,
+                AbilityVfxSwapID = request.VfxId
+            };
+
+            account.CharacterData[request.CharacterType].CharacterComponent.AbilityVfxSwaps.Add(abilityVfxSwapData);
+
+            account.BankComponent.ChangeValue(request.CurrencyType, -cost, $"Purchase vfx");
+
+            DB.Get().AccountDao.UpdateAccount(account);
+
+            PurchaseAbilityVfxResponse response = new PurchaseAbilityVfxResponse()
+            {
+                ResponseId = request.RequestId,
+                Result = PurchaseResult.Success,
+                CurrencyType = request.CurrencyType,
+                CharacterType = request.CharacterType,
+                AbilityId = request.AbilityId,
+                VfxId = request.VfxId
+            };
+
+            Send(response);
+
+            // Notify in chat
+            Send(new ChatNotification
+            {
+                ConsoleMessageType = ConsoleMessageType.SystemMessage,
+                Text = "Purchase vfx succesfull."
+            });
+
+            // Update character
+            Send(new PlayerCharacterDataUpdateNotification()
+            {
+                CharacterData = account.CharacterData[request.CharacterType],
+            });
+
+            //Update account curency
+            Send(new PlayerAccountDataUpdateNotification()
+            {
+                AccountData = account,
+            });
+        }
+
+        public void HandleGroupChatRequest(GroupChatRequest request)
+        {
+            Send(new GroupChatResponse
+            {
+                Text = request.Text,
+                ResponseId = request.RequestId,
+                Success = true
+            });
+
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+
+            ChatNotification message = new ChatNotification()
+            {
+                SenderAccountId = AccountId,
+                EmojisAllowed = request.RequestedEmojis,
+                CharacterType = account.AccountComponent.LastCharacter,
+                ConsoleMessageType = ConsoleMessageType.GroupChat,
+                SenderHandle = account.Handle,
+                Text = request.Text
+            };
+
+            foreach (long accountID in GroupManager.GetPlayerGroup(AccountId).Members)
+            {
+                LobbyServerProtocol connection = SessionManager.GetClientConnection(accountID);
+                connection.Send(message);
             }
         }
 

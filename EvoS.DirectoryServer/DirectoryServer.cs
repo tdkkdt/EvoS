@@ -52,7 +52,7 @@ namespace EvoS.DirectoryServer
         public void Configure(IApplicationBuilder app)
         {
             var serverAddressesFeature = app.ServerFeatures.Get<IServerAddressesFeature>();
-            log.Info("Started DirectoryServer on '0.0.0.0:6050'");
+            log.Info($"Started DirectoryServer on '0.0.0.0:{EvosConfiguration.GetDirectoryServerPort()}'");
 
             app.Run(async (context) =>
             {
@@ -183,14 +183,16 @@ namespace EvoS.DirectoryServer
             foreach (PersistedCharacterData persistedCharacterData in account.CharacterData.Values)
             {
                 persistedCharacterData.CharacterComponent.UnlockSkinsAndTaunts(persistedCharacterData.CharacterType);
-                persistedCharacterData.ExperienceComponent.Level = 20;
+                if (EvosStoreConfiguration.AreAllCharactersForFree()) persistedCharacterData.ExperienceComponent.Level = EvosStoreConfiguration.GetStartingCharactersLevel();
+                persistedCharacterData.CharacterComponent.UnlockVFX(persistedCharacterData.CharacterType);
             }
 
-            account.AccountComponent.UnlockedEmojiIDs = InventoryManager.GetUnlockedEmojiIDs(account.AccountId);
-            account.AccountComponent.UnlockedLoadingScreenBackgroundIdsToActivatedState = InventoryManager.GetActivatedLoadingScreenBackgroundIds(account.AccountId);
-            account.AccountComponent.UnlockedOverconIDs = InventoryManager.GetUnlockedOverconIDs(account.AccountId);
-            account.AccountComponent.UnlockedTitleIDs = InventoryManager.GetUnlockedTitleIDs(account.AccountId);
-            account.AccountComponent.UnlockedBannerIDs = InventoryManager.GetUnlockedBannerIDs(account.AccountId);
+            if (EvosStoreConfiguration.AreEmojisFree()) account.AccountComponent.UnlockedEmojiIDs = InventoryManager.GetUnlockedEmojiIDs(account.AccountId);
+            if (EvosStoreConfiguration.AreLoadingScreenBackgroundFree()) account.AccountComponent.UnlockedLoadingScreenBackgroundIdsToActivatedState = InventoryManager.GetActivatedLoadingScreenBackgroundIds(account.AccountId);
+            if (EvosStoreConfiguration.AreOverconsFree()) account.AccountComponent.UnlockedOverconIDs = InventoryManager.GetUnlockedOverconIDs(account.AccountId);
+            if (EvosStoreConfiguration.AreTitlesFree()) account.AccountComponent.UnlockedTitleIDs = InventoryManager.GetUnlockedTitleIDs(account.AccountId);
+            if (EvosStoreConfiguration.AreBannersFree()) account.AccountComponent.UnlockedBannerIDs = InventoryManager.GetUnlockedBannerIDs(account.AccountId);
+
             return true;
         }
 

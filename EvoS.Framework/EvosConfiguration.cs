@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using YamlDotNet.Serialization.NamingConventions;
+﻿using System.IO;
+using YamlDotNet.Serialization;
 
 namespace EvoS.Framework
 {
@@ -16,9 +13,11 @@ namespace EvoS.Framework
         public string SteamWebApiKey = "";
         public bool AutoRegisterNewUsers = true;
         public DBConfig Database = new DBConfig();
+        
+        public bool PingOnGroupRequest = true;
 
         private static Lazy<EvosConfiguration> _instance = new Lazy<EvosConfiguration>(() =>
-            new YamlDotNet.Serialization.DeserializerBuilder().Build().Deserialize<EvosConfiguration>(File.ReadAllText("settings.yaml")));
+            new DeserializerBuilder().Build().Deserialize<EvosConfiguration>(File.ReadAllText("settings.yaml")));
 
         private static EvosConfiguration Instance => _instance.Value;
 
@@ -47,6 +46,11 @@ namespace EvoS.Framework
         
         public static DBConfig GetDBConfig() => Instance.Database;
 
+        public static bool GetPingOnGroupRequest()
+        {
+            return GetInstance().PingOnGroupRequest;
+        }
+
         public enum DBType
         {
             None,
@@ -56,11 +60,12 @@ namespace EvoS.Framework
         public class DBConfig
         {
             public DBType Type = DBType.None;
-            public string URI = "localhost";
+            public string URI = "localhost:27017";
             public string User = "user";
             public string Password = "password";
             public string Database = "atlas";
             public string Salt = "salt";
+            public bool MongoDbSrv = false;
         }
     }
 }
