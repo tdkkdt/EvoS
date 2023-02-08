@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using YamlDotNet.Serialization;
 
 namespace EvoS.Framework
@@ -46,10 +47,7 @@ namespace EvoS.Framework
         
         public static DBConfig GetDBConfig() => Instance.Database;
 
-        public static bool GetPingOnGroupRequest()
-        {
-            return GetInstance().PingOnGroupRequest;
-        }
+        public static bool GetPingOnGroupRequest() => Instance.PingOnGroupRequest;
 
         public enum DBType
         {
