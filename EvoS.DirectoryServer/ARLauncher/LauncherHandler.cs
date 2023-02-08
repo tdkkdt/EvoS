@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using EvoS.DirectoryServer.Account;
-using EvoS.DirectoryServer.ARLauncher;
 using EvoS.DirectoryServer.ARLauncher.Messages;
 using log4net.Core;
 using MongoDB.Driver.Core.Authentication;
 using static EvoS.DirectoryServer.ARLauncher.Messages.LauncherRequest;
 
-namespace EvoS.DirectoryServer.Launcher
+namespace EvoS.DirectoryServer.ARLauncher
 {
     internal static class LauncherHandler
     {
