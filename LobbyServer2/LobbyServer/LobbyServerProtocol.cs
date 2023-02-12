@@ -47,7 +47,7 @@ namespace CentralServer.LobbyServer
         public bool IsInQueue() => MatchmakingManager.IsQueued(GroupManager.GetPlayerGroup(AccountId));
         
         public bool IsReady { get; private set; }
-        
+
         protected override void HandleOpen()
         {
             RegisterHandler(new EvosMessageDelegate<RegisterGameClientRequest>(HandleRegisterGame));
@@ -69,7 +69,10 @@ namespace CentralServer.LobbyServer
             RegisterHandler(new EvosMessageDelegate<ChatNotification>(HandleChatNotification));
             RegisterHandler(new EvosMessageDelegate<GroupInviteRequest>(HandleGroupInviteRequest));
             RegisterHandler(new EvosMessageDelegate<GroupConfirmationResponse>(HandleGroupConfirmationResponse));
+            RegisterHandler(new EvosMessageDelegate<GroupSuggestionResponse>(HandleGroupSuggestionResponse));
             RegisterHandler(new EvosMessageDelegate<GroupLeaveRequest>(HandleGroupLeaveRequest));
+            RegisterHandler(new EvosMessageDelegate<GroupKickRequest>(HandleGroupKickRequest));
+            RegisterHandler(new EvosMessageDelegate<GroupPromoteRequest>(HandleGroupPromoteRequest));
             RegisterHandler(new EvosMessageDelegate<SelectBannerRequest>(HandleSelectBannerRequest));
             RegisterHandler(new EvosMessageDelegate<SelectTitleRequest>(HandleSelectTitleRequest));
             RegisterHandler(new EvosMessageDelegate<UseOverconRequest>(HandleUseOverconRequest));
@@ -188,6 +191,48 @@ namespace CentralServer.LobbyServer
             };
 
             Send(update);
+        }
+
+        private void HandleGroupPromoteRequest(GroupPromoteRequest message)
+        {
+            GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
+            //Sadly message.AccountId returns 0 so look it up by name/handle
+            long? accountId = SessionManager.GetOnlinePlayerByHandle(message.Name);
+            if (accountId.HasValue)
+            {
+                group.SetLeader((long)accountId);
+                BroadcastRefreshGroup();
+                //If the new leader is accountId send success true else false tho we do not have any localization does nothing atm 
+                if (group.IsLeader((long)accountId))
+                {
+                    Send(new GroupPromoteResponse()
+                    {
+                        Success = true
+                    });
+                }
+                else 
+                {
+                    Send(new GroupPromoteResponse()
+                    {
+                        //To send more need LocalizedFailure to be added
+                        Success = false
+                    });
+                }
+            }
+            else
+            {
+                Send(new GroupPromoteResponse()
+                {
+                    //To send more need LocalizedFailure to be added
+                    Success = false
+                });
+            }
+        }
+
+        private void HandleGroupKickRequest(GroupKickRequest message)
+        {
+            LobbyPlayerGroupInfo info = GroupManager.GetGroupInfo(AccountId);
+            GroupManager.LeaveGroup(info.Members.Find(m => m.MemberDisplayName == message.MemberName).AccountID, false);
         }
 
         public void HandleRegisterGame(RegisterGameClientRequest request)
@@ -611,6 +656,19 @@ namespace CentralServer.LobbyServer
             }
             
             GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
+
+            if (group.Members.Count == LobbyConfiguration.GetMaxGroupSize())
+            {
+                log.Warn($"{AccountId} try'd to invite {request.FriendHandle} into a full group");
+                Send(new GroupInviteResponse
+                {
+                    FriendHandle = request.FriendHandle,
+                    ResponseId = request.RequestId,
+                    Success = false
+                });
+                return;
+            }
+
             GroupConfirmationRequest.JoinType joinType;
             if (group == null)
             {
@@ -629,36 +687,55 @@ namespace CentralServer.LobbyServer
             PersistedAccountData requester = DB.Get().AccountDao.GetAccount(AccountId);
             PersistedAccountData leader = DB.Get().AccountDao.GetAccount(group.Leader);
             LobbyServerProtocol friend = SessionManager.GetClientConnection((long) friendAccountId);
-            friend.Send(new GroupConfirmationRequest
+            if (group.Leader == AccountId)
             {
-                GroupId = group.GroupId,
-                LeaderName = leader.Handle,
-                LeaderFullHandle = leader.Handle,
-                JoinerName = requester.Handle,
-                JoinerAccountId = AccountId,
-                ConfirmationNumber = GroupManager.CreateGroupRequest(AccountId, friend.AccountId, group.GroupId),
-                ExpirationTime = TimeSpan.FromSeconds(20),
-                Type = joinType,
-                // RequestId = TODO
-            });
-            if (EvosConfiguration.GetPingOnGroupRequest() && !friend.IsInGroup() && !friend.IsInGame())
-            {
-                friend.Send(new ChatNotification
+                friend.Send(new GroupConfirmationRequest
                 {
-                    SenderAccountId = AccountId,
-                    SenderHandle = requester.Handle,
-                    ConsoleMessageType = ConsoleMessageType.WhisperChat,
-                    Text = "[Group request]"
+                    GroupId = group.GroupId,
+                    LeaderName = leader.Handle,
+                    LeaderFullHandle = leader.Handle,
+                    JoinerName = requester.Handle,
+                    JoinerAccountId = AccountId,
+                    ConfirmationNumber = GroupManager.CreateGroupRequest(AccountId, friend.AccountId, group.GroupId),
+                    ExpirationTime = TimeSpan.FromSeconds(20),
+                    Type = joinType,
+                    // RequestId = TODO
+                });
+                if (EvosConfiguration.GetPingOnGroupRequest() && !friend.IsInGroup() && !friend.IsInGame())
+                {
+                    friend.Send(new ChatNotification
+                    {
+                        SenderAccountId = AccountId,
+                        SenderHandle = requester.Handle,
+                        ConsoleMessageType = ConsoleMessageType.WhisperChat,
+                        Text = "[Group request]"
+                    });
+                }
+            
+                log.Info($"{AccountId}/{requester.Handle} invited {friend.AccountId}/{request.FriendHandle} to group {group.GroupId}");
+                Send(new GroupInviteResponse
+                {
+                    FriendHandle = request.FriendHandle,
+                    ResponseId = request.RequestId,
+                    Success = true
+                });
+            } 
+            else
+            {
+                LobbyServerProtocol leaderSession = SessionManager.GetClientConnection(leader.AccountId);
+                leaderSession.Send(new GroupSuggestionRequest
+                {
+                    LeaderAccountId = group.Leader,
+                    SuggestedAccountFullHandle = request.FriendHandle,
+                    SuggesterAccountName = requester.Handle,
+                    SuggesterAccountId = AccountId,
                 });
             }
-            
-            log.Info($"{AccountId}/{requester.Handle} invited {friend.AccountId}/{request.FriendHandle} to group {group.GroupId}");
-            Send(new GroupInviteResponse
-            {
-                FriendHandle = request.FriendHandle,
-                ResponseId = request.RequestId,
-                Success = true
-            });
+        }
+
+        public void HandleGroupSuggestionResponse(GroupSuggestionResponse response)
+        { 
+            //Is this needed? 
         }
 
         public void HandleGroupConfirmationResponse(GroupConfirmationResponse response)
