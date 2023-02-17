@@ -253,7 +253,14 @@ namespace CentralServer.LobbyServer
                 EnableShop = true,
                 EnableQuests = false,
                 EnableSteamAchievements = false,
-                EnableTaunts = true
+                EnableTaunts = true,
+                CardConfigOverrides =
+                {
+                    { CardType.Cleanse_Prep, new CardConfigOverride { CardType = CardType.Cleanse_Prep, Allowed = false } },
+                    { CardType.TurtleTech, new CardConfigOverride { CardType = CardType.TurtleTech, Allowed = false } },
+                    { CardType.SecondWind, new CardConfigOverride { CardType = CardType.SecondWind, Allowed = false } },
+                    { CardType.ReduceCooldown, new CardConfigOverride { CardType = CardType.ReduceCooldown, Allowed = false } },
+                }
             };
         }
 
