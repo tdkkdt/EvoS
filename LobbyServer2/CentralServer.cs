@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using CentralServer.BridgeServer;
 using CentralServer.LobbyServer;
 using EvoS.Framework;
@@ -27,10 +28,13 @@ namespace CentralServer
                 log.Warn("GameServerExecutable not set in settings.yaml. " +
                          "Automatic game server launch is disabled. Game servers can still connect to this lobby");
             }
-            Console.ReadLine();
-            
-            //Console.ReadKey();
-            //server.Stop();
+
+            while (server.IsListening)
+            {
+                Thread.Sleep(5000);
+            }
+            log.Info("Lobby server is not listening, exiting...");
+            throw new ApplicationException("Lobby is down");
         }
     }
 }

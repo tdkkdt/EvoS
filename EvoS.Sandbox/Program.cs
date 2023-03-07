@@ -13,7 +13,6 @@ namespace EvoS.Sandbox
         {
             XmlConfigurator.Configure(new FileInfo("log4net.xml"));
             CommandLineApplication.Execute<Program>(args);
-            Console.ReadLine();
             return 0;
         }
         
