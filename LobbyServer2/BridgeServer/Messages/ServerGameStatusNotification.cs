@@ -6,7 +6,7 @@ using EvoS.Framework.Network.Unity;
 // added in rogues
 public class ServerGameStatusNotification : AllianceMessageBase
 {
-    internal GameStatus GameStatus { get; set; }
+    public GameStatus GameStatus;
 
     public override void Serialize(NetworkWriter writer)
     {

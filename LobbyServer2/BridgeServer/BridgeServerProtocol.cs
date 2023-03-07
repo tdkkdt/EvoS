@@ -33,6 +33,8 @@ namespace CentralServer.BridgeServer
         public string ProcessCode { get; } = "Artemis" + DateTime.Now.Ticks;
         public string Name => SessionInfo?.UserName ?? "ATLAS";
         public string BuildVersion => SessionInfo?.BuildVersion ?? "";
+        public bool IsPrivate { get; private set; }
+        public bool IsConnected { get; private set; } = true;
 
         public LobbyServerPlayerInfo GetServerPlayerInfo(long accountId)
         {
@@ -102,6 +104,7 @@ namespace CentralServer.BridgeServer
                 Address = data.Split(":")[0];
                 Port = Convert.ToInt32(data.Split(":")[1]);
                 SessionInfo = request.SessionInfo;
+                IsPrivate = request.isPrivate;
                 ServerManager.AddServer(this);
 
                 Send(new RegisterGameServerResponse
@@ -119,9 +122,9 @@ namespace CentralServer.BridgeServer
                     if (request.GameSummary == null) request.GameSummary = new LobbyGameSummary();
                     if (request.GameSummary.BadgeAndParticipantsInfo == null) request.GameSummary.BadgeAndParticipantsInfo = new List<BadgeAndParticipantInfo>();
                     log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
-                    log.Info($"Game {GameInfo.Name} at {request.GameSummary.GameServerAddress} finished " +
-                                            $"({request.GameSummary.NumOfTurns} turns), " +
-                                            $"{request.GameSummary.GameResult} {request.GameSummary.TeamAPoints}-{request.GameSummary.TeamBPoints}");
+                    log.Info($"Game {GameInfo?.Name} at {request.GameSummary?.GameServerAddress} finished " +
+                                            $"({request.GameSummary?.NumOfTurns} turns), " +
+                                            $"{request.GameSummary?.GameResult} {request.GameSummary?.TeamAPoints}-{request.GameSummary?.TeamBPoints}");
                     foreach (LobbyServerProtocolBase client in clients)
                     {
                         MatchResultsNotification response = new MatchResultsNotification
@@ -223,7 +226,7 @@ namespace CentralServer.BridgeServer
             {
                 PlayerDisconnectedNotification request = Deserialize<PlayerDisconnectedNotification>(networkReader);
                 log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
-                log.Info($"Player {request.PlayerInfo.AccountId} left game {GameInfo.GameServerProcessCode}");
+                log.Info($"Player {request.PlayerInfo.AccountId} left game {GameInfo?.GameServerProcessCode}");
                 
                 foreach (LobbyServerProtocol client in clients)
                 {
@@ -238,7 +241,7 @@ namespace CentralServer.BridgeServer
             {
                 ServerGameStatusNotification request = Deserialize<ServerGameStatusNotification>(networkReader);
                 log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
-                log.Info($"Game {GameInfo.Name} {request.GameStatus}");
+                log.Info($"Game {GameInfo?.Name} {request.GameStatus}");
                 GameStatus = request.GameStatus;
                 if (GameStatus == GameStatus.Stopped)
                 {
@@ -264,12 +267,19 @@ namespace CentralServer.BridgeServer
 
         protected override void HandleClose(CloseEventArgs e)
         {
-            ServerManager.RemoveServer(this.ID);
+            ServerManager.RemoveServer(ProcessCode);
+            IsConnected = false;
         }
 
         public bool IsAvailable()
         {
-            return GameStatus == GameStatus.Stopped;
+            return GameStatus == GameStatus.Stopped && !IsPrivate && IsConnected;
+        }
+
+        public void ReserveForGame()
+        {
+            GameStatus = GameStatus.Assembling;
+            // TODO release if game did not start?
         }
 
         public void StartGame(LobbyGameInfo gameInfo, LobbyServerTeamInfo teamInfo)

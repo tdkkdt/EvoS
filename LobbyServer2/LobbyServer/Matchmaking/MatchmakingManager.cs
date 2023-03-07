@@ -324,6 +324,20 @@ namespace CentralServer.LobbyServer.Matchmaking
                 }
 
                 // We are ready to start the game
+                if (!server.IsConnected)
+                {
+                    log.Error($"Server {server.URI} reserved for game {gameInfo.Name} has disconnected");
+                    foreach (LobbyServerProtocol client in clients)
+                    {
+                        client.Send(new GameAssignmentNotification
+                        {
+                            GameInfo = null,
+                            GameResult = GameResult.NoResult,
+                            Reconnection = false
+                        });
+                    }
+                    return;
+                }
                 server.StartGame(gameInfo, teamInfo);
 
                 for (int i = 0; i < clients.Count; i++)

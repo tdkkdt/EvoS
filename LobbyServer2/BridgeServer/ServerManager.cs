@@ -1,7 +1,5 @@
 ﻿using System.Collections.Generic;
 using CentralServer.LobbyServer.Matchmaking;
-using EvoS.Framework.Misc;
-using EvoS.Framework.Network.Static;
 using log4net;
 
 namespace CentralServer.BridgeServer
@@ -14,15 +12,15 @@ namespace CentralServer.BridgeServer
 
         public static void AddServer(BridgeServerProtocol gameServer)
         {
-            ServerPool.Add(gameServer.ID, gameServer);
+            ServerPool.Add(gameServer.ProcessCode, gameServer);
 
             log.Info($"New game server connected with address {gameServer.Address}:{gameServer.Port}");
             MatchmakingManager.Update();
         }
 
-        public static void RemoveServer(string connectionID)
+        public static void RemoveServer(string processCode)
         {
-            ServerPool.Remove(connectionID);
+            ServerPool.Remove(processCode);
             log.Info($"Game server disconnected");
         }
 
@@ -34,9 +32,7 @@ namespace CentralServer.BridgeServer
                 {
                     if (server.IsAvailable())
                     {
-                        // Let MatchmakingManager start it when ready (Cause mods etc can be updated pre game)
-                        //server.StartGame(gameInfo, teamInfo);
-
+                        server.ReserveForGame();
                         return server;
                     }
                 }
