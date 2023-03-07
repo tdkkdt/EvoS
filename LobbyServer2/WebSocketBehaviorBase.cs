@@ -9,6 +9,8 @@ namespace CentralServer
 {
     public abstract class WebSocketBehaviorBase : WebSocketBehavior
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketBehaviorBase));
+        
         protected sealed override void OnOpen()
         {
             Wrap((object x) => HandleOpen(), null);
@@ -20,6 +22,7 @@ namespace CentralServer
         
         protected sealed override void OnClose(CloseEventArgs e)
         {
+            Wrap(x => log.Info($"Disconnect: code {x.Code}, reason '{x.Reason}', clean {x.WasClean}"), e);
             Wrap(HandleClose, e);
         }
 
@@ -29,6 +32,13 @@ namespace CentralServer
 
         protected sealed override void OnError(ErrorEventArgs e)
         {
+            Wrap(x =>
+            {
+                log.Info("--- Websocket Error ---");
+                log.Info(x.Exception.Source);
+                log.Info(x.Message);
+                log.Info(x.Exception.StackTrace);
+            }, e);
             Wrap(HandleError, e);
         }
 
