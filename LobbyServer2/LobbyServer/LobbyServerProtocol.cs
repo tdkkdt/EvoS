@@ -258,6 +258,7 @@ namespace CentralServer.LobbyServer
                     };
 
                     // Overwrite the values we need
+                    response.AuthInfo.Password = null;
                     response.AuthInfo.AccountId = AccountId;
                     response.AuthInfo.Handle = playerInfo.Handle;
                     response.AuthInfo.TicketData = new SessionTicketData
