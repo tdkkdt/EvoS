@@ -19,6 +19,7 @@ using log4net;
 using Newtonsoft.Json;
 using WebSocketSharp;
 using WebSocketSharp.Server;
+using MongoDB.Bson;
 using Discord.Webhook;
 using Discord;
 
@@ -82,6 +83,7 @@ namespace CentralServer.LobbyServer
             RegisterHandler(new EvosMessageDelegate<UpdateUIStateRequest>(HandleUpdateUIStateRequest));
             RegisterHandler(new EvosMessageDelegate<GroupChatRequest>(HandleGroupChatRequest));
             RegisterHandler(new EvosMessageDelegate<ClientFeedbackReport>(HandleClientFeedbackReport));
+            RegisterHandler(new EvosMessageDelegate<RejoinGameRequest>(HandleRejoinGameRequest));
 
             /* TODO: adding these to
             RegisterHandler(new EvosMessageDelegate<PurchaseModResponse>(HandlePurchaseModRequest));
@@ -247,19 +249,25 @@ namespace CentralServer.LobbyServer
                 if (playerInfo != null)
                 {
                     log.Info(string.Format(Messages.LoginSuccess, this.UserName));
+                    LobbySessionInfo sessionInfo = SessionManager.GetSessionInfo(request.SessionInfo.AccountId);
                     RegisterGameClientResponse response = new RegisterGameClientResponse
                     {
-                        // Note: If we send AuthInfo back, it will override the one currently set up on the client
-                        // which will cause issues if the client attempts to reconnect at some point.
-                        AuthInfo = new AuthInfo()
-                        {
-                            AccountId = AccountId,
-                            Handle = playerInfo.Handle
-                        },
-                        SessionInfo = SessionManager.GetSessionInfo(request.AuthInfo.AccountId),
+                        AuthInfo = request.AuthInfo, // Send original, if some data is missing on a new instance the game fails
+                        SessionInfo = sessionInfo,
                         ResponseId = request.RequestId
                     };
+
+                    // Overwrite the values we need
+                    response.AuthInfo.AccountId = AccountId;
+                    response.AuthInfo.Handle = playerInfo.Handle;
+                    response.AuthInfo.TicketData = new SessionTicketData
+                    {
+                        AccountID = AccountId,
+                        SessionToken = sessionInfo.SessionToken,
+                        ReconnectionSessionToken = sessionInfo.ReconnectSessionToken
+                    }.ToStringWithSignature();
                     
+
                     Send(response);
                     SendLobbyServerReadyNotification();
 
@@ -1077,6 +1085,13 @@ namespace CentralServer.LobbyServer
             }
         }
 
+        public void HandleRejoinGameRequest(RejoinGameRequest request)
+        {
+            log.Info($"TODO: {UserName} want to reconnect to a game");
+            // log.Info(request.ToJson());
+            // Send(new RejoinGameResponse() { ResponseId = request.RequestId });
+        }
+
         public void OnLeaveGroup()
         {
             RefreshGroup();
@@ -1098,6 +1113,11 @@ namespace CentralServer.LobbyServer
                        (server.BuildVersion != "" ? $"Build {server.BuildVersion}. " : "") +
                        $"Game {new DateTime(server.GameInfo.CreateTimestamp):yyyy_MM_dd__HH_mm_ss}."
             });
+        }
+
+        public void CloseConnection()
+        {
+            this.WebSocket.Close();
         }
 
         private void HandleClientFeedbackReport(ClientFeedbackReport message)

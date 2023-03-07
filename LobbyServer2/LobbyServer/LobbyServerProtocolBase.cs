@@ -29,9 +29,8 @@ namespace CentralServer.LobbyServer
         private static readonly ILog log = LogManager.GetLogger(typeof(LobbyServerProtocolBase));
         private Dictionary<Type, EvosMessageDelegate<WebSocketMessage>> messageHandlers = new Dictionary<Type, EvosMessageDelegate<WebSocketMessage>>();
         public long AccountId;
-        public long SessionToken;
         public string UserName;
-        
+        public long SessionToken;
         public GameType SelectedGameType;
         public ushort SelectedSubTypeMask;
         public BotDifficulty AllyDifficulty;
