@@ -67,8 +67,8 @@ namespace CentralServer.BridgeServer
             typeof(ServerGameMetricsNotification),
             typeof(ServerGameStatusNotification),
             typeof(MonitorHeartbeatNotification),
-            null, // typeof(LaunchGameResponse),
-            null, // typeof(JoinGameServerResponse),
+            typeof(LaunchGameResponse),
+            typeof(JoinGameServerResponse),
             null, // typeof(JoinGameAsObserverResponse)
         };
         
@@ -263,6 +263,19 @@ namespace CentralServer.BridgeServer
             {
                 MonitorHeartbeatNotification request = Deserialize<MonitorHeartbeatNotification>(networkReader);
                 log.Debug($"< {request.GetType().Name} heartbeat");
+            }
+            else if (type == typeof(LaunchGameResponse))
+            {
+                LaunchGameResponse response = Deserialize<LaunchGameResponse>(networkReader);
+                log.Debug($"< {response.GetType().Name} {DefaultJsonSerializer.Serialize(response)}");
+                log.Info($"Game {GameInfo?.Name} launched ({response.GameServerAddress}, {response.GameInfo?.GameStatus}) with {response.GameInfo?.ActiveHumanPlayers} players");
+            }
+            else if (type == typeof(JoinGameServerResponse))
+            {
+                JoinGameServerResponse response = Deserialize<JoinGameServerResponse>(networkReader);
+                log.Debug($"< {response.GetType().Name} {DefaultJsonSerializer.Serialize(response)}");
+                log.Info($"Player {response.PlayerInfo?.Handle} {response.PlayerInfo?.AccountId} {response.PlayerInfo?.CharacterType} " +
+                         $"joined {GameInfo?.Name}  ({response.GameServerProcessCode})");
             }
             else
             {
