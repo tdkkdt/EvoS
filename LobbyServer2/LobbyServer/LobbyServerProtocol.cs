@@ -459,8 +459,6 @@ namespace CentralServer.LobbyServer
 
         public void HandleLeaveGameRequest(LeaveGameRequest request)
         {
-            Console.WriteLine("LeaveGameRequest " + JsonConvert.SerializeObject(request));
-
             LeaveGameResponse response = new LeaveGameResponse()
             {
                 Success = true,

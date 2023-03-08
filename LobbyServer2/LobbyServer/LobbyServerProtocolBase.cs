@@ -65,7 +65,7 @@ namespace CentralServer.LobbyServer
                 }
                 else
                 {
-                    log.Error("No handler for " + deserialized.GetType().Name + "\n" + DefaultJsonSerializer.Serialize(deserialized));
+                    log.Error("No handler for " + deserialized.GetType().Name + ": " + DefaultJsonSerializer.Serialize(deserialized));
                 }
             }
         }
