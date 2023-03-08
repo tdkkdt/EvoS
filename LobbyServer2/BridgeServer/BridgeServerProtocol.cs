@@ -64,9 +64,9 @@ namespace CentralServer.BridgeServer
             null, // typeof(MonitorHeartbeatResponse),
             typeof(ServerGameSummaryNotification),
             typeof(PlayerDisconnectedNotification),
-            null, // typeof(ServerGameMetricsNotification),
+            typeof(ServerGameMetricsNotification),
             typeof(ServerGameStatusNotification),
-            null, // typeof(MonitorHeartbeatNotification),
+            typeof(MonitorHeartbeatNotification),
             null, // typeof(LaunchGameResponse),
             null, // typeof(JoinGameServerResponse),
             null, // typeof(JoinGameAsObserverResponse)
@@ -237,6 +237,14 @@ namespace CentralServer.BridgeServer
                     }
                 }
             }
+            else if (type == typeof(ServerGameMetricsNotification))
+            {
+                ServerGameMetricsNotification request = Deserialize<ServerGameMetricsNotification>(networkReader);
+                log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
+                log.Info($"Game {GameInfo?.Name} Turn {request.GameMetrics?.CurrentTurn}, " +
+                         $"{request.GameMetrics?.TeamAPoints}-{request.GameMetrics?.TeamBPoints}, " +
+                         $"frame time: {request.GameMetrics?.AverageFrameTime}");
+            }
             else if (type == typeof(ServerGameStatusNotification))
             {
                 ServerGameStatusNotification request = Deserialize<ServerGameStatusNotification>(networkReader);
@@ -250,6 +258,11 @@ namespace CentralServer.BridgeServer
                         client.CurrentServer = null;
                     }
                 }
+            }
+            else if (type == typeof(MonitorHeartbeatNotification))
+            {
+                MonitorHeartbeatNotification request = Deserialize<MonitorHeartbeatNotification>(networkReader);
+                log.Debug($"< {request.GetType().Name} heartbeat");
             }
             else
             {
