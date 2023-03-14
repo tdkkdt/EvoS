@@ -34,10 +34,7 @@ namespace CentralServer
         {
             Wrap(x =>
             {
-                log.Info("--- Websocket Error ---");
-                log.Info(x.Exception.Source);
-                log.Info(x.Message);
-                log.Info(x.Exception.StackTrace);
+                log.Error($"Websocket Error: {x.Message} {x.Exception}");
             }, e);
             Wrap(HandleError, e);
         }
