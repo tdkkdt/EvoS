@@ -100,14 +100,30 @@ namespace CentralServer.LobbyServer
 
         protected override void HandleClose(CloseEventArgs e)
         {
+            if (!SessionCleaned)
+            {
+                SessionCleaned = true;
+                GroupManager.LeaveGroup(AccountId, false);
+            } 
             LobbyServerPlayerInfo playerInfo = SessionManager.GetPlayerInfo(this.AccountId);
             if (playerInfo != null)
             {
                 log.Info(string.Format(Messages.PlayerDisconnected, this.UserName));
+
+                BridgeServerProtocol server = ServerManager.GetServerWithPlayer(AccountId);
+                if (server != null)
+                {
+                    server.Send(new DisconnectPlayerRequest()
+                    {
+                        SessionInfo = SessionManager.GetSessionInfo(this.AccountId),
+                        PlayerInfo = playerInfo,
+                        GameResult = GameResult.ClientLeft
+                    });
+                }
+
                 SessionManager.OnPlayerDisconnect(this);
             }
             BroadcastRefreshFriendList();
-            GroupManager.LeaveGroup(AccountId, false);
         }
 
         public void BroadcastRefreshFriendList()
@@ -273,6 +289,21 @@ namespace CentralServer.LobbyServer
                     SendLobbyServerReadyNotification();
 
                     GroupManager.CreateGroup(AccountId);
+
+                    // Send 'Connected to lobby server' notification to chat
+                    foreach (long playerAccountId in SessionManager.GetOnlinePlayers())
+                    {
+                        LobbyServerProtocol player =  SessionManager.GetClientConnection(playerAccountId);
+                        if (player.CurrentServer == null)
+                        {
+                            ChatNotification chatNotification = new ChatNotification
+                            {
+                                ConsoleMessageType = ConsoleMessageType.SystemMessage,
+                                Text = $"<link=name>{sessionInfo.Handle}</link> connected to lobby server"
+                            };
+                            player.Send(chatNotification);
+                        }
+                    }
                 }
                 else
                 {
@@ -333,29 +364,28 @@ namespace CentralServer.LobbyServer
         public void HandlePlayerInfoUpdateRequest(PlayerInfoUpdateRequest request)
         {
             LobbyPlayerInfoUpdate update = request.PlayerInfoUpdate;
-
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+
+            // Change Character
             if (update.CharacterType.HasValue)
             {
                 account.AccountComponent.LastCharacter = update.CharacterType.Value;
             }
             CharacterComponent characterComponent = account.CharacterData[account.AccountComponent.LastCharacter].CharacterComponent;
-            if (update.CharacterSkin.HasValue)
-            {
-                characterComponent.LastSkin = update.CharacterSkin.Value;
-            }
-            if (update.CharacterCards.HasValue)
-            {
-                characterComponent.LastCards = update.CharacterCards.Value;
-            }
-            if (update.CharacterMods.HasValue)
-            {
-                characterComponent.LastMods = update.CharacterMods.Value;
-            }
-            if (update.CharacterAbilityVfxSwaps.HasValue)
-            {
-                characterComponent.LastAbilityVfxSwaps = update.CharacterAbilityVfxSwaps.Value;
-            }
+
+            // Change Skin
+            if (update.CharacterSkin.HasValue) characterComponent.LastSkin = update.CharacterSkin.Value;
+            
+            // Change Catalysts
+            if (update.CharacterCards.HasValue) characterComponent.LastCards = update.CharacterCards.Value;
+
+            // Change Mods
+            if (update.CharacterMods.HasValue) characterComponent.LastMods = update.CharacterMods.Value;
+
+            // Change Ability VFX
+            if (update.CharacterAbilityVfxSwaps.HasValue) characterComponent.LastAbilityVfxSwaps = update.CharacterAbilityVfxSwaps.Value;
+
+            // Change Loadout
             if (update.CharacterLoadoutChanges.HasValue)
             {
                 characterComponent.CharacterLoadouts = update.CharacterLoadoutChanges.Value.CharacterLoadoutChanges;
@@ -364,6 +394,8 @@ namespace CentralServer.LobbyServer
             {
                 characterComponent.LastSelectedLoadout = update.LastSelectedLoadout.Value;
             }
+
+
             DB.Get().AccountDao.UpdateAccount(account);
             LobbyServerPlayerInfo playerInfo = SessionManager.UpdateLobbyServerPlayerInfo(AccountId);
 
@@ -389,7 +421,6 @@ namespace CentralServer.LobbyServer
             if (update.LastSelectedLoadout != null && update.LastSelectedLoadout.HasValue)
                 SetLastSelectedLoadout(update.LastSelectedLoadout.Value);
 
-            //Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
             
             PlayerInfoUpdateResponse response = new PlayerInfoUpdateResponse()
             {
@@ -428,9 +459,22 @@ namespace CentralServer.LobbyServer
 
         public void HandlePreviousGameInfoRequest(PreviousGameInfoRequest request)
         {
+
+            BridgeServerProtocol server = ServerManager.GetServerWithPlayer(AccountId);
+            LobbyGameInfo lobbyGameInfo = null;
+
+            if (server != null)
+            {
+                // Make sure we wait untill gameserver disconects us
+                if (server.GetPlayerInfo(AccountId).ReplacedWithBots)
+                {
+                    lobbyGameInfo = server.GameInfo;
+                }
+            }
+
             PreviousGameInfoResponse response = new PreviousGameInfoResponse()
             {
-                PreviousGameInfo = null,
+                PreviousGameInfo = lobbyGameInfo,
                 ResponseId = request.RequestId
             };
             Send(response);
@@ -476,8 +520,9 @@ namespace CentralServer.LobbyServer
 
             if (CurrentServer != null)
             {
-                CurrentServer.clients.Remove(this);
-                CurrentServer = null; // we will probably want to save it somewhere for reconnection
+                if (CurrentServer.ServerGameStatus == GameStatus.Stopped) {
+                    CurrentServer = null;
+                }
             }
         }
         
@@ -563,7 +608,7 @@ namespace CentralServer.LobbyServer
             LobbyServerPlayerInfo lobbyServerPlayerInfo = null;
             if (CurrentServer != null)
             {
-                lobbyServerPlayerInfo = CurrentServer.GetServerPlayerInfo(AccountId);
+                lobbyServerPlayerInfo = CurrentServer.GetPlayerInfo(AccountId);
                 if (lobbyServerPlayerInfo != null)
                 {
                     message.SenderTeam = lobbyServerPlayerInfo.TeamId;
@@ -840,7 +885,7 @@ namespace CentralServer.LobbyServer
             if (CurrentServer != null)
             {
                 response.ResponseId = 0;
-                foreach (LobbyServerProtocol client in CurrentServer.clients)
+                foreach (LobbyServerProtocol client in CurrentServer.GetClients())
                 {
                     if (client.AccountId != AccountId)
                     {
@@ -867,7 +912,7 @@ namespace CentralServer.LobbyServer
 
             if (CurrentServer != null)
             {
-                foreach(LobbyServerProtocol client in CurrentServer.clients)
+                foreach(LobbyServerProtocol client in CurrentServer.GetClients())
                 {
                     if (client.AccountId != AccountId)
                     {
@@ -1087,9 +1132,49 @@ namespace CentralServer.LobbyServer
 
         public void HandleRejoinGameRequest(RejoinGameRequest request)
         {
-            log.Info($"TODO: {UserName} want to reconnect to a game");
-            // log.Info(request.ToJson());
-            // Send(new RejoinGameResponse() { ResponseId = request.RequestId });
+            if (request.PreviousGameInfo == null || request.Accept == false)
+            {
+                Send(new RejoinGameResponse() { ResponseId = request.RequestId, Success = false });
+                return;
+            }
+
+            log.Info($"{UserName} wants to reconnect to a game");
+            
+            BridgeServerProtocol server = ServerManager.GetServerWithPlayer(AccountId);
+            LobbyServerPlayerInfo playerInfo;
+            try
+            {
+                playerInfo = server.GetPlayerInfo(AccountId);
+            }
+            catch (EvosException)
+            {
+                // no longer in a game
+                Send(new RejoinGameResponse() { ResponseId = request.RequestId, Success = false });
+                return;
+            }
+
+            Send(new RejoinGameResponse() { ResponseId = request.RequestId, Success = true });
+
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+            LobbyCharacterInfo character = LobbyCharacterInfo.Of(account.CharacterData[account.AccountComponent.LastCharacter]);
+
+            if (character.CharacterType != server.TeamInfo.TeamPlayerInfo.Find(p => p.AccountId == AccountId).CharacterType)
+            {
+                //Update db with the new LastCharacter
+                account.AccountComponent.LastCharacter = server.TeamInfo.TeamPlayerInfo.Find(p => p.AccountId == AccountId).CharacterType;
+                DB.Get().AccountDao.UpdateAccount(account);
+            }
+
+            CurrentServer = server;
+
+            playerInfo.ReplacedWithBots = false;
+
+            server.SendGameAssignmentNotification(this, true);
+            server.SendGameInfo(this, GameStatus.Launching);
+            server.SendGameInfo(this, GameStatus.Launched);
+            OnStartGame(server);
+            server.SendGameInfo(this, GameStatus.Started);
+            server.StartGameForReconection(AccountId);
         }
 
         public void OnLeaveGroup()

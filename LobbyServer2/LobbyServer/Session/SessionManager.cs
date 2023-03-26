@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Group;
-using EvoS.DirectoryServer.Account;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Exceptions;
@@ -96,7 +96,9 @@ namespace CentralServer.LobbyServer.Session
                 if (session != null && session.SessionToken == client.SessionToken)
                 {
                     ActiveConnections.TryRemove(client.AccountId, out _);
-                }
+                    // TODO: this sends to every player even if its in game and the disconnected player is not
+                    //client.Broadcast(new ChatNotification() { Text = $"{client.UserName} disconnected", ConsoleMessageType = ConsoleMessageType.SystemMessage });
+                }                
             }
         }
 
@@ -134,29 +136,57 @@ namespace CentralServer.LobbyServer.Session
 
         public static LobbySessionInfo CreateSession(long accountId)
         {
-            // Remove any previous session from this account
-            Sessions.TryRemove(accountId, out _);
+            // If we have a game with this accountId do not remove the session we need the info to be able to reconnect
+            // Else remove it and create a new Session
+            BridgeServerProtocol server = ServerManager.GetServerWithPlayer(accountId);
+            if (server == null)
+            {
+                Sessions.TryRemove(accountId, out _);
+            }
+
+            Sessions.TryGetValue(accountId, out LobbySessionInfo session);
+            LobbySessionInfo sessionInfo;
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
 
-            LobbySessionInfo sessionInfo = new LobbySessionInfo()
+            if (session == null)
             {
-                AccountId = accountId,
-                Handle = account.Handle,
-                UserName = account.Handle,
-                ConnectionAddress = "127.0.0.1",
-                BuildVersion = "STABLE-122-100",
-                LanguageCode = "",
-                FakeEntitlements = "",
-                ProcessCode = "",
-                ProcessType = ProcessType.AtlasReactor,
-                SessionToken = GenerateToken(account.Handle),
-                ReconnectSessionToken = GenerateToken(account.Handle),
-                Region = Region.EU,
-            };
+                sessionInfo = new LobbySessionInfo()
+                {
+                    AccountId = accountId,
+                    Handle = account.Handle,
+                    UserName = account.Handle,
+                    ConnectionAddress = "127.0.0.1",
+                    BuildVersion = "STABLE-122-100",
+                    LanguageCode = "",
+                    FakeEntitlements = "",
+                    ProcessCode = "",
+                    ProcessType = ProcessType.AtlasReactor,
+                    SessionToken = GenerateToken(account.Handle),
+                    ReconnectSessionToken = GenerateToken(account.Handle),
+                    Region = Region.EU,
+                };
 
-            // Add session for account
-            Sessions.TryAdd(accountId, sessionInfo);
-
+                // Add session for account
+                Sessions.TryAdd(accountId, sessionInfo);
+            }
+            else
+            {
+                sessionInfo = new LobbySessionInfo()
+                {
+                    AccountId = accountId,
+                    Handle = account.Handle,
+                    UserName = account.Handle,
+                    ConnectionAddress = "127.0.0.1",
+                    BuildVersion = "STABLE-122-100",
+                    LanguageCode = "",
+                    FakeEntitlements = "",
+                    ProcessCode = "",
+                    ProcessType = ProcessType.AtlasReactor,
+                    SessionToken = session.SessionToken,
+                    ReconnectSessionToken = GenerateToken(account.Handle), // This can be regenerated since we send ReconnectPlayerRequest that sends the new ReconnectSessionToken
+                    Region = Region.EU,
+                };
+            }
             return sessionInfo;
         }
 
@@ -166,6 +196,11 @@ namespace CentralServer.LobbyServer.Session
             ActiveConnections.TryGetValue(accountId, out client);
             if (client != null)
             {
+                if (!client.SessionCleaned)
+                {
+                    client.SessionCleaned = true;
+                    GroupManager.LeaveGroup(accountId, false);
+                }
                 client.WebSocket.Close();
                 ActiveConnections.TryRemove(accountId, out client);
             }
