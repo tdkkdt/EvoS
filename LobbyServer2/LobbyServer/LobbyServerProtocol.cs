@@ -110,16 +110,16 @@ namespace CentralServer.LobbyServer
             {
                 log.Info(string.Format(Messages.PlayerDisconnected, this.UserName));
 
-                BridgeServerProtocol server = ServerManager.GetServerWithPlayer(AccountId);
-                if (server != null)
-                {
-                    server.Send(new DisconnectPlayerRequest()
-                    {
-                        SessionInfo = SessionManager.GetSessionInfo(this.AccountId),
-                        PlayerInfo = playerInfo,
-                        GameResult = GameResult.ClientLeft
-                    });
-                }
+                // BridgeServerProtocol server = ServerManager.GetServerWithPlayer(AccountId);
+                // if (server != null)
+                // {
+                //     server.Send(new DisconnectPlayerRequest()
+                //     {
+                //         SessionInfo = SessionManager.GetSessionInfo(this.AccountId),
+                //         PlayerInfo = playerInfo,
+                //         GameResult = GameResult.ClientLeft
+                //     });
+                // }
 
                 SessionManager.OnPlayerDisconnect(this);
             }
