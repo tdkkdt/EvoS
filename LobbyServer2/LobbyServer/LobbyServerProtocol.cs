@@ -556,8 +556,11 @@ namespace CentralServer.LobbyServer
                         CurrentServer.GetPlayerInfo(AccountId).ReadyState = ReadyState.Ready;
                     }
                 }
-                UpdateGroupReadyState();
-                BroadcastRefreshGroup();
+                else
+                {
+                    UpdateGroupReadyState();
+                    BroadcastRefreshGroup();
+                }
             }
         }
         
