@@ -241,6 +241,8 @@ namespace CentralServer.LobbyServer.Matchmaking
                 TimeSpan timeout = server.GameInfo.SelectTimeout;
                 TimeSpan timePassed = TimeSpan.Zero;
                 bool allReady = false;
+                
+                log.Info($"Waiting for {timeout} to let players pick new characters");
 
                 while (!allReady && timePassed <= timeout)
                 {
@@ -262,6 +264,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             server.SendGameInfoNotifications();
 
             // Wait Loadout Selection time
+            log.Info($"Waiting for {server.GameInfo.LoadoutSelectTimeout} to let players update their loadouts");
             await Task.Delay(server.GameInfo.LoadoutSelectTimeout);
 
             log.Info("Launching...");
@@ -289,7 +292,6 @@ namespace CentralServer.LobbyServer.Matchmaking
 
             server.StartGame();
 
-            
             foreach (LobbyServerProtocol client in server.GetClients())
             {
                 server.SendGameInfo(client);

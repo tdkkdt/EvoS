@@ -846,8 +846,9 @@ namespace CentralServer.BridgeServer
                 { 
                     if (IsCharacterUnavailable(playerInfo, duplicateCharsA, duplicateCharsB))
                     {
-                        var thiefName = GetThiefName(playerInfo, duplicateCharsA, duplicateCharsB);
+                        string thiefName = GetThiefName(playerInfo, duplicateCharsA, duplicateCharsB);
 
+                        log.Info($"Forcing {playerInfo.Handle} to switch character as {playerInfo.CharacterType} is already picked by {thiefName}");
                         playerConnection.Send(new FreelancerUnavailableNotification()
                         {
                             oldCharacterType = playerInfo.CharacterType,
@@ -859,12 +860,23 @@ namespace CentralServer.BridgeServer
 
                         didWeHadFillOrDuplicate = true;
                     }
+                }
+            }
 
+            if (didWeHadFillOrDuplicate)
+            {
+                log.Info("We have duplicates/fills, going into DUPLICATE_FREELANCER subphase");
+                foreach (long player in GetPlayers())
+                {
+                    LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(player);
+                    if (playerConnection == null)
+                    {
+                        continue;
+                    }
                     playerConnection.Send(new EnterFreelancerResolutionPhaseNotification()
                     {
                         SubPhase = FreelancerResolutionPhaseSubType.DUPLICATE_FREELANCER
                     });
-
                     SendGameInfo(playerConnection);
                 }
             }
@@ -934,6 +946,7 @@ namespace CentralServer.BridgeServer
                             playerInfo.TeamId == Team.TeamA ? teamACharacters : teamBCharacters, 
                             usedRandomCharacters);
                     }
+                    log.Info($"{playerInfo.Handle} switched from {playerInfo.CharacterType} to {randomType}");
 
                     usedRandomCharacters.Add(randomType);
 
