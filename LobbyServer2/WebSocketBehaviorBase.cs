@@ -1,9 +1,7 @@
 using System;
-using System.IO;
 using log4net;
 using WebSocketSharp;
 using WebSocketSharp.Server;
-using ErrorEventArgs = WebSocketSharp.ErrorEventArgs;
 
 namespace CentralServer
 {
@@ -53,44 +51,56 @@ namespace CentralServer
         }
 
         protected abstract string GetConnContext();
+
+        private void LogContextPush()
+        {
+            string connContext = GetConnContext();
+            LogicalThreadContext.Stacks["conns"].Push(connContext);
+            LogicalThreadContext.Properties["conn"] = connContext;
+        }
+
+        private void LogContextPop()
+        {
+            LogicalThreadContext.Properties["conn"] = LogicalThreadContext.Stacks["conns"].Pop();
+        }
         
         protected void Wrap<T>(Action<T> handler, T param)
         {
-            LogicalThreadContext.Stacks["conn"].Push(GetConnContext());
+            LogContextPush();
             try
             {
                 handler(param);
             }
             finally
             {
-                LogicalThreadContext.Stacks["conn"].Pop();
+                LogContextPop();
             }
         }
         
         // plz forgive me
         protected void Wrap<T1, T2>(Action<T1, T2> handler, T1 param1, T2 param2)
         {
-            LogicalThreadContext.Stacks["conn"].Push(GetConnContext());
+            LogContextPush();
             try
             {
                 handler(param1, param2);
             }
             finally
             {
-                LogicalThreadContext.Stacks["conn"].Pop();
+                LogContextPop();
             }
         }
-        
+
         protected void Wrap<T1, T2, T3>(Action<T1, T2, T3> handler, T1 param1, T2 param2, T3 param3)
         {
-            LogicalThreadContext.Stacks["conn"].Push(GetConnContext());
+            LogContextPush();
             try
             {
                 handler(param1, param2, param3);
             }
             finally
             {
-                LogicalThreadContext.Stacks["conn"].Pop();
+                LogContextPop();
             }
         }
     }
