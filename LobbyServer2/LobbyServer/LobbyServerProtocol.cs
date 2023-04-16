@@ -1210,24 +1210,29 @@ namespace CentralServer.LobbyServer
             log.Info($"{UserName} wants to reconnect to a game");
             
             BridgeServerProtocol server = ServerManager.GetServerWithPlayer(AccountId);
-            LobbyServerPlayerInfo playerInfo;
-            try
-            {
-                playerInfo = server.GetPlayerInfo(AccountId);
-            }
-            catch (EvosException)
+
+            if (server == null)
             {
                 // no longer in a game
                 Send(new RejoinGameResponse() { ResponseId = request.RequestId, Success = false });
                 return;
             }
-
+            
+            LobbyServerPlayerInfo playerInfo = server.GetPlayerInfo(AccountId);
             Send(new RejoinGameResponse() { ResponseId = request.RequestId, Success = true });
 
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
             LobbyCharacterInfo character = LobbyCharacterInfo.Of(account.CharacterData[account.AccountComponent.LastCharacter]);
 
-            CharacterType oldCharacterType = server.TeamInfo.TeamPlayerInfo.Find(p => p.AccountId == AccountId).CharacterType;
+            LobbyServerPlayerInfo lobbyServerPlayerInfo = server.TeamInfo.TeamPlayerInfo.Find(p => p.AccountId == AccountId);
+            if (lobbyServerPlayerInfo == null)
+            {
+                // no longer in a game
+                Send(new RejoinGameResponse() { ResponseId = request.RequestId, Success = false });
+                return;
+            }
+            
+            CharacterType oldCharacterType = lobbyServerPlayerInfo.CharacterType;
 
             if (character.CharacterType != oldCharacterType)
             {
