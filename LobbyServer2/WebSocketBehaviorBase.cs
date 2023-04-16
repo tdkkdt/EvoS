@@ -61,7 +61,17 @@ namespace CentralServer
 
         private void LogContextPop()
         {
-            LogicalThreadContext.Properties["conn"] = LogicalThreadContext.Stacks["conns"].Pop();
+            LogicalThreadContext.Stacks["conns"].Pop();
+            if (LogicalThreadContext.Stacks["conns"].Count > 0)
+            {
+                string connContext = LogicalThreadContext.Stacks["conns"].Pop();
+                LogicalThreadContext.Stacks["conns"].Push(connContext);
+                LogicalThreadContext.Properties["conn"] = connContext;
+            }
+            else
+            {
+                LogicalThreadContext.Properties["conn"] = null;
+            }
         }
         
         protected void Wrap<T>(Action<T> handler, T param)
