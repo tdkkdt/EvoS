@@ -19,7 +19,6 @@ using log4net;
 using Newtonsoft.Json;
 using WebSocketSharp;
 using WebSocketSharp.Server;
-using MongoDB.Bson;
 using Discord.Webhook;
 using Discord;
 
@@ -304,15 +303,14 @@ namespace CentralServer.LobbyServer
                     // Send 'Connected to lobby server' notification to chat
                     foreach (long playerAccountId in SessionManager.GetOnlinePlayers())
                     {
-                        LobbyServerProtocol player =  SessionManager.GetClientConnection(playerAccountId);
-                        if (player.CurrentServer == null)
+                        LobbyServerProtocol player = SessionManager.GetClientConnection(playerAccountId);
+                        if (player != null && player.CurrentServer == null)
                         {
-                            ChatNotification chatNotification = new ChatNotification
+                            player.Send(new ChatNotification
                             {
                                 ConsoleMessageType = ConsoleMessageType.SystemMessage,
                                 Text = $"<link=name>{sessionInfo.Handle}</link> connected to lobby server"
-                            };
-                            player.Send(chatNotification);
+                            });
                         }
                     }
                 }
@@ -376,6 +374,36 @@ namespace CentralServer.LobbyServer
         {
             LobbyPlayerInfoUpdate update = request.PlayerInfoUpdate;
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+
+            if (CurrentServer != null
+                && CurrentServer.GameInfo.GameStatus != GameStatus.FreelancerSelecting
+                && update.CharacterType != null
+                && update.CharacterType.HasValue
+                && update.CharacterType != account.AccountComponent.LastCharacter)
+            {
+                log.Warn($"{account.Handle} attempted to switch from {account.AccountComponent.LastCharacter} " +
+                         $"to {update.CharacterType} while in game and not in FreelancerSelecting status");
+                Send(new PlayerInfoUpdateResponse
+                {
+                    Success = false,
+                    ResponseId = request.RequestId
+                });
+            }
+
+            CharacterType selectedCharacter = update.CharacterType ?? account.AccountComponent.LastCharacter;
+            if (update.ContextualReadyState != null
+                && update.ContextualReadyState.HasValue
+                && CurrentServer != null 
+                && CurrentServer.ServerGameStatus == GameStatus.FreelancerSelecting 
+                && !CurrentServer.ValidateSelectedCharacter(AccountId, selectedCharacter))
+            {
+                log.Warn($"{account.Handle} attempted to ready up while in game using illegal character {selectedCharacter}");
+                Send(new PlayerInfoUpdateResponse
+                {
+                    Success = false,
+                    ResponseId = request.RequestId
+                });
+            }
 
             // Change Character
             if (update.CharacterType.HasValue)
@@ -543,13 +571,12 @@ namespace CentralServer.LobbyServer
 
             if (CurrentServer != null)
             {
-                LobbyServerProtocol client = SessionManager.GetClientConnection(AccountId);
-                if (CurrentServer.GetPlayerInfo(AccountId).CharacterType != client.OldCharacter)
+                if (CurrentServer.GetPlayerInfo(AccountId)?.CharacterType != OldCharacter)
                 {
-                    CurrentServer.ResetCharacterToOriginal(client);
+                    CurrentServer.ResetCharacterToOriginal(this);
                 }
                 // We set it back on reconnect if need be
-                client.OldCharacter = CharacterType.None;
+                OldCharacter = CharacterType.None;
 
                 if (CurrentServer.ServerGameStatus == GameStatus.Stopped)
                 {

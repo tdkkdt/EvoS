@@ -260,13 +260,13 @@ namespace CentralServer.LobbyServer.Matchmaking
                         await Task.Delay(1000);
                     }
                 }
-
-                // Check if all characters have selected a new freelancer; if not, force them to change
-                server.CheckIfAllSelected();
             }
 
             // Enter loadout selection
             server.SetGameStatus(GameStatus.LoadoutSelecting);
+            // Check if all characters have selected a new freelancer; if not, force them to change
+            server.CheckIfAllSelected();
+            
             server.SendGameInfoNotifications();
 
             // Wait Loadout Selection time

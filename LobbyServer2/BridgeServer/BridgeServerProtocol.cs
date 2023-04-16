@@ -25,6 +25,8 @@ namespace CentralServer.BridgeServer
     public class BridgeServerProtocol : WebSocketBehaviorBase
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(BridgeServerProtocol));
+        
+        public static readonly object characterSelectionLock = new object();
 
         public string Address;
         public int Port;
@@ -837,26 +839,38 @@ namespace CentralServer.BridgeServer
 
         public bool CheckDuplicatedAndFill()
         {
-            ILookup<CharacterType, LobbyServerPlayerInfo> teamACharacters = GetCharactersByTeam(Team.TeamA);
-            ILookup<CharacterType, LobbyServerPlayerInfo> teamBCharacters = GetCharactersByTeam(Team.TeamB);
-
-            IEnumerable<LobbyServerPlayerInfo> duplicateCharsA = GetDuplicateCharacters(teamACharacters);
-            IEnumerable<LobbyServerPlayerInfo> duplicateCharsB = GetDuplicateCharacters(teamBCharacters);
-
-            bool didWeHadFillOrDuplicate = false;
-            
-            foreach (long player in GetPlayers())
+            lock (characterSelectionLock)
             {
-                LobbyServerPlayerInfo playerInfo = GetPlayerInfo(player);
-                LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(player);
-                if (playerConnection != null)
-                { 
-                    if (IsCharacterUnavailable(playerInfo, duplicateCharsA, duplicateCharsB))
+                bool didWeHadFillOrDuplicate = false;
+                for (Team team = Team.TeamA; team <= Team.TeamB; ++team)
+                {
+                    ILookup<CharacterType, LobbyServerPlayerInfo> characters = GetCharactersByTeam(team);
+                    log.Info($"{team}: {string.Join(", ", characters.Select(e => e.Key + ": [" + string.Join(", ", e.Select(x => x.Handle)) + "]"))}");
+
+                    List<LobbyServerPlayerInfo> playersRequiredToSwitch = characters
+                        .Where(players => players.Count() > 1 && players.Key != CharacterType.PendingWillFill)
+                        .SelectMany(players => players.Skip(1))
+                        .Concat(
+                            characters
+                                .Where(players => players.Key == CharacterType.PendingWillFill)
+                                .SelectMany(players => players))
+                        .ToList();
+
+                    Dictionary<CharacterType, string> thiefNames = GetThiefNames(characters);
+
+                    foreach (LobbyServerPlayerInfo playerInfo in playersRequiredToSwitch)
                     {
-                        string thiefName = GetThiefName(playerInfo, duplicateCharsA, duplicateCharsB);
+                        LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(playerInfo.AccountId);
+                        if (playerConnection == null)
+                        {
+                            log.Error($"Player {playerInfo.Handle}/{playerInfo.AccountId} is in game but has no connection.");
+                            continue;
+                        }
+
+                        string thiefName = thiefNames.GetValueOrDefault(playerInfo.CharacterType, "");
 
                         log.Info($"Forcing {playerInfo.Handle} to switch character as {playerInfo.CharacterType} is already picked by {thiefName}");
-                        playerConnection.Send(new FreelancerUnavailableNotification()
+                        playerConnection.Send(new FreelancerUnavailableNotification
                         {
                             oldCharacterType = playerInfo.CharacterType,
                             thiefName = thiefName,
@@ -868,33 +882,33 @@ namespace CentralServer.BridgeServer
                         didWeHadFillOrDuplicate = true;
                     }
                 }
-            }
 
-            if (didWeHadFillOrDuplicate)
-            {
-                log.Info("We have duplicates/fills, going into DUPLICATE_FREELANCER subphase");
-                foreach (long player in GetPlayers())
+                if (didWeHadFillOrDuplicate)
                 {
-                    LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(player);
-                    if (playerConnection == null)
+                    log.Info("We have duplicates/fills, going into DUPLICATE_FREELANCER subphase");
+                    foreach (long player in GetPlayers())
                     {
-                        continue;
+                        LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(player);
+                        if (playerConnection == null)
+                        {
+                            continue;
+                        }
+                        playerConnection.Send(new EnterFreelancerResolutionPhaseNotification()
+                        {
+                            SubPhase = FreelancerResolutionPhaseSubType.DUPLICATE_FREELANCER
+                        });
+                        SendGameInfo(playerConnection);
                     }
-                    playerConnection.Send(new EnterFreelancerResolutionPhaseNotification()
-                    {
-                        SubPhase = FreelancerResolutionPhaseSubType.DUPLICATE_FREELANCER
-                    });
-                    SendGameInfo(playerConnection);
                 }
-            }
 
-            return didWeHadFillOrDuplicate;
+                return didWeHadFillOrDuplicate;
+            }
         }
 
-        private ILookup<CharacterType, LobbyServerPlayerInfo> GetCharactersByTeam(Team team)
+        private ILookup<CharacterType, LobbyServerPlayerInfo> GetCharactersByTeam(Team team, long? excludeAccountId = null)
         {
             return TeamInfo.TeamPlayerInfo
-                .Where(p => p.TeamId == team)
+                .Where(p => p.TeamId == team && p.AccountId != excludeAccountId)
                 .ToLookup(p => p.CharacterInfo.CharacterType);
         }
 
@@ -910,64 +924,79 @@ namespace CentralServer.BridgeServer
                    || (playerInfo.TeamId == Team.TeamA && duplicateChars.Contains(playerInfo) && duplicateChars.First() != playerInfo);
         }
 
-        private string GetThiefName(LobbyServerPlayerInfo playerInfo, IEnumerable<LobbyServerPlayerInfo> duplicateCharsA, IEnumerable<LobbyServerPlayerInfo> duplicateCharsB)
+        private Dictionary<CharacterType, string> GetThiefNames(ILookup<CharacterType, LobbyServerPlayerInfo> characters)
         {
-            if (playerInfo.CharacterType == CharacterType.PendingWillFill) return "";
-
-            IEnumerable<LobbyServerPlayerInfo> thiefChars = playerInfo.TeamId == Team.TeamA ? duplicateCharsA : duplicateCharsB;
-            return thiefChars
-                .Where(p =>
-                    p.CharacterType == playerInfo.CharacterType
-                    && p.AccountId != playerInfo.AccountId)
-                .Select(p => p.Handle)
-                .FirstOrDefault();
+            return characters
+                .Where(players => players.Count() > 1 && players.Key != CharacterType.PendingWillFill)
+                .ToDictionary(
+                    players => players.Key,
+                    players => players.First().Handle);
         }
 
         public void CheckIfAllSelected()
         {
-            ILookup<CharacterType, LobbyServerPlayerInfo> teamACharacters = GetCharactersByTeam(Team.TeamA);
-            ILookup<CharacterType, LobbyServerPlayerInfo> teamBCharacters = GetCharactersByTeam(Team.TeamB);
-
-            IEnumerable<LobbyServerPlayerInfo> duplicateCharsA = GetDuplicateCharacters(teamACharacters);
-            IEnumerable<LobbyServerPlayerInfo> duplicateCharsB = GetDuplicateCharacters(teamBCharacters);
-
-            HashSet<CharacterType> usedRandomCharacters = new HashSet<CharacterType>();
-
-            foreach (long player in GetPlayers())
+            lock (characterSelectionLock)
             {
-                LobbyServerPlayerInfo playerInfo = GetPlayerInfo(player);
-                LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(player);
-                PersistedAccountData account = DB.Get().AccountDao.GetAccount(playerInfo.AccountId);
-                
-                if (playerConnection != null
-                    && IsCharacterUnavailable(playerInfo, duplicateCharsA, duplicateCharsB)
-                    && playerInfo.ReadyState != ReadyState.Ready)
+                ILookup<CharacterType, LobbyServerPlayerInfo> teamACharacters = GetCharactersByTeam(Team.TeamA);
+                ILookup<CharacterType, LobbyServerPlayerInfo> teamBCharacters = GetCharactersByTeam(Team.TeamB);
+
+                IEnumerable<LobbyServerPlayerInfo> duplicateCharsA = GetDuplicateCharacters(teamACharacters);
+                IEnumerable<LobbyServerPlayerInfo> duplicateCharsB = GetDuplicateCharacters(teamBCharacters);
+
+                HashSet<CharacterType> usedFillCharacters = new HashSet<CharacterType>();
+
+                foreach (long player in GetPlayers())
                 {
-                    CharacterType randomType = account.AccountComponent.LastCharacter;
-                    if (account.AccountComponent.LastCharacter == playerInfo.CharacterType)
+                    LobbyServerPlayerInfo playerInfo = GetPlayerInfo(player);
+                    LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(player);
+                    PersistedAccountData account = DB.Get().AccountDao.GetAccount(playerInfo.AccountId);
+                    
+                    if (IsCharacterUnavailable(playerInfo, duplicateCharsA, duplicateCharsB)
+                        && playerInfo.ReadyState != ReadyState.Ready)
                     {
-                        // If they do not press ready and do not select a new character
-                        // force them a random character else use the one they selected
-                        randomType = AssignRandomCharacter(
-                            playerInfo, 
-                            playerInfo.TeamId == Team.TeamA ? teamACharacters : teamBCharacters, 
-                            usedRandomCharacters);
+                        CharacterType randomType = account.AccountComponent.LastCharacter;
+                        if (account.AccountComponent.LastCharacter == playerInfo.CharacterType)  // TODO it does not automatically mean that currently selected character is allowed
+                        {
+                            // If they do not press ready and do not select a new character
+                            // force them a random character else use the one they selected
+                            randomType = AssignRandomCharacter(
+                                playerInfo, 
+                                playerInfo.TeamId == Team.TeamA ? teamACharacters : teamBCharacters, 
+                                usedFillCharacters);
+                        }
+                        log.Info($"{playerInfo.Handle} switched from {playerInfo.CharacterType} to {randomType}");
+
+                        usedFillCharacters.Add(randomType);
+
+                        UpdateAccountCharacter(playerInfo, randomType);
+                        SessionManager.UpdateLobbyServerPlayerInfo(player);
+                        if (playerConnection != null)
+                        {
+                            NotifyCharacterChange(playerConnection, playerInfo, randomType);
+                            SetPlayerReady(playerConnection, playerInfo, randomType);
+                        }
                     }
-                    log.Info($"{playerInfo.Handle} switched from {playerInfo.CharacterType} to {randomType}");
-
-                    usedRandomCharacters.Add(randomType);
-
-                    UpdateAccountCharacter(playerInfo, randomType);
-                    NotifyCharacterChange(playerConnection, playerInfo, randomType);
-                    SetPlayerReady(playerConnection, playerInfo, randomType);
                 }
+            }
+        }
+
+        public bool ValidateSelectedCharacter(long accountId, CharacterType character)
+        {
+            lock (characterSelectionLock)
+            {
+                LobbyServerPlayerInfo playerInfo = GetPlayerInfo(accountId);
+                ILookup<CharacterType, LobbyServerPlayerInfo> teamCharacters = GetCharactersByTeam(playerInfo.TeamId, accountId);
+                bool isValid = !teamCharacters.Contains(character);
+                log.Info($"Character validation: {playerInfo.Handle} is {(isValid ? "" : "not ")}allowed to use {character}"
+                         +  $"(teammates are {string.Join(", ", teamCharacters.Select(x => x.Key))})");
+                return isValid;
             }
         }
 
         private CharacterType AssignRandomCharacter(
             LobbyServerPlayerInfo playerInfo,
             ILookup<CharacterType,LobbyServerPlayerInfo> teammates,
-            HashSet<CharacterType> usedRandomCharacters)
+            HashSet<CharacterType> usedFillCharacters)
         {
             HashSet<CharacterType> usedCharacters = teammates.Select(ct => ct.Key).ToHashSet();
 
@@ -976,15 +1005,17 @@ namespace CentralServer.BridgeServer
                     cc.Value.AllowForPlayers
                     && cc.Value.CharacterRole != CharacterRole.None
                     && !usedCharacters.Contains(cc.Key)
-                    && !usedRandomCharacters.Contains(cc.Key))
+                    && !usedFillCharacters.Contains(cc.Key))
                 .Select(cc => cc.Key)
                 .ToList();
 
             Random rand = new Random();
             CharacterType randomType = availableTypes[rand.Next(availableTypes.Count)];
 
-            log.Info($"Selecting random character for {playerInfo.Handle} {randomType} (was {playerInfo.CharacterType})");
-
+            log.Info($"Selected random character {randomType} for {playerInfo.Handle} " +
+                     $"(was {playerInfo.CharacterType}), options were {string.Join(", ", availableTypes)}, " +
+                     $"teammates: {string.Join(", ", usedCharacters)}, " +
+                     $"used fill characters: {string.Join(", ", usedFillCharacters)})");
             return randomType;
         }
 

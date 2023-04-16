@@ -15,6 +15,7 @@ namespace CentralServer.LobbyServer.Session
 {
     public static class SessionManager
     {
+        // TODO make it a single dict
         private static ConcurrentDictionary<long, LobbyServerPlayerInfo> ActivePlayers = new ConcurrentDictionary<long, LobbyServerPlayerInfo>();// key: AccountID
         private static ConcurrentDictionary<long, LobbyServerProtocol> ActiveConnections = new ConcurrentDictionary<long, LobbyServerProtocol>();
         private static ConcurrentDictionary<long, LobbySessionInfo> Sessions = new ConcurrentDictionary<long, LobbySessionInfo>();
