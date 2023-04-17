@@ -509,7 +509,10 @@ namespace CentralServer.BridgeServer
                 {
                     if (client.AccountId == request.PlayerInfo.AccountId)
                     {
-                        client.CurrentServer = null;
+                        if (client.CurrentServer == this)
+                        {
+                            client.CurrentServer = null;
+                        }
                         break;
                     }
                 }
