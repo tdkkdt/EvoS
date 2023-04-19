@@ -5,11 +5,10 @@ using System.Reflection;
 using System.Threading.Tasks;
 using CentralServer.LobbyServer;
 using CentralServer.LobbyServer.Character;
+using CentralServer.LobbyServer.Discord;
 using CentralServer.LobbyServer.Gamemode;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
-using Discord;
-using Discord.Webhook;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
@@ -403,91 +402,12 @@ namespace CentralServer.BridgeServer
                         };
                         client?.Send(response);
                     }
-
-
+                    
                     SendGameInfoNotifications();
 
                     if (LobbyConfiguration.GetChannelWebhook().MaybeUri())
                     {
-                        try
-                        {
-                            if (request.GameSummary.GameResult == GameResult.TeamAWon || request.GameSummary.GameResult == GameResult.TeamBWon)
-                            {
-                                DiscordWebhookClient discord = new DiscordWebhookClient(LobbyConfiguration.GetChannelWebhook());
-                                string map = Maps.GetMapName[GameInfo.GameConfig.Map];
-                                EmbedBuilder eb = new EmbedBuilder()
-                                {
-                                    Title = $"Game Result for {(map ?? GameInfo.GameConfig.Map)}",
-                                    Description = $"{(request.GameSummary.GameResult.ToString() == "TeamAWon" ? "Team A Won" : "Team B Won")} {request.GameSummary.TeamAPoints}-{request.GameSummary.TeamBPoints} ({request.GameSummary.NumOfTurns} turns)",
-                                    Color = request.GameSummary.GameResult.ToString() == "TeamAWon" ? Color.Green : Color.Red
-                                };
-
-                                eb.AddField("Team A", "\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_", true);
-                                eb.AddField("│", "│", true);
-                                eb.AddField("Team B", "\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_", true);
-
-                                eb.AddField("**[ Takedowns : Deaths : Deathblows ] [ Damage : Healing : Damage Received ]**", "\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_\\_", false);
-
-
-                                List<PlayerGameSummary> teamA = new List<PlayerGameSummary>();
-                                List<PlayerGameSummary> teamB = new List<PlayerGameSummary>();
-                                int players = 0;
-
-                                // Sort into seperate teams ignore spectators if ever
-                                while (players < request.GameSummary.PlayerGameSummaryList.Count())
-                                {
-                                    PlayerGameSummary player = request.GameSummary.PlayerGameSummaryList[players];
-                                    if (player.IsSpectator()) return;
-                                    if (player.IsInTeamA()) teamA.Add(player);
-                                    else teamB.Add(player);
-                                    players++;
-                                }
-
-                                int teams = 0;
-                                int highestCount = (teamA.Count() > teamB.Count() ? teamA.Count() : teamB.Count());
-                                while (teams < highestCount)
-                                {
-                                    // try catch cause index can be out of bound if it happens (oneven teams) add a default field need to keep order of operation or fields are a jumbeld mess
-                                    try
-                                    {
-                                        PlayerGameSummary playerA = teamA[teams];
-                                        PersistedAccountData account = DB.Get().AccountDao.GetAccount(playerA.AccountId);
-                                        eb.AddField($"{account.Handle} ({playerA.CharacterName})", $"**[ {playerA.NumAssists} : {playerA.NumDeaths} : {playerA.NumKills} ] [ {playerA.TotalPlayerDamage} : {playerA.GetTotalHealingFromAbility() + playerA.TotalPlayerAbsorb} : {playerA.TotalPlayerDamageReceived} ]**", true);
-                                    }
-                                    catch
-                                    {
-                                        eb.AddField("-", "-", true);
-                                    }
-
-                                    eb.AddField("│", "│", true);
-
-                                    try
-                                    {
-                                        PlayerGameSummary playerB = teamB[teams];
-                                        PersistedAccountData account = DB.Get().AccountDao.GetAccount(playerB.AccountId);
-                                        eb.AddField($"{account.Handle} ({playerB.CharacterName})", $"**[ {playerB.NumAssists} : {playerB.NumDeaths} : {playerB.NumKills} ] [ {playerB.TotalPlayerDamage} : {playerB.GetTotalHealingFromAbility() + playerB.TotalPlayerAbsorb} : {playerB.TotalPlayerDamageReceived} ]**", true);
-                                    }
-                                    catch
-                                    {
-                                        eb.AddField("-", "-", true);
-                                    }
-                                    teams++;
-                                }
-
-                                EmbedFooterBuilder footer = new EmbedFooterBuilder
-                                {
-                                    Text = $"{Name} - {BuildVersion} - {new DateTime(GameInfo.CreateTimestamp):yyyy_MM_dd__HH_mm_ss}"
-                                };
-                                eb.Footer = footer;
-
-                                Embed[] embedArray = new Embed[] { eb.Build() };
-                                await discord.SendMessageAsync(null, false, embeds: embedArray, "Atlas Reactor", threadId: LobbyConfiguration.GetChannelThreadId());
-                            }
-                        }
-                        catch (Exception exeption)
-                        {
-                            log.Info($"Failed to send report to discord webhook {exeption.Message}");
-                        }
+                        DiscordManager.Get().SendGameReport(GameInfo, Name, BuildVersion, request.GameSummary);
                     }
                 }
                 catch (NullReferenceException ex)

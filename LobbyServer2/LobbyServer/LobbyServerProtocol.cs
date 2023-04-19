@@ -3,24 +3,23 @@ using System.Collections.Generic;
 using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Character;
 using CentralServer.LobbyServer.Config;
+using CentralServer.LobbyServer.Discord;
 using CentralServer.LobbyServer.Friend;
 using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Store;
+using EvoS.DirectoryServer.Inventory;
+using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
-using EvoS.DirectoryServer.Inventory;
-using EvoS.Framework;
 using log4net;
 using Newtonsoft.Json;
 using WebSocketSharp;
 using WebSocketSharp.Server;
-using Discord.Webhook;
-using Discord;
 
 namespace CentralServer.LobbyServer
 {
@@ -1290,31 +1289,7 @@ namespace CentralServer.LobbyServer
 
         private void HandleClientFeedbackReport(ClientFeedbackReport message)
         {
-            if (LobbyConfiguration.GetAdminChannelWebhook().MaybeUri())
-            {
-                try
-                {
-                    DiscordWebhookClient discord = new DiscordWebhookClient(LobbyConfiguration.GetAdminChannelWebhook());
-                    LobbyServerPlayerInfo playerInfo = SessionManager.GetPlayerInfo(this.AccountId);
-                    EmbedBuilder eb = new EmbedBuilder()
-                    {
-                        Title = $"User Report From: {playerInfo.Handle}",
-                        Description = message.Message,
-                        Color = 16711680
-                    };
-                    eb.AddField("Reason", message.Reason, true);
-                    if (message.ReportedPlayerHandle != null)
-                    {
-                        eb.AddField("Reported Account", message.ReportedPlayerHandle, true);
-                    }
-                    Embed[] embedArray = new Embed[] { eb.Build() };
-                    discord.SendMessageAsync(null, false, embeds: embedArray, "Atlas Reactor");
-                }
-                catch (Exception e)
-                {
-                    log.Info($"Failed to send report to discord webhook {e.Message}");
-                }
-            }
+            DiscordManager.Get().SendPlayerFeedback(AccountId, message);
         }
     }
 }
