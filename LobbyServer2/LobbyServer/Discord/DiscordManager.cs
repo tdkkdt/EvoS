@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using CentralServer.LobbyServer.Chat;
 using CentralServer.LobbyServer.Session;
 using Discord;
 using EvoS.Framework;
@@ -31,8 +32,8 @@ namespace CentralServer.LobbyServer.Discord
         
         private readonly CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
 
-        private static readonly DiscordStatusUtils.Status NO_STATUS = new DiscordStatusUtils.Status { totalPlayers = -1, inGame = -1, inQueue = -1 };
-        private DiscordStatusUtils.Status lastStatus = NO_STATUS;
+        private static readonly DiscordLobbyUtils.Status NO_STATUS = new DiscordLobbyUtils.Status { totalPlayers = -1, inGame = -1, inQueue = -1 };
+        private DiscordLobbyUtils.Status lastStatus = NO_STATUS;
         
         
         public DiscordManager()
@@ -73,11 +74,24 @@ namespace CentralServer.LobbyServer.Discord
             if (lobbyChannel != null)
             {
                 _ = SendServerStatusLoop(cancelTokenSource.Token);
+                ChatManager.Get().OnGlobalChatMessage += SendGlobalChatMessageAsync;
+            }
+            if (adminChannel != null)
+            {
+                ChatManager.Get().OnChatMessage += SendChatMessageAuditAsync;
             }
         }
 
         public void Shutdown()
         {
+            if (lobbyChannel != null)
+            {
+                ChatManager.Get().OnGlobalChatMessage -= SendGlobalChatMessageAsync;
+            }
+            if (adminChannel != null)
+            {
+                ChatManager.Get().OnChatMessage -= SendChatMessageAuditAsync;
+            }
             cancelTokenSource.Cancel();
             cancelTokenSource.Dispose();
         }
@@ -121,11 +135,11 @@ namespace CentralServer.LobbyServer.Discord
 
         private async Task SendServerStatus()
         {
-            if (lobbyChannel == null)
+            if (lobbyChannel == null || !conf.LobbyEnableServerStatus)
             {
                 return;
             }
-            DiscordStatusUtils.Status status = DiscordStatusUtils.GetStatus();
+            DiscordLobbyUtils.Status status = DiscordLobbyUtils.GetStatus();
             if (conf.LobbyChannelUpdateOnChangeOnly && lastStatus.Equals(status))
             {
                 return;
@@ -133,13 +147,74 @@ namespace CentralServer.LobbyServer.Discord
             try
             {
                 await lobbyChannel.SendMessageAsync(
-                    DiscordStatusUtils.BuildPlayerCountSummary(status),
-                    username: "Atlas Reactor")
+                        embeds: new []
+                        {
+                            new EmbedBuilder
+                            {
+                                Title = DiscordLobbyUtils.BuildPlayerCountSummary(status),
+                                Color = Color.Green
+                            }.Build()
+                        },
+                        username: "Atlas Reactor")
                     .ContinueWith(x => lastStatus = status);
             }
             catch (Exception e)
             {
-                log.Error($"Failed to send report to discord webhook {e.Message}");
+                log.Error($"Failed to send status to discord webhook: {e.Message}");
+            }
+        }
+
+        private void SendGlobalChatMessageAsync(ChatNotification notification)
+        {
+            _ = SendGlobalChatMessage(notification);
+        }
+
+        private async Task SendGlobalChatMessage(ChatNotification notification)
+        {
+            if (lobbyChannel == null || !conf.LobbyEnableChat)
+            {
+                return;
+            }
+            try
+            {
+                await lobbyChannel.SendMessageAsync(
+                    notification.Text,
+                    username: notification.SenderHandle);
+            }
+            catch (Exception e)
+            {
+                log.Error($"Failed to send chat message to discord webhook: {e.Message}");
+            }
+        }
+
+        private void SendChatMessageAuditAsync(ChatNotification notification)
+        {
+            _ = SendChatMessageAudit(notification);
+        }
+
+        private async Task SendChatMessageAudit(ChatNotification notification)
+        {
+            if (adminChannel == null || !conf.AdminEnableChatAudit)
+            {
+                return;
+            }
+            try
+            {
+                string recipients = DiscordLobbyUtils.GetMessageRecipients(notification, out string context);
+                await adminChannel.SendMessageAsync(
+                    username: notification.SenderHandle,
+                    embeds: new[] { new EmbedBuilder
+                    {
+                        Title = notification.Text,
+                        Description = recipients != null ? $"to {recipients}" : null,
+                        Color = DiscordLobbyUtils.GetColor(notification.ConsoleMessageType),
+                        Footer = new EmbedFooterBuilder { Text = context }
+                    }.Build() },
+                    threadIdOverride: conf.AdminChatAuditThreadId);
+            }
+            catch (Exception e)
+            {
+                log.Error($"Failed to send chat message to discord webhook: {e.Message}");
             }
         }
 
@@ -180,7 +255,7 @@ namespace CentralServer.LobbyServer.Discord
         
         public async void SendPlayerFeedback(long accountId, ClientFeedbackReport message)
         {
-            if (adminChannel == null)
+            if (adminChannel == null || !conf.AdminEnableUserReports)
             {
                 return;
             }
@@ -198,7 +273,12 @@ namespace CentralServer.LobbyServer.Discord
                 {
                     eb.AddField("Reported Account", $"{message.ReportedPlayerHandle} #{message.ReportedPlayerAccountId}", true);
                 }
-                await adminChannel.SendMessageAsync(null, false, embeds: new[] { eb.Build() }, "Atlas Reactor");
+                await adminChannel.SendMessageAsync(
+                    null,
+                    false,
+                    embeds: new[] { eb.Build() },
+                    "Atlas Reactor",
+                    threadIdOverride: conf.AdminUserReportThreadId);
             }
             catch (Exception e)
             {

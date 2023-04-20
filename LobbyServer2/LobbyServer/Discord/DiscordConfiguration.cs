@@ -9,6 +9,14 @@ namespace CentralServer.LobbyServer.Discord
         public DiscordChannel AdminChannel;
         public DiscordChannel GameLogChannel;
         public DiscordChannel LobbyChannel;
+
+        public bool AdminEnableUserReports;
+        public ulong? AdminUserReportThreadId;
+        public bool AdminEnableChatAudit;
+        public ulong? AdminChatAuditThreadId;
+        
+        public bool LobbyEnableChat;
+        public bool LobbyEnableServerStatus;
         public int LobbyChannelUpdatePeriodSeconds = 300;
         public bool LobbyChannelUpdateOnChangeOnly = true;
     }

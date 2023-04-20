@@ -21,6 +21,9 @@ namespace CentralServer.LobbyServer.Session
         private static ConcurrentDictionary<long, LobbySessionInfo> Sessions = new ConcurrentDictionary<long, LobbySessionInfo>();
 
         private static readonly ILog log = LogManager.GetLogger(typeof(SessionManager));
+        
+        public static event Action<LobbyServerProtocol> OnPlayerConnected = delegate {};
+        public static event Action<LobbyServerProtocol> OnPlayerDisconnected = delegate {};
 
         public static LobbyServerPlayerInfo OnPlayerConnect(LobbyServerProtocol client, RegisterGameClientRequest registerRequest)
         {
@@ -52,6 +55,8 @@ namespace CentralServer.LobbyServer.Session
 
                 LobbyServerPlayerInfo playerInfo = UpdateLobbyServerPlayerInfo(account.AccountId);
                 ActiveConnections.TryAdd(client.AccountId, client);
+
+                OnPlayerConnected(client);
 
                 return playerInfo;
             }
@@ -99,7 +104,9 @@ namespace CentralServer.LobbyServer.Session
                     ActiveConnections.TryRemove(client.AccountId, out _);
                     // TODO: this sends to every player even if its in game and the disconnected player is not
                     //client.Broadcast(new ChatNotification() { Text = $"{client.UserName} disconnected", ConsoleMessageType = ConsoleMessageType.SystemMessage });
-                }                
+                }
+
+                OnPlayerDisconnected(client);
             }
         }
 

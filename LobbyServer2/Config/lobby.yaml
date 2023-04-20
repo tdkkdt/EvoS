@@ -8,11 +8,17 @@ Discord:
   AdminChannel: # Discord Webhook for admin reports
     Webhook: ""
     ThreadId: # leave empty to post into the channel
+  AdminEnableUserReports: true
+  AdminUserReportThreadId:
+  AdminEnableChatAudit: true
+  AdminChatAuditThreadId:
   GameLogChannel:
     Webhook: "" # Discord Webhook for game results
     ThreadId: 
   LobbyChannel:
     Webhook: "" # Discord Webhook for lobby status and chat
     ThreadId:
-  LobbyChannelUpdatePeriodSeconds: 30
+  LobbyEnableChat: true
+  LobbyEnableServerStatus: true
+  LobbyChannelUpdatePeriodSeconds: 300
   LobbyChannelUpdateOnChangeOnly: true

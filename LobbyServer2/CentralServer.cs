@@ -2,6 +2,7 @@
 using System.Threading;
 using CentralServer.BridgeServer;
 using CentralServer.LobbyServer;
+using CentralServer.LobbyServer.Chat;
 using CentralServer.LobbyServer.Discord;
 using EvoS.Framework;
 using log4net;
@@ -21,7 +22,8 @@ namespace CentralServer
             server.AddWebSocketService<LobbyServerProtocol>("/LobbyGameClientSessionManager");
             server.AddWebSocketService<BridgeServerProtocol>("/BridgeServer");
             server.Log.Level = LogLevel.Debug;
-            
+
+            ChatManager.Get(); // TODO Dependency injection
             DiscordManager.Get().Start();
 
             server.Start();
