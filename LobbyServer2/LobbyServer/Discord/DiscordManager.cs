@@ -261,10 +261,10 @@ namespace CentralServer.LobbyServer.Discord
             }
             try
             {
-                LobbyServerPlayerInfo playerInfo = SessionManager.GetPlayerInfo(accountId);
+                PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
                 EmbedBuilder eb = new EmbedBuilder
                 {
-                    Title = $"User Report From: {playerInfo.Handle}",
+                    Title = $"User Report From: {account.Handle}",
                     Description = message.Message,
                     Color = 16711680
                 };
