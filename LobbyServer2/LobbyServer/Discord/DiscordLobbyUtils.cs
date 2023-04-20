@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Session;
@@ -28,7 +29,10 @@ namespace CentralServer.LobbyServer.Discord
                     string serverInfo = "";
                     if (conn.CurrentServer != null)
                     {
-                        serverInfo = $"{conn.CurrentServer.Name} {conn.CurrentServer.GameInfo.Name} ";
+                        serverInfo = $"{conn.CurrentServer.Name} " +
+                                     $"{new DateTime(conn.CurrentServer.GameInfo.CreateTimestamp):yyyy_MM_dd__HH_mm_ss}\n" +
+                                     $"{conn.CurrentServer.GameInfo.GameConfig.Map} " +
+                                     $"{conn.CurrentServer.GameInfo.GameConfig.GameType} ";
                         playerInfo = conn.CurrentServer.GetPlayerInfo(notification.SenderAccountId);
                     }
 
