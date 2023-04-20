@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using CentralServer.LobbyServer.Discord;
 using YamlDotNet.Serialization;
 
 namespace EvoS.Framework
@@ -21,9 +22,7 @@ namespace EvoS.Framework
         public bool GameTypeRankedAvailable = false;
         public bool GameTypeCustomAvailable = false;
         public int MaxGroupSize = 5;
-        public string AdminChannelWebhook = "";
-        public string ChannelWebhook = "";
-        public ulong? ChannelThreadId = null;
+        public DiscordConfiguration Discord = new DiscordConfiguration();
 
         private static LobbyConfiguration GetInstance()
         {
@@ -98,19 +97,9 @@ namespace EvoS.Framework
             return GetInstance().MaxGroupSize > 5 ? 5 : GetInstance().MaxGroupSize;
         }
 
-        public static string GetAdminChannelWebhook()
+        public static DiscordConfiguration GetDiscordConfiguration()
         {
-            return GetInstance().AdminChannelWebhook;
-        }
-
-        public static string GetChannelWebhook()
-        {
-            return GetInstance().ChannelWebhook;
-        }
-
-        public static ulong? GetChannelThreadId()
-        {
-            return GetInstance().ChannelThreadId;
+            return GetInstance().Discord;
         }
     }
 }

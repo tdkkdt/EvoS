@@ -404,11 +404,7 @@ namespace CentralServer.BridgeServer
                     }
                     
                     SendGameInfoNotifications();
-
-                    if (LobbyConfiguration.GetChannelWebhook().MaybeUri())
-                    {
-                        DiscordManager.Get().SendGameReport(GameInfo, Name, BuildVersion, request.GameSummary);
-                    }
+                    DiscordManager.Get().SendGameReport(GameInfo, Name, BuildVersion, request.GameSummary);
                 }
                 catch (NullReferenceException ex)
                 {

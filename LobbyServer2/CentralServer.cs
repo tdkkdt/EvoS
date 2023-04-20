@@ -2,6 +2,7 @@
 using System.Threading;
 using CentralServer.BridgeServer;
 using CentralServer.LobbyServer;
+using CentralServer.LobbyServer.Discord;
 using EvoS.Framework;
 using log4net;
 using WebSocketSharp;
@@ -20,6 +21,8 @@ namespace CentralServer
             server.AddWebSocketService<LobbyServerProtocol>("/LobbyGameClientSessionManager");
             server.AddWebSocketService<BridgeServerProtocol>("/BridgeServer");
             server.Log.Level = LogLevel.Debug;
+            
+            DiscordManager.Get().Start();
 
             server.Start();
             log.Info($"Started lobby server on port {port}");
@@ -33,6 +36,9 @@ namespace CentralServer
             {
                 Thread.Sleep(5000);
             }
+            
+            DiscordManager.Get().Shutdown();
+            
             log.Info("Lobby server is not listening, exiting...");
             throw new ApplicationException("Lobby is down");
         }
