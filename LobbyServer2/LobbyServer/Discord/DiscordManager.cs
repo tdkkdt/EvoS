@@ -5,14 +5,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using CentralServer.LobbyServer.Session;
 using Discord;
-using Discord.Webhook;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using log4net;
-using WebSocketSharp;
 
 namespace CentralServer.LobbyServer.Discord
 {
@@ -27,12 +25,9 @@ namespace CentralServer.LobbyServer.Discord
 
         private readonly DiscordConfiguration conf;
         
-        private readonly DiscordWebhookClient gameLogChannel;
-        private readonly ulong? gameLogThreadId;
-        private readonly DiscordWebhookClient adminChannel;
-        private readonly bool lobbyEnabled;
-        private readonly DiscordWebhookClient lobbyChannel;
-        private readonly ulong? lobbyThreadId;
+        private readonly DiscordClientWrapper gameLogChannel;
+        private readonly DiscordClientWrapper adminChannel;
+        private readonly DiscordClientWrapper lobbyChannel;
         
         private readonly CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
 
@@ -49,27 +44,22 @@ namespace CentralServer.LobbyServer.Discord
                 return;
             }
 
-            if (conf.ChannelWebhook.MaybeUri())
+            if (conf.GameLogChannel.IsChannel())
             {
                 log.Info("Discord game log is enabled");
-                gameLogChannel = new DiscordWebhookClient(conf.ChannelWebhook);
-                gameLogThreadId = conf.ChannelThreadId;
-                gameLogChannel.Log += Log;
+                gameLogChannel = new DiscordClientWrapper(conf.GameLogChannel);
             }
 
-            if (conf.AdminChannelWebhook.MaybeUri())
+            if (conf.AdminChannel.IsChannel())
             {
                 log.Info("Discord admin is enabled");
-                adminChannel = new DiscordWebhookClient(conf.AdminChannelWebhook);
-                adminChannel.Log += Log;
+                adminChannel = new DiscordClientWrapper(conf.AdminChannel);
             }
             
-            if (conf.DiscordLobbyEnabled && conf.LobbyChannelWebhook.MaybeUri())
+            if (conf.LobbyChannel.IsChannel())
             {
                 log.Info("Discord lobby is enabled");
-                lobbyChannel = new DiscordWebhookClient(conf.LobbyChannelWebhook);
-                lobbyThreadId = conf.LobbyChannelThreadId;
-                lobbyChannel.Log += Log;
+                lobbyChannel = new DiscordClientWrapper(conf.LobbyChannel);
             }
         }
 
@@ -121,8 +111,7 @@ namespace CentralServer.LobbyServer.Discord
                     embeds: new[] {
                         MakeGameReportEmbed(gameInfo, serverName, serverVersion, gameSummary)
                     },
-                    "Atlas Reactor",
-                    threadId: gameLogThreadId);
+                    "Atlas Reactor");
             }
             catch (Exception e)
             {
@@ -145,8 +134,7 @@ namespace CentralServer.LobbyServer.Discord
             {
                 await lobbyChannel.SendMessageAsync(
                     DiscordStatusUtils.BuildPlayerCountSummary(status),
-                    username: "Atlas Reactor",
-                    threadId: lobbyThreadId)
+                    username: "Atlas Reactor")
                     .ContinueWith(x => lastStatus = status);
             }
             catch (Exception e)
@@ -259,11 +247,6 @@ namespace CentralServer.LobbyServer.Discord
                     teamB.Add(player);
                 }
             }
-        }
-
-        private Task Log(LogMessage msg)
-        {
-            return DiscordUtils.Log(log, msg);
         }
     }
 }
