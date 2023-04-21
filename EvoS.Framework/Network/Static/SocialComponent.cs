@@ -14,6 +14,7 @@ namespace EvoS.Framework.Network.Static
             ReportedTemporaryPoints = 0;
             TimeOfDecay = DateTime.MinValue;
             GrantedRAFRewards = new Dictionary<int, int>();
+            BlockedAccounts = new HashSet<long>();
         }
 
         public int ReportedPermanentPoints { get; set; }
@@ -21,6 +22,8 @@ namespace EvoS.Framework.Network.Static
         public int ReportedTemporaryPoints { get; set; }
 
         public Dictionary<int, int> GrantedRAFRewards { get; set; }
+
+        [NonSerialized] public HashSet<long> BlockedAccounts;
 
         public object Clone()
         {

@@ -22,6 +22,7 @@ namespace CentralServer.LobbyServer.Friend
 
         public static FriendList GetFriendList(long accountId)
         {
+            HashSet<long> blockedAccounts = DB.Get().AccountDao.GetAccount(accountId).SocialComponent.BlockedAccounts;
             FriendList friendList = new FriendList
             {
                 // TODO We are all friends here for now
@@ -33,7 +34,7 @@ namespace CentralServer.LobbyServer.Friend
                         {
                             FriendAccountId = acc.AccountId,
                             FriendHandle = acc.Handle,
-                            FriendStatus = FriendStatus.Friend,
+                            FriendStatus = blockedAccounts.Contains(acc.AccountId) ? FriendStatus.Blocked : FriendStatus.Friend,
                             IsOnline = true,
                             StatusString = GetStatusString(SessionManager.GetClientConnection(acc.AccountId)),
                             // FriendNote = 

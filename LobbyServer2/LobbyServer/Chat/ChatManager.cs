@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Session;
 using EvoS.DirectoryServer.Inventory;
@@ -84,7 +85,10 @@ namespace CentralServer.LobbyServer.Chat
             {
                 case ConsoleMessageType.GlobalChat:
                 {
-                    conn.Broadcast(message);
+                    foreach (long player in SessionManager.GetOnlinePlayers())
+                    {
+                        SendMessageToPlayer(player, message);
+                    }
                     OnGlobalChatMessage(message);
                     break;
                 }
@@ -94,7 +98,7 @@ namespace CentralServer.LobbyServer.Chat
                     if (accountId.HasValue)
                     {
                         message.RecipientHandle = notification.RecipientHandle;
-                        SessionManager.GetClientConnection((long)accountId)?.Send(message);
+                        SendMessageToPlayer((long)accountId, message);
                         conn.Send(message);
                     }
                     else
@@ -112,21 +116,21 @@ namespace CentralServer.LobbyServer.Chat
                     }
                     foreach (long accountId in conn.CurrentServer.GetPlayers())
                     {
-                        SessionManager.GetClientConnection(accountId)?.Send(message);
+                        SendMessageToPlayer(accountId, message);
                     }
                     break;
                 }
                 case ConsoleMessageType.GroupChat:
                 {
-                    LobbyPlayerGroupInfo group = GroupManager.GetGroupInfo(conn.AccountId);
-                    if (conn.CurrentServer == null) // TODO fix?
+                    GroupInfo group = GroupManager.GetPlayerGroup(conn.AccountId);
+                    if (group == null || group.IsSolo())
                     {
                         log.Error($"{conn.AccountId} {account.Handle} attempted to use {notification.ConsoleMessageType} while not in a group");
                         break;
                     }
-                    foreach (UpdateGroupMemberData member in group.Members)
+                    foreach (long member in group.Members)
                     {
-                        SessionManager.GetClientConnection(member.AccountID)?.Send(message);
+                        SendMessageToPlayer(member, message);
                     }
                     break;
                 }
@@ -145,7 +149,7 @@ namespace CentralServer.LobbyServer.Chat
                     }
                     foreach (long teammateAccountId in conn.CurrentServer.GetPlayers(lobbyServerPlayerInfo.TeamId))
                     {
-                        SessionManager.GetClientConnection(teammateAccountId)?.Send(message);
+                        SendMessageToPlayer(teammateAccountId, message);
                     }
                     break;
                 }
@@ -183,11 +187,19 @@ namespace CentralServer.LobbyServer.Chat
 
             foreach (long accountID in GroupManager.GetPlayerGroup(conn.AccountId).Members)
             {
-                LobbyServerProtocol connection = SessionManager.GetClientConnection(accountID);
-                connection.Send(message);
+                SendMessageToPlayer(accountID, message);
             }
 
             OnChatMessage(message);
+        }
+
+        private void SendMessageToPlayer(long player, ChatNotification message)
+        {
+            HashSet<long> blockedAccounts = DB.Get().AccountDao.GetAccount(player)?.SocialComponent?.BlockedAccounts;
+            if (blockedAccounts != null && !blockedAccounts.Contains(message.SenderAccountId))
+            {
+                SessionManager.GetClientConnection(player)?.Send(message);
+            }
         }
     }
 }

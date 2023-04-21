@@ -4,11 +4,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CentralServer.LobbyServer.Chat;
-using CentralServer.LobbyServer.Session;
 using Discord;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
+using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using log4net;
@@ -129,7 +129,7 @@ namespace CentralServer.LobbyServer.Discord
             }
             catch (Exception e)
             {
-                log.Error($"Failed to send report to discord webhook {e.Message}");
+                log.Error("Failed to send game report to discord webhook", e);
             }
         }
 
@@ -160,7 +160,7 @@ namespace CentralServer.LobbyServer.Discord
             }
             catch (Exception e)
             {
-                log.Error($"Failed to send status to discord webhook: {e.Message}");
+                log.Error("Failed to send status to discord webhook", e);
             }
         }
 
@@ -183,7 +183,7 @@ namespace CentralServer.LobbyServer.Discord
             }
             catch (Exception e)
             {
-                log.Error($"Failed to send chat message to discord webhook: {e.Message}");
+                log.Error("Failed to send lobby chat message to discord webhook", e);
             }
         }
 
@@ -200,13 +200,15 @@ namespace CentralServer.LobbyServer.Discord
             }
             try
             {
-                string recipients = DiscordLobbyUtils.GetMessageRecipients(notification, out string context);
+                List<long> recipients = DiscordLobbyUtils.GetMessageRecipients(notification, out string fallback, out string context);
                 await adminChannel.SendMessageAsync(
                     username: notification.SenderHandle,
                     embeds: new[] { new EmbedBuilder
                     {
                         Title = notification.Text,
-                        Description = recipients != null ? $"to {recipients}" : null,
+                        Description = !recipients.IsNullOrEmpty()
+                            ? $"to {DiscordLobbyUtils.FormatMessageRecipients(notification.SenderAccountId, recipients)}"
+                            : fallback,
                         Color = DiscordLobbyUtils.GetColor(notification.ConsoleMessageType),
                         Footer = new EmbedFooterBuilder { Text = context }
                     }.Build() },
@@ -214,7 +216,7 @@ namespace CentralServer.LobbyServer.Discord
             }
             catch (Exception e)
             {
-                log.Error($"Failed to send chat message to discord webhook: {e.Message}");
+                log.Error("Failed to send audit chat message to discord webhook", e);
             }
         }
 
@@ -282,7 +284,7 @@ namespace CentralServer.LobbyServer.Discord
             }
             catch (Exception e)
             {
-                log.Error($"Failed to send report to discord webhook {e.Message}");
+                log.Error("Failed to send user report to discord webhook", e);
             }
         }
 

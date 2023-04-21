@@ -9,11 +9,11 @@ using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Store;
+using CentralServer.LobbyServer.Utils;
 using EvoS.DirectoryServer.Inventory;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
-using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using log4net;
@@ -101,6 +101,7 @@ namespace CentralServer.LobbyServer
             RegisterHandler(new EvosMessageDelegate<PurchaseBannerBackgroundRequest>(HandlePurchaseBannerRequest));
             RegisterHandler(new EvosMessageDelegate<PurchaseAbilityVfxRequest>(HandlePurchasAbilityVfx));
             
+            RegisterHandler(new EvosMessageDelegate<FriendUpdateRequest>(HandleFriendUpdate));
         }
 
         protected override void HandleClose(CloseEventArgs e)
@@ -683,12 +684,26 @@ namespace CentralServer.LobbyServer
                 });
                 return;
             }
+
+            HashSet<long> blockedAccounts = DB.Get().AccountDao.GetAccount((long)friendAccountId)?.SocialComponent?
+                .BlockedAccounts;
+            if (blockedAccounts != null && blockedAccounts.Contains(AccountId))
+            {
+                log.Warn($"{AccountId} attempted to invite {request.FriendHandle} who blocked them");
+                Send(new GroupInviteResponse
+                {
+                    FriendHandle = request.FriendHandle,
+                    ResponseId = request.RequestId,
+                    Success = true // shadow ban
+                });
+                return;
+            }
             
             GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
 
             if (group.Members.Count == LobbyConfiguration.GetMaxGroupSize())
             {
-                log.Warn($"{AccountId} try'd to invite {request.FriendHandle} into a full group");
+                log.Warn($"{AccountId} attempted to invite {request.FriendHandle} into a full group");
                 Send(new GroupInviteResponse
                 {
                     FriendHandle = request.FriendHandle,
@@ -708,9 +723,11 @@ namespace CentralServer.LobbyServer
             }
             else
             {
-                joinType = group.IsSolo()
-                    ? GroupConfirmationRequest.JoinType.InviteToFormGroup
-                    : GroupConfirmationRequest.JoinType.RequestToJoinGroup;
+                // TODO request to join group
+                // joinType = group.IsSolo()
+                //     ? GroupConfirmationRequest.JoinType.InviteToFormGroup
+                //     : GroupConfirmationRequest.JoinType.RequestToJoinGroup;
+                joinType = GroupConfirmationRequest.JoinType.InviteToFormGroup;
             }
 
             PersistedAccountData requester = DB.Get().AccountDao.GetAccount(AccountId);
@@ -1173,6 +1190,67 @@ namespace CentralServer.LobbyServer
         private void HandleClientFeedbackReport(ClientFeedbackReport message)
         {
             DiscordManager.Get().SendPlayerFeedback(AccountId, message);
+        }
+
+        private void HandleFriendUpdate(FriendUpdateRequest request)
+        {
+            long friendAccountId = LobbyServerUtils.ResolveAccountId(request.FriendAccountId, request.FriendHandle);
+            if (friendAccountId == 0)
+            {
+                Send(FriendUpdateResponse.of(request, false));
+                return;
+            }
+            
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+            PersistedAccountData friendAccount = DB.Get().AccountDao.GetAccount(friendAccountId);
+
+            switch (request.FriendOperation)
+            {
+                case FriendOperation.Block:
+                {
+                    bool updated = account.SocialComponent.BlockedAccounts.Add(friendAccountId);
+                    log.Info($"{account.Handle} blocked {friendAccount.Handle}{(updated ? "" : ", but they were already blocked")}");
+                    if (updated)
+                    {
+                        DB.Get().AccountDao.UpdateAccount(account);
+                    }
+
+                    Send(FriendUpdateResponse.of(request, true));
+                    RefreshFriendList();
+                    return;
+                }
+                case FriendOperation.Remove:
+                {
+                    if (account.SocialComponent.BlockedAccounts.Contains(friendAccountId))
+                    {
+                        goto case FriendOperation.Unblock;
+                    }
+                    else
+                    {
+                        goto default;
+                    }
+                }
+                case FriendOperation.Unblock:
+                {
+                    bool updated = account.SocialComponent.BlockedAccounts.Remove(friendAccountId);
+                    log.Info($"{account.Handle} unblocked {friendAccount.Handle}{(updated ? "" : ", but they weren't blocked")}");
+                    if (updated)
+                    {
+                        DB.Get().AccountDao.UpdateAccount(account);
+                    }
+
+                    Send(FriendUpdateResponse.of(request, true));
+                    RefreshFriendList();
+                    return;
+                }
+                default:
+                {
+                    log.Warn($"{account.Handle} attempted to {request.FriendOperation} {friendAccount.Handle}, " +
+                             $"but this operation is not supported yet");
+                    Send(FriendUpdateResponse.of(request, false));
+                    return;
+                }
+            }
         }
     }
 }

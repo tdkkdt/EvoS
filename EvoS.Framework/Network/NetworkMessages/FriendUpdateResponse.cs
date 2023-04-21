@@ -14,5 +14,17 @@ namespace EvoS.Framework.Network.NetworkMessages
         public string FriendHandle;
         public FriendOperation FriendOperation;
         public LocalizationPayload LocalizedFailure;
+
+        public static FriendUpdateResponse of(FriendUpdateRequest request, bool success)
+        {
+            return new FriendUpdateResponse
+            {
+                FriendAccountId = request.FriendAccountId,
+                FriendHandle = request.FriendHandle,
+                FriendOperation = request.FriendOperation,
+                Success = success,
+                ResponseId = request.RequestId
+            };
+        }
     }
 }

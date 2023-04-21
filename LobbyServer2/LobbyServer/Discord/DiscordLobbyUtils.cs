@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Session;
@@ -12,15 +13,18 @@ namespace CentralServer.LobbyServer.Discord
 {
     public static class DiscordLobbyUtils
     {
-        public static string GetMessageRecipients(ChatNotification notification, out string context)
+        public static List<long> GetMessageRecipients(ChatNotification notification, out string fallback, out string context)
         {
+            fallback = null;
             context = null;
             switch (notification.ConsoleMessageType)
             {
                 case ConsoleMessageType.GlobalChat:
                     return null;
                 case ConsoleMessageType.WhisperChat:
-                    return notification.RecipientHandle;
+                    fallback = notification.RecipientHandle;
+                    long? accountId = SessionManager.GetOnlinePlayerByHandle(notification.RecipientHandle);
+                    return accountId.HasValue ? new List<long> { accountId.Value } : null;
                 case ConsoleMessageType.GameChat:
                 case ConsoleMessageType.TeamChat:
                 {
@@ -48,39 +52,52 @@ namespace CentralServer.LobbyServer.Discord
                     {
                         if (notification.ConsoleMessageType == ConsoleMessageType.GameChat)
                         {
-                            return string.Join(", ",
-                                conn.CurrentServer
-                                    .GetPlayers()
-                                    .Where(id => id != notification.SenderAccountId)
-                                    .Select(id => DB.Get().AccountDao.GetAccount(id).Handle));
+                            return conn.CurrentServer
+                                .GetPlayers()
+                                .Where(id => id != notification.SenderAccountId)
+                                .ToList();
                         }
                         if (playerInfo != null)
                         {
-                            return string.Join(", ",
-                                conn.CurrentServer
-                                    .GetPlayers(playerInfo.TeamId)
-                                    .Where(id => id != notification.SenderAccountId)
-                                    .Select(id => DB.Get().AccountDao.GetAccount(id).Handle));
+                            return conn.CurrentServer
+                                .GetPlayers(playerInfo.TeamId)
+                                .Where(id => id != notification.SenderAccountId)
+                                .ToList();
                         }
                     }
                     return null;
                 }
                 case ConsoleMessageType.GroupChat:
                 {
+                    fallback = "<group>";
                     LobbyPlayerGroupInfo group = GroupManager.GetGroupInfo(notification.SenderAccountId);
                     return group != null
-                        ? string.Join(", ",
-                            group.Members
+                        ? group.Members
                                 .Select(member => member.AccountID)
                                 .Where(id => id != notification.SenderAccountId)
-                                .Select(id => DB.Get().AccountDao.GetAccount(id).Handle))
-                        : "<group>";
+                                .ToList()
+                        : new List<long>();
                 }
                 default:
-                    return $"<{notification.ConsoleMessageType}>";
+                    fallback = $"<{notification.ConsoleMessageType}>";
+                    return new List<long>();
             }
         }
-        
+
+        public static string FormatMessageRecipients(long sender, List<long> recipients)
+        {
+            List<string> recipientsStrs = new List<string>();
+            foreach (long recipient in recipients)
+            {
+                PersistedAccountData acc = DB.Get().AccountDao.GetAccount(recipient);
+                if (acc == null) continue;
+                bool blocked = acc.SocialComponent.BlockedAccounts.Contains(sender);
+                recipientsStrs.Add(blocked ? $"~~{acc.Handle}~~" : acc.Handle);
+            }
+
+            return string.Join(", ", recipientsStrs.ToArray());
+        }
+
         public static Color GetColor(ConsoleMessageType messageType)
         {
             switch (messageType)
