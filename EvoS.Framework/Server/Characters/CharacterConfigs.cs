@@ -324,7 +324,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Support,
                     CharacterType = CharacterType.Sensei,
                     Difficulty = 1,
@@ -402,7 +402,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Assassin,
                     CharacterType = CharacterType.Thief,
                     Difficulty = 1,
@@ -428,7 +428,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Assassin,
                     CharacterType = CharacterType.Trickster,
                     Difficulty = 1,
