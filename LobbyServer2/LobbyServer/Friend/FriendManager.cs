@@ -22,7 +22,7 @@ namespace CentralServer.LobbyServer.Friend
 
         public static FriendList GetFriendList(long accountId)
         {
-            HashSet<long> blockedAccounts = DB.Get().AccountDao.GetAccount(accountId).SocialComponent.BlockedAccounts;
+            HashSet<long> blockedAccounts = DB.Get().AccountDao.GetAccount(accountId)?.SocialComponent?.BlockedAccounts ?? new HashSet<long>();
             FriendList friendList = new FriendList
             {
                 // TODO We are all friends here for now

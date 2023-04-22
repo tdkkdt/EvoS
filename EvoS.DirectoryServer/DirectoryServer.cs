@@ -251,6 +251,11 @@ namespace EvoS.DirectoryServer
                 account.AccountComponent.UnlockedTitleIDs.Add(26);
             }
 
+            if (account.SocialComponent.BlockedAccounts == null)
+            {
+                account.SocialComponent.BlockedAccounts = new HashSet<long>();
+            }
+
             return true;
         }
 
