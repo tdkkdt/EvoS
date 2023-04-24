@@ -47,7 +47,7 @@ namespace CentralServer.BridgeServer
         {
             foreach (BridgeServerProtocol server in ServerPool.Values)
             {
-                if (server.ServerGameStatus == GameStatus.Started) 
+                if (server.ServerGameStatus == GameStatus.Started) // TODO why started only?
                 { 
                     foreach (long player in server.GetPlayers())
                     {

@@ -34,7 +34,9 @@ namespace CentralServer.BridgeServer
         public LobbyServerTeamInfo TeamInfo { private set; get; } = new LobbyServerTeamInfo() { TeamPlayerInfo = new List<LobbyServerPlayerInfo>() };
 
         public string URI => "ws://" + Address + ":" + Port;
-        public GameStatus ServerGameStatus { get; private set; } = GameStatus.Stopped;
+        
+        // TODO sync with GameInfo.GameStatus or get rid of it (GameInfo can be null)
+        public GameStatus ServerGameStatus { get; private set; } = GameStatus.None;
         public string ProcessCode { get; } = "Artemis" + DateTime.Now.Ticks;
         public string Name => SessionInfo?.UserName ?? "ATLAS";
         public string BuildVersion => SessionInfo?.BuildVersion ?? "";
@@ -410,7 +412,7 @@ namespace CentralServer.BridgeServer
                 {
                     log.Error(ex);
                 }
-                ServerGameStatus = GameStatus.None;
+                ServerGameStatus = GameStatus.Stopped;
                 //Wait a bit so people can look at stuff but we do have to send it so server can restart
                 await Task.Delay(60000);
                 Send(new ShutdownGameRequest());
@@ -540,7 +542,7 @@ namespace CentralServer.BridgeServer
 
         public bool IsAvailable()
         {
-            return ServerGameStatus == GameStatus.Stopped && !IsPrivate && IsConnected;
+            return ServerGameStatus == GameStatus.None && !IsPrivate && IsConnected;
         }
 
         public void ReserveForGame()
