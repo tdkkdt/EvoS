@@ -11,13 +11,12 @@ namespace CentralServer.LobbyServer.Utils
             {
                 return accountId;
             }
+            
             int hashPos = handle.IndexOf('#');
-            if (hashPos < 0)
-            {
-                return 0;
-            }
-
-            string username = handle.Substring(0, hashPos);
+            string username = hashPos >= 0
+                ? handle.Substring(0, hashPos)
+                : handle;
+            
             LoginDao.LoginEntry loginEntry = DB.Get().LoginDao.Find(username);
             return loginEntry?.AccountId ?? 0;
         }

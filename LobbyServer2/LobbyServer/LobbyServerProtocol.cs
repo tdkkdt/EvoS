@@ -690,9 +690,8 @@ namespace CentralServer.LobbyServer
                 return;
             }
 
-            HashSet<long> blockedAccounts = DB.Get().AccountDao.GetAccount((long)friendAccountId)?.SocialComponent?
-                .BlockedAccounts;
-            if (blockedAccounts != null && blockedAccounts.Contains(AccountId))
+            SocialComponent socialComponent = DB.Get().AccountDao.GetAccount((long)friendAccountId)?.SocialComponent;
+            if (socialComponent?.IsBlocked(AccountId) == true)
             {
                 log.Warn($"{AccountId} attempted to invite {request.FriendHandle} who blocked them");
                 Send(new GroupInviteResponse
@@ -1200,33 +1199,72 @@ namespace CentralServer.LobbyServer
         private void HandleFriendUpdate(FriendUpdateRequest request)
         {
             long friendAccountId = LobbyServerUtils.ResolveAccountId(request.FriendAccountId, request.FriendHandle);
-            if (friendAccountId == 0)
+            if (friendAccountId == 0 || friendAccountId == AccountId)
             {
-                Send(FriendUpdateResponse.of(request, false));
+                string failure = FriendManager.GetFailTerm(request.FriendOperation);
+                string context = failure != null ? "FriendList" : "Global";
+                failure ??= "FailedMessage";
+                Send(FriendUpdateResponse.of(
+                    request, 
+                    LocalizationPayload.Create(failure, context,
+                        LocalizationArg_LocalizationPayload.Create(
+                            LocalizationPayload.Create("PlayerNotFound", "Invite",
+                                LocalizationArg_Handle.Create(request.FriendHandle))))
+                ));
+                log.Info($"Attempted to {request.FriendOperation} {request.FriendHandle}, but such a user was not found");
                 return;
             }
             
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
             PersistedAccountData friendAccount = DB.Get().AccountDao.GetAccount(friendAccountId);
 
+            if (account == null || friendAccount == null)
+            {
+                Send(FriendUpdateResponse.of(request, LocalizationPayload.Create("ServerError@Global")));
+                log.Info($"Failed to find account {AccountId} and/or {friendAccountId}");
+                return;
+            }
+
             switch (request.FriendOperation)
             {
                 case FriendOperation.Block:
                 {
-                    bool updated = account.SocialComponent.BlockedAccounts.Add(friendAccountId);
+                    bool updated = account.SocialComponent.Block(friendAccountId);
                     log.Info($"{account.Handle} blocked {friendAccount.Handle}{(updated ? "" : ", but they were already blocked")}");
+                    if (updated)
+                    {
+                        DB.Get().AccountDao.UpdateAccount(account);
+                        Send(FriendUpdateResponse.of(request));
+                        RefreshFriendList();
+                    }
+                    else
+                    {
+                        Send(FriendUpdateResponse.of(
+                            request, 
+                            LocalizationPayload.Create("FailedFriendBlock", "FriendList",
+                                LocalizationArg_LocalizationPayload.Create(
+                                    LocalizationPayload.Create("PlayerAlreadyBlocked", "FriendUpdateResponse",
+                                        LocalizationArg_Handle.Create(request.FriendHandle))))
+                        ));
+                    }
+                    return;
+                }
+                case FriendOperation.Unblock:
+                {
+                    bool updated = account.SocialComponent.Unblock(friendAccountId);
+                    log.Info($"{account.Handle} unblocked {friendAccount.Handle}{(updated ? "" : ", but they weren't blocked")}");
                     if (updated)
                     {
                         DB.Get().AccountDao.UpdateAccount(account);
                     }
 
-                    Send(FriendUpdateResponse.of(request, true));
+                    Send(FriendUpdateResponse.of(request));
                     RefreshFriendList();
                     return;
                 }
                 case FriendOperation.Remove:
                 {
-                    if (account.SocialComponent.BlockedAccounts.Contains(friendAccountId))
+                    if (account.SocialComponent.IsBlocked(friendAccountId))
                     {
                         goto case FriendOperation.Unblock;
                     }
@@ -1235,24 +1273,11 @@ namespace CentralServer.LobbyServer
                         goto default;
                     }
                 }
-                case FriendOperation.Unblock:
-                {
-                    bool updated = account.SocialComponent.BlockedAccounts.Remove(friendAccountId);
-                    log.Info($"{account.Handle} unblocked {friendAccount.Handle}{(updated ? "" : ", but they weren't blocked")}");
-                    if (updated)
-                    {
-                        DB.Get().AccountDao.UpdateAccount(account);
-                    }
-
-                    Send(FriendUpdateResponse.of(request, true));
-                    RefreshFriendList();
-                    return;
-                }
                 default:
                 {
                     log.Warn($"{account.Handle} attempted to {request.FriendOperation} {friendAccount.Handle}, " +
                              $"but this operation is not supported yet");
-                    Send(FriendUpdateResponse.of(request, false));
+                    Send(FriendUpdateResponse.of(request, LocalizationPayload.Create("ServerError@Global")));
                     return;
                 }
             }

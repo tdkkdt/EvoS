@@ -22,7 +22,7 @@ namespace CentralServer.LobbyServer.Friend
 
         public static FriendList GetFriendList(long accountId)
         {
-            HashSet<long> blockedAccounts = DB.Get().AccountDao.GetAccount(accountId)?.SocialComponent?.BlockedAccounts ?? new HashSet<long>();
+            SocialComponent socialComponent = DB.Get().AccountDao.GetAccount(accountId)?.SocialComponent;
             FriendList friendList = new FriendList
             {
                 // TODO We are all friends here for now
@@ -34,7 +34,7 @@ namespace CentralServer.LobbyServer.Friend
                         {
                             FriendAccountId = acc.AccountId,
                             FriendHandle = acc.Handle,
-                            FriendStatus = blockedAccounts.Contains(acc.AccountId) ? FriendStatus.Blocked : FriendStatus.Friend,
+                            FriendStatus = socialComponent?.IsBlocked(acc.AccountId) == true ? FriendStatus.Blocked : FriendStatus.Friend,
                             IsOnline = true,
                             StatusString = GetStatusString(SessionManager.GetClientConnection(acc.AccountId)),
                             // FriendNote = 
@@ -83,6 +83,25 @@ namespace CentralServer.LobbyServer.Friend
             };
 
             return response;
+        }
+
+        public static string GetFailTerm(FriendOperation op)
+        {
+            switch (op)
+            {
+                case FriendOperation.Accept:
+                    return "FailedFriendAccept";
+                case FriendOperation.Add:
+                    return "FailedFriendAdd";
+                case FriendOperation.Reject:
+                    return "FailedFriendReject";
+                case FriendOperation.Remove:
+                    return "FailedFriendRemove";
+                case FriendOperation.Block:
+                    return "FailedFriendBlock";
+                default:
+                    return null;
+            }
         }
     }
 }

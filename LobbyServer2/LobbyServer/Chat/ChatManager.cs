@@ -195,8 +195,8 @@ namespace CentralServer.LobbyServer.Chat
 
         private void SendMessageToPlayer(long player, ChatNotification message)
         {
-            HashSet<long> blockedAccounts = DB.Get().AccountDao.GetAccount(player)?.SocialComponent?.BlockedAccounts;
-            if (blockedAccounts != null && !blockedAccounts.Contains(message.SenderAccountId))
+            SocialComponent socialComponent = DB.Get().AccountDao.GetAccount(player)?.SocialComponent;
+            if (socialComponent?.IsBlocked(message.SenderAccountId) != true)
             {
                 SessionManager.GetClientConnection(player)?.Send(message);
             }

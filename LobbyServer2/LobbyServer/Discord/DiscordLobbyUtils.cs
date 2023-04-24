@@ -91,7 +91,7 @@ namespace CentralServer.LobbyServer.Discord
             {
                 PersistedAccountData acc = DB.Get().AccountDao.GetAccount(recipient);
                 if (acc == null) continue;
-                bool blocked = acc.SocialComponent.BlockedAccounts.Contains(sender);
+                bool blocked = acc.SocialComponent.IsBlocked(sender);
                 recipientsStrs.Add(blocked ? $"~~{acc.Handle}~~" : acc.Handle);
             }
 

@@ -100,6 +100,22 @@ namespace EvoS.Framework.Network.Static
             }
         }
 
+        public bool IsBlocked(long accountId)
+        {
+            return BlockedAccounts != null && BlockedAccounts.Contains(accountId);
+        }
+
+        public bool Block(long accountId)
+        {
+            BlockedAccounts ??= new HashSet<long>();
+            return BlockedAccounts.Add(accountId);
+        }
+
+        public bool Unblock(long accountId)
+        {
+            return BlockedAccounts != null && BlockedAccounts.Remove(accountId);
+        }
+
         [EvosMessage(556)]
         public Dictionary<long, FriendData> FriendInfo;
         public DateTime TimeOfDecay;
