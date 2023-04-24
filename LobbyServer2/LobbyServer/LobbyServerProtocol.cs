@@ -34,8 +34,11 @@ namespace CentralServer.LobbyServer
             get => _currentServer;
             set
             {
-                _currentServer = value;
-                BroadcastRefreshFriendList();
+                if (_currentServer != value)
+                {
+                    _currentServer = value;
+                    BroadcastRefreshFriendList();
+                }
             }
         }
 
@@ -559,35 +562,37 @@ namespace CentralServer.LobbyServer
 
         public void HandleLeaveGameRequest(LeaveGameRequest request)
         {
-            LeaveGameResponse response = new LeaveGameResponse()
+            BridgeServerProtocol server = CurrentServer;
+            if (server != null)
+            {
+                if (server.GetPlayerInfo(AccountId)?.CharacterType != OldCharacter)
+                {
+                    server.ResetCharacterToOriginal(this);
+                }
+                // We set it back on reconnect if need be
+                OldCharacter = CharacterType.None;
+
+                if (server.ServerGameStatus == GameStatus.Stopped)
+                {
+                    CurrentServer = null;
+                }
+            }
+
+            Send(new LeaveGameResponse
             {
                 Success = true,
                 ResponseId = request.RequestId
-            };
-            Send(response);
-
-            Send(new GameStatusNotification() { GameStatus = GameStatus.Stopped });
-            Send(new GameAssignmentNotification()
+            });
+            Send(new GameStatusNotification
+            {
+                GameStatus = GameStatus.Stopped
+            });
+            Send(new GameAssignmentNotification
             {
                 GameInfo = null,
                 GameResult = GameResult.NoResult,
                 Reconnection = false
             });
-
-            if (CurrentServer != null)
-            {
-                if (CurrentServer.GetPlayerInfo(AccountId)?.CharacterType != OldCharacter)
-                {
-                    CurrentServer.ResetCharacterToOriginal(this);
-                }
-                // We set it back on reconnect if need be
-                OldCharacter = CharacterType.None;
-
-                if (CurrentServer.ServerGameStatus == GameStatus.Stopped)
-                {
-                    CurrentServer = null;
-                }
-            }
         }
         
         protected void SetContextualReadyState(ContextualReadyState contextualReadyState)
