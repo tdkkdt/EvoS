@@ -1,4 +1,6 @@
 using System;
+using EvoS.Framework.Misc;
+using EvoS.Framework.Network.WebSocket;
 using log4net;
 using WebSocketSharp;
 using WebSocketSharp.Server;
@@ -8,6 +10,18 @@ namespace CentralServer
     public abstract class WebSocketBehaviorBase : WebSocketBehavior
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketBehaviorBase));
+
+        protected static void LogMessage(string prefix, object message)
+        {
+            try
+            {
+                log.Debug($"{prefix} {message.GetType().Name} {DefaultJsonSerializer.Serialize(message)}");
+            }
+            catch (Exception e)
+            {
+                log.Debug($"{prefix} {message.GetType().Name} <failed to serialize message>");
+            }
+        }
         
         protected sealed override void OnOpen()
         {

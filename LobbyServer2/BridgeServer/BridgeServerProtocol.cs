@@ -123,7 +123,7 @@ namespace CentralServer.BridgeServer
             if (type == typeof(RegisterGameServerRequest))
             {
                 RegisterGameServerRequest request = Deserialize<RegisterGameServerRequest>(networkReader);
-                log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
+                LogMessage("<", request);
                 string data = request.SessionInfo.ConnectionAddress;
                 Address = data.Split(":")[0];
                 Port = Convert.ToInt32(data.Split(":")[1]);
@@ -153,7 +153,7 @@ namespace CentralServer.BridgeServer
                         GameInfo.GameResult = request.GameSummary.GameResult;
                     }
 
-                    log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
+                    LogMessage("<", request);
                     log.Info($"Game {GameInfo?.Name} at {request.GameSummary?.GameServerAddress} finished " +
                                             $"({request.GameSummary?.NumOfTurns} turns), " +
                                             $"{request.GameSummary?.GameResult} {request.GameSummary?.TeamAPoints}-{request.GameSummary?.TeamBPoints}");
@@ -420,7 +420,7 @@ namespace CentralServer.BridgeServer
             else if (type == typeof(PlayerDisconnectedNotification))
             {
                 PlayerDisconnectedNotification request = Deserialize<PlayerDisconnectedNotification>(networkReader);
-                log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
+                LogMessage("<", request);
                 log.Info($"Player {request.PlayerInfo.AccountId} left game {GameInfo?.GameServerProcessCode}");
 
                 foreach (LobbyServerProtocol client in GetClients())
@@ -439,19 +439,19 @@ namespace CentralServer.BridgeServer
             else if (type == typeof(DisconnectPlayerRequest))
             {
                 DisconnectPlayerRequest request = Deserialize<DisconnectPlayerRequest>(networkReader);
-                log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
+                LogMessage("<", request);
                 log.Info($"Sending Disconnect player Request for accountId {request.PlayerInfo.AccountId}");
             }
             else if (type == typeof(ReconnectPlayerRequest))
             {
                 ReconnectPlayerRequest request = Deserialize<ReconnectPlayerRequest>(networkReader);
-                log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
+                LogMessage("<", request);
                 log.Info($"Sending reconnect player Request for accountId {request.AccountId} with reconectionsession id {request.NewSessionId}");
             }
             else if (type == typeof(ServerGameMetricsNotification))
             {
                 ServerGameMetricsNotification request = Deserialize<ServerGameMetricsNotification>(networkReader);
-                log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
+                LogMessage("<", request);
                 log.Info($"Game {GameInfo?.Name} Turn {request.GameMetrics?.CurrentTurn}, " +
                          $"{request.GameMetrics?.TeamAPoints}-{request.GameMetrics?.TeamBPoints}, " +
                          $"frame time: {request.GameMetrics?.AverageFrameTime}");
@@ -459,7 +459,7 @@ namespace CentralServer.BridgeServer
             else if (type == typeof(ServerGameStatusNotification))
             {
                 ServerGameStatusNotification request = Deserialize<ServerGameStatusNotification>(networkReader);
-                log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
+                LogMessage("<", request);
                 log.Info($"Game {GameInfo?.Name} {request.GameStatus}");
 
                 ServerGameStatus = request.GameStatus;
@@ -493,18 +493,18 @@ namespace CentralServer.BridgeServer
             else if (type == typeof(MonitorHeartbeatNotification))
             {
                 MonitorHeartbeatNotification request = Deserialize<MonitorHeartbeatNotification>(networkReader);
-                log.Debug($"< {request.GetType().Name} heartbeat");
+                LogMessage("<", request);
             }
             else if (type == typeof(LaunchGameResponse))
             {
                 LaunchGameResponse response = Deserialize<LaunchGameResponse>(networkReader);
-                log.Debug($"< {response.GetType().Name} {DefaultJsonSerializer.Serialize(response)}");
+                LogMessage("<", response);
                 log.Info($"Game {GameInfo?.Name} launched ({response.GameServerAddress}, {response.GameInfo?.GameStatus}) with {response.GameInfo?.ActiveHumanPlayers} players");
             }
             else if (type == typeof(JoinGameServerResponse))
             {
                 JoinGameServerResponse response = Deserialize<JoinGameServerResponse>(networkReader);
-                log.Debug($"< {response.GetType().Name} {DefaultJsonSerializer.Serialize(response)}");
+                LogMessage("<", response);
                 log.Info($"Player {response.PlayerInfo?.Handle} {response.PlayerInfo?.AccountId} {response.PlayerInfo?.CharacterType} " +
                          $"joined {GameInfo?.Name}  ({response.GameServerProcessCode})");
             }
@@ -611,11 +611,11 @@ namespace CentralServer.BridgeServer
             if (messageType >= 0)
             {
                 Send(messageType, msg, originalCallbackId);
-                log.Debug($"> {msg.GetType().Name} {DefaultJsonSerializer.Serialize(msg)}");
+                LogMessage(">", msg);
                 return true;
             }
             log.Error($"No sender for {msg.GetType().Name}");
-            log.Debug($">X {msg.GetType().Name} {DefaultJsonSerializer.Serialize(msg)}");
+            LogMessage(">X", msg);
 
             return false;
         }

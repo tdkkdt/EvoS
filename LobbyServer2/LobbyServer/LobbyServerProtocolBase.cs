@@ -61,7 +61,7 @@ namespace CentralServer.LobbyServer
                 EvosMessageDelegate<WebSocketMessage> handler = GetHandler(deserialized.GetType());
                 if (handler != null)
                 {
-                    log.Debug($"< {deserialized.GetType().Name} {DefaultJsonSerializer.Serialize(deserialized)}");
+                    LogMessage("<", deserialized);
                     handler.Invoke(deserialized);
                 }
                 else
@@ -104,7 +104,7 @@ namespace CentralServer.LobbyServer
             MemoryStream stream = new MemoryStream();
             EvosSerializer.Instance.Serialize(stream, message);
             Send(stream.ToArray());
-            log.Debug($"> {message.GetType().Name} {DefaultJsonSerializer.Serialize(message)}");
+            LogMessage(">", message);
         }
 
         private void BroadcastImpl(WebSocketMessage message)
@@ -112,10 +112,9 @@ namespace CentralServer.LobbyServer
             MemoryStream stream = new MemoryStream();
             EvosSerializer.Instance.Serialize(stream, message);
             Sessions.Broadcast(stream.ToArray());
-            log.Debug($">> {message.GetType().Name} {DefaultJsonSerializer.Serialize(message)}");
+            LogMessage(">>", message);
         }
-
-
+        
         public void SendErrorResponse(WebSocketResponseMessage response, int requestId, string message)
         {
             response.Success = false;
