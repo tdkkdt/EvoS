@@ -6,8 +6,8 @@ using EvoS.Framework.Network.Unity;
 [Serializable]
 public class ServerGameSummaryNotification : AllianceMessageBase
 {
-    internal LobbyGameSummary GameSummary;
-    internal LobbyGameSummaryOverrides GameSummaryOverrides;
+    public LobbyGameSummary GameSummary;
+    public LobbyGameSummaryOverrides GameSummaryOverrides;
 
     public override void Serialize(NetworkWriter writer)
     {
