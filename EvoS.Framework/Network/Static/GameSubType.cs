@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using EvoS.Framework.Constants.Enums;
-using EvoS.Framework.Network.NetworkMessages;
+using EvoS.Framework.Misc;
 
 namespace EvoS.Framework.Network.Static
 {

@@ -2,7 +2,7 @@
 using System.IO;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
-using EvoS.Framework.Network.NetworkMessages;
+using EvoS.Framework.Misc;
 using EvoS.Framework.Network.Static;
 using Newtonsoft.Json;
 

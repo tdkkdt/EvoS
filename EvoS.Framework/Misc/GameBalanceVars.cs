@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using EvoS.Framework.Network;
 using EvoS.Framework.Network.Static;
 using log4net;
 
 namespace EvoS.Framework.Misc
 {
+    // TODO EvosMessage
     
     [Serializable]
     public class GameBalanceVars
@@ -942,6 +944,7 @@ namespace EvoS.Framework.Misc
             // }
         }
 
+        [EvosMessage(146)]
         public enum GameRewardBucketType
         {
             FullVsHumanRewards,

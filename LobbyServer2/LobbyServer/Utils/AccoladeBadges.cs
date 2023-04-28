@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using EvoS.Framework.Misc;
 using EvoS.Framework.Network.Static;
 
@@ -102,7 +103,7 @@ namespace CentralServer.LobbyServer.Utils
             }
         };
         
-        public static readonly List<GameBalanceVars.GameResultBadge> GameResultBadges =
+        public static readonly Dictionary<int, GameBalanceVars.GameResultBadge> GameResultBadges =
             new List<GameBalanceVars.GameResultBadge>
             {
                 new GameBalanceVars.GameResultBadge
@@ -1208,6 +1209,7 @@ namespace CentralServer.LobbyServer.Utils
                     GlobalPercentileToObtain = 80,
                     UsesFreelancerStats = false
                 }
-            };
+            }
+                .ToDictionary(badge => badge.GetID());
     }
 }

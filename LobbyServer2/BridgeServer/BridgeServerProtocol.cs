@@ -158,7 +158,14 @@ namespace CentralServer.BridgeServer
                                             $"({request.GameSummary?.NumOfTurns} turns), " +
                                             $"{request.GameSummary?.GameResult} {request.GameSummary?.TeamAPoints}-{request.GameSummary?.TeamBPoints}");
 
-                    request.GameSummary.BadgeAndParticipantsInfo = AccoladesUtils.ProcessGameSummary(request);
+                    try
+                    {
+                        request.GameSummary.BadgeAndParticipantsInfo = AccoladeUtils.ProcessGameSummary(request);
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Error("Failed to process game summary", ex);
+                    }
 
                     //Wait 5 seconds for gg Usages
                     await Task.Delay(5000);
