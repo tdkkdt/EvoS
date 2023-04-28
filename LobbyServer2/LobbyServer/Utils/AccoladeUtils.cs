@@ -95,7 +95,8 @@ namespace CentralServer.LobbyServer.Utils
 
         public static Dictionary<int, List<BadgeInfo>> AwardBadges(LobbyGameSummary gameSummary)
         {
-            Dictionary<int, List<BadgeInfo>> badgeInfos = new Dictionary<int, List<BadgeInfo>>();
+            Dictionary<int, List<BadgeInfo>> badgeInfos = gameSummary.PlayerGameSummaryList
+                .ToDictionary(player => player.PlayerId, x => new List<BadgeInfo>());
 
             HashSet<int> processedBadges = new HashSet<int>();
             foreach (GameResultBadgeData.ConsolidatedBadgeGroup badgeGroup in AccoladeBadges.BadgeGroups)
@@ -103,10 +104,6 @@ namespace CentralServer.LobbyServer.Utils
                 Dictionary<int,List<BadgeInfo>> groupBadgeInfos = AwardBadgeGroup(gameSummary, badgeGroup);
                 foreach ((int player, List<BadgeInfo> playerBadges) in groupBadgeInfos)
                 {
-                    if (!badgeInfos.ContainsKey(player))
-                    {
-                        badgeInfos[player] = new List<BadgeInfo>();
-                    }
                     badgeInfos[player].AddRange(playerBadges);
                 }
                 foreach (int badgeID in badgeGroup.BadgeIDs)
@@ -121,10 +118,6 @@ namespace CentralServer.LobbyServer.Utils
                 List<int> groupBadgeInfos = AwardBadge(gameSummary, badge);
                 foreach (int player in groupBadgeInfos)
                 {
-                    if (!badgeInfos.ContainsKey(player))
-                    {
-                        badgeInfos[player] = new List<BadgeInfo>();
-                    }
                     badgeInfos[player].Add(new BadgeInfo { BadgeId = badge.GetID() });
                 }
                 processedBadges.Add(badge.GetID());
