@@ -1,9 +1,10 @@
 using System;
+using System.IO;
 using EvoS.Framework.Misc;
-using EvoS.Framework.Network.WebSocket;
 using log4net;
 using WebSocketSharp;
 using WebSocketSharp.Server;
+using ErrorEventArgs = WebSocketSharp.ErrorEventArgs;
 
 namespace CentralServer
 {
@@ -44,11 +45,27 @@ namespace CentralServer
 
         protected sealed override void OnError(ErrorEventArgs e)
         {
-            Wrap(x =>
+            if (!IsMinorError(e))
             {
-                log.Error($"Websocket Error: {x.Message} {x.Exception}");
-            }, e);
+                Wrap(x =>
+                {
+                    log.Error($"Websocket Error: {x.Message} {x.Exception}");
+                }, e);
+            }
+            else
+            {
+                Wrap(x =>
+                {
+                    log.Warn($"Websocket Error: {x.Message} {x.Exception}");
+                }, e);
+            }
             Wrap(HandleError, e);
+        }
+
+        private static bool IsMinorError(ErrorEventArgs e)
+        {
+            return e.Exception is IOException
+                   || "The stream has been closed".Equals(e.Exception.Message);
         }
 
         protected virtual void HandleError(ErrorEventArgs e)
