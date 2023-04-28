@@ -22,11 +22,11 @@ namespace EvoS.Framework.Network.NetworkMessages
         [EvosMessage(697, typeof(ClientStatusReport.ClientStatusReportType))]
         public enum ClientStatusReportType
         {
-			u001D,
-			u000E,
-			u0012,
-			u0015,
-			u0016
+	        Crash,
+	        Exception,
+	        CrashUserMessage,
+	        ExceptionUserMessage,
+	        BelowMinimumSpecComputer
 		}
     }
 }

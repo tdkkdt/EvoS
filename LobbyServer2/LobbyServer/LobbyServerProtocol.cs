@@ -93,12 +93,17 @@ namespace CentralServer.LobbyServer
             RegisterHandler(new EvosMessageDelegate<ClientFeedbackReport>(HandleClientFeedbackReport));
             RegisterHandler(new EvosMessageDelegate<RejoinGameRequest>(HandleRejoinGameRequest));
 
-            /* TODO: adding these to
-            RegisterHandler(new EvosMessageDelegate<PurchaseModResponse>(HandlePurchaseModRequest));
+            RegisterHandler(new EvosMessageDelegate<PurchaseModRequest>(HandlePurchaseModRequest));
             RegisterHandler(new EvosMessageDelegate<PurchaseTauntRequest>(HandlePurchaseTauntRequest));
-            RegisterHandler(new EvosMessageDelegate<PurchaseChatEmojiRequest>(HandlePurchaseChatEmoji));
-            RegisterHandler(new EvosMessageDelegate<PurchaseLoadoutSlotRequest>(HandlePurchaseLoadoutSlot));
-            */
+            RegisterHandler(new EvosMessageDelegate<PurchaseChatEmojiRequest>(HandlePurchaseChatEmojiRequest));
+            RegisterHandler(new EvosMessageDelegate<PurchaseLoadoutSlotRequest>(HandlePurchaseLoadoutSlotRequest));
+            RegisterHandler(new EvosMessageDelegate<PaymentMethodsRequest>(HandlePaymentMethodsRequest));
+            RegisterHandler(new EvosMessageDelegate<StoreOpenedMessage>(HandleStoreOpenedMessage));
+            RegisterHandler(new EvosMessageDelegate<UIActionNotification>(HandleUIActionNotification));
+            RegisterHandler(new EvosMessageDelegate<CrashReportArchiveNameRequest>(HandleCrashReportArchiveNameRequest));
+            RegisterHandler(new EvosMessageDelegate<ClientStatusReport>(HandleClientStatusReport));
+            RegisterHandler(new EvosMessageDelegate<SubscribeToCustomGamesRequest>(HandleSubscribeToCustomGamesRequest));
+            RegisterHandler(new EvosMessageDelegate<UnsubscribeFromCustomGamesRequest>(HandleUnsubscribeFromCustomGamesRequest));
 
             RegisterHandler(new EvosMessageDelegate<PurchaseBannerForegroundRequest>(HandlePurchaseEmblemRequest));
             RegisterHandler(new EvosMessageDelegate<PurchaseBannerBackgroundRequest>(HandlePurchaseBannerRequest));
@@ -1095,6 +1100,87 @@ namespace CentralServer.LobbyServer
             {
                 AccountData = account,
             });
+        }
+
+        private void HandlePurchaseModRequest(PurchaseModRequest request)
+        {
+            Send(new PurchaseModResponse
+            {
+                Character = request.Character,
+                UnlockData = request.UnlockData,
+                Success = false,
+                ResponseId = request.RequestId
+            });
+        }
+
+        private void HandlePurchaseTauntRequest(PurchaseTauntRequest request)
+        {
+            Send(new PurchaseTauntResponse
+            {
+                Result = PurchaseResult.Failed,
+                CurrencyType = request.CurrencyType,
+                CharacterType = request.CharacterType,
+                TauntId = request.TauntId,
+                Success = false,
+                ResponseId = request.RequestId
+            });
+        }
+
+        private void HandlePurchaseChatEmojiRequest(PurchaseChatEmojiRequest request)
+        {
+            Send(new PurchaseChatEmojiResponse
+            {
+                Result = PurchaseResult.Failed,
+                CurrencyType = request.CurrencyType,
+                EmojiID = request.EmojiID,
+                Success = false,
+                ResponseId = request.RequestId
+            });
+        }
+
+        private void HandlePurchaseLoadoutSlotRequest(PurchaseLoadoutSlotRequest request)
+        {
+            Send(new PurchaseLoadoutSlotResponse
+            {
+                Character = request.Character,
+                Success = false,
+                ResponseId = request.RequestId
+            });
+        }
+
+        private void HandlePaymentMethodsRequest(PaymentMethodsRequest request)
+        {
+        }
+
+        private void HandleStoreOpenedMessage(StoreOpenedMessage msg)
+        {
+        }
+
+        private void HandleUIActionNotification(UIActionNotification notify)
+        {
+        }
+
+        private void HandleCrashReportArchiveNameRequest(CrashReportArchiveNameRequest request)
+        {
+            Send(new CrashReportArchiveNameResponse
+            {
+                ArchiveName = $"ARCrash_{DateTime.Now:yyyyMddHHmmss}_{AccountId}",
+                Success = true,
+                ResponseId = request.RequestId
+            });
+        }
+
+        private void HandleClientStatusReport(ClientStatusReport msg)
+        {
+            log.Info($"ClientStatusReport {msg.Status}: {msg.StatusDetails.Split('\n', 2)[0]} ({msg.UserMessage})");
+        }
+
+        private void HandleSubscribeToCustomGamesRequest(SubscribeToCustomGamesRequest request)
+        {
+        }
+
+        private void HandleUnsubscribeFromCustomGamesRequest(UnsubscribeFromCustomGamesRequest request)
+        {
         }
 
         public void HandleGroupChatRequest(GroupChatRequest request)
