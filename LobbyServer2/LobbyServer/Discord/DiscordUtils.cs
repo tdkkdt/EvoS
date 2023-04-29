@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Discord;
 using log4net;
+using log4net.Core;
 
 namespace CentralServer.LobbyServer.Discord
 {
@@ -26,6 +27,14 @@ namespace CentralServer.LobbyServer.Discord
             }
 
             return Task.CompletedTask;
+        }
+
+        public static Color GetLogColor(Level level)
+        {
+            if (level >= Level.Error) return Color.DarkRed;
+            if (level >= Level.Warn) return Color.Orange;
+            if (level >= Level.Info) return Color.Green;
+            return Color.Default;
         }
         
     }

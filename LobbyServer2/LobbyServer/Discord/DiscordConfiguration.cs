@@ -14,6 +14,8 @@ namespace CentralServer.LobbyServer.Discord
         public ulong? AdminUserReportThreadId;
         public bool AdminEnableChatAudit;
         public ulong? AdminChatAuditThreadId;
+        public bool AdminEnableLog;
+        public ulong? AdminLogThreadId;
         
         public bool LobbyEnableChat;
         public bool LobbyEnableServerStatus;

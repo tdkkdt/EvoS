@@ -12,6 +12,7 @@ using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using log4net;
+using log4net.Core;
 
 namespace CentralServer.LobbyServer.Discord
 {
@@ -217,6 +218,29 @@ namespace CentralServer.LobbyServer.Discord
             catch (Exception e)
             {
                 log.Error("Failed to send audit chat message to discord webhook", e);
+            }
+        }
+
+        public async Task SendLogEvent(Level severity, string msg)
+        {
+            if (adminChannel == null || !conf.AdminEnableLog)
+            {
+                return;
+            }
+            try
+            {
+                await adminChannel.SendMessageAsync(
+                    username: "Atlas Reactor",
+                    embeds: new[] { new EmbedBuilder
+                    {
+                        Description = msg,
+                        Color = DiscordUtils.GetLogColor(severity)
+                    }.Build() },
+                    threadIdOverride: conf.AdminLogThreadId);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Failed to send log to Discord: {e}");
             }
         }
 
