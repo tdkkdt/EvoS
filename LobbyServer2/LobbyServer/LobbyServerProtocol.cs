@@ -104,7 +104,12 @@ namespace CentralServer.LobbyServer
             RegisterHandler(new EvosMessageDelegate<ClientStatusReport>(HandleClientStatusReport));
             RegisterHandler(new EvosMessageDelegate<SubscribeToCustomGamesRequest>(HandleSubscribeToCustomGamesRequest));
             RegisterHandler(new EvosMessageDelegate<UnsubscribeFromCustomGamesRequest>(HandleUnsubscribeFromCustomGamesRequest));
-
+            RegisterHandler(new EvosMessageDelegate<RankedLeaderboardOverviewRequest>(HandleRankedLeaderboardOverviewRequest));
+            RegisterHandler(new EvosMessageDelegate<CalculateFreelancerStatsRequest>(HandleCalculateFreelancerStatsRequest));
+            RegisterHandler(new EvosMessageDelegate<PlayerPanelUpdatedNotification>(HandlePlayerPanelUpdatedNotification));
+            
+            
+            
             RegisterHandler(new EvosMessageDelegate<PurchaseBannerForegroundRequest>(HandlePurchaseEmblemRequest));
             RegisterHandler(new EvosMessageDelegate<PurchaseBannerBackgroundRequest>(HandlePurchaseBannerRequest));
             RegisterHandler(new EvosMessageDelegate<PurchaseAbilityVfxRequest>(HandlePurchasAbilityVfx));
@@ -1180,6 +1185,32 @@ namespace CentralServer.LobbyServer
         }
 
         private void HandleUnsubscribeFromCustomGamesRequest(UnsubscribeFromCustomGamesRequest request)
+        {
+        }
+
+        private void HandleRankedLeaderboardOverviewRequest(RankedLeaderboardOverviewRequest request)
+        {
+            Send(new RankedLeaderboardOverviewResponse
+            {
+                GameType = GameType.PvP,
+                TierInfoPerGroupSize = new Dictionary<int, PerGroupSizeTierInfo>(),
+                Success = false,
+                ResponseId = request.RequestId
+            });
+        }
+
+        private void HandleCalculateFreelancerStatsRequest(CalculateFreelancerStatsRequest request)
+        {
+            Send(new CalculateFreelancerStatsResponse
+            {
+                GlobalPercentiles = new Dictionary<StatDisplaySettings.StatType, PercentileInfo>(),
+                FreelancerSpecificPercentiles = new Dictionary<int, PercentileInfo>(),
+                Success = false,
+                ResponseId = request.RequestId
+            });
+        }
+
+        private void HandlePlayerPanelUpdatedNotification(PlayerPanelUpdatedNotification msg)
         {
         }
 
