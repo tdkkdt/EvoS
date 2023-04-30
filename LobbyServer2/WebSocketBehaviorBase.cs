@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using EvoS.Framework.Misc;
+using EvoS.Framework.Network.WebSocket;
 using log4net;
 using WebSocketSharp;
 using WebSocketSharp.Server;
@@ -8,9 +10,11 @@ using ErrorEventArgs = WebSocketSharp.ErrorEventArgs;
 
 namespace CentralServer
 {
-    public abstract class WebSocketBehaviorBase : WebSocketBehavior
+    public abstract class WebSocketBehaviorBase<TMessage> : WebSocketBehavior
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketBehaviorBase));
+        private static readonly ILog log = LogManager.GetLogger("WebSocketBehaviorBase");
+        
+        private readonly Dictionary<Type, Action<TMessage, int>> messageHandlers = new Dictionary<Type, Action<TMessage, int>>();
 
         protected static void LogMessage(string prefix, object message)
         {
@@ -77,8 +81,69 @@ namespace CentralServer
             Wrap(HandleMessage, e);
         }
 
+        protected abstract TMessage DeserializeMessage(byte[] data, out int callbackId);
+
         protected virtual void HandleMessage(MessageEventArgs e)
         {
+            TMessage deserialized = default(TMessage);
+            int callbackId = 0;
+
+            try
+            {
+                deserialized = DeserializeMessage(e.RawData, out callbackId);
+            }
+            catch (NullReferenceException nullEx)
+            {
+                log.Error("No message handler registered for data: " + BitConverter.ToString(e.RawData));
+            }
+            catch (Exception ex)
+            {
+                log.Error("Failed to deserialize data: " + BitConverter.ToString(e.RawData), ex);
+            }
+
+            if (deserialized != null)
+            {
+                Action<TMessage, int> handler = GetHandler(deserialized.GetType());
+                if (handler != null)
+                {
+                    LogMessage("<", deserialized);
+                    try
+                    {
+                        handler.Invoke(deserialized, callbackId);
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Error($"Handler for {deserialized.GetType()} failed", ex);
+                    }
+                }
+                else
+                {
+                    log.Error("No handler for " + deserialized.GetType().Name + ": " + DefaultJsonSerializer.Serialize(deserialized));
+                }
+            }
+        }
+
+        protected void RegisterHandler<T>(Action<T, int> handler) where T : TMessage
+        {
+            messageHandlers.Add(typeof(T), (msg, callbackId) => { handler((T)msg, callbackId); });
+        }
+
+        protected void RegisterHandler<T>(Action<T> handler) where T : TMessage
+        {
+            messageHandlers.Add(typeof(T), (msg, callbackId) => { handler((T)msg); });
+        }
+
+        private Action<TMessage, int> GetHandler(Type type)
+        {
+            try
+            {
+                return messageHandlers[type];
+            }
+            catch (KeyNotFoundException e)
+            {
+                log.Error("No handler found for type " + type.Name);
+                return null;
+            }
         }
 
         protected abstract string GetConnContext();

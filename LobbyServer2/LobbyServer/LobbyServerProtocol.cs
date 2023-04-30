@@ -61,60 +61,60 @@ namespace CentralServer.LobbyServer
 
         protected override void HandleOpen()
         {
-            RegisterHandler(new EvosMessageDelegate<RegisterGameClientRequest>(HandleRegisterGame));
-            RegisterHandler(new EvosMessageDelegate<OptionsNotification>(HandleOptionsNotification));
-            RegisterHandler(new EvosMessageDelegate<CustomKeyBindNotification>(HandleCustomKeyBindNotification));
-            RegisterHandler(new EvosMessageDelegate<PricesRequest>(HandlePricesRequest));
-            RegisterHandler(new EvosMessageDelegate<PlayerUpdateStatusRequest>(HandlePlayerUpdateStatusRequest));
-            RegisterHandler(new EvosMessageDelegate<PlayerMatchDataRequest>(HandlePlayerMatchDataRequest));
-            RegisterHandler(new EvosMessageDelegate<SetGameSubTypeRequest>(HandleSetGameSubTypeRequest));
-            RegisterHandler(new EvosMessageDelegate<PlayerInfoUpdateRequest>(HandlePlayerInfoUpdateRequest));
-            RegisterHandler(new EvosMessageDelegate<CheckAccountStatusRequest>(HandleCheckAccountStatusRequest));
-            RegisterHandler(new EvosMessageDelegate<CheckRAFStatusRequest>(HandleCheckRAFStatusRequest));
-            RegisterHandler(new EvosMessageDelegate<ClientErrorSummary>(HandleClientErrorSummary));
-            RegisterHandler(new EvosMessageDelegate<PreviousGameInfoRequest>(HandlePreviousGameInfoRequest));
-            RegisterHandler(new EvosMessageDelegate<PurchaseTintRequest>(HandlePurchaseTintRequest));
-            RegisterHandler(new EvosMessageDelegate<LeaveGameRequest>(HandleLeaveGameRequest));
-            RegisterHandler(new EvosMessageDelegate<JoinMatchmakingQueueRequest>(HandleJoinMatchmakingQueueRequest));
-            RegisterHandler(new EvosMessageDelegate<LeaveMatchmakingQueueRequest>(HandleLeaveMatchmakingQueueRequest));
-            RegisterHandler(new EvosMessageDelegate<ChatNotification>(HandleChatNotification));
-            RegisterHandler(new EvosMessageDelegate<GroupInviteRequest>(HandleGroupInviteRequest));
-            RegisterHandler(new EvosMessageDelegate<GroupConfirmationResponse>(HandleGroupConfirmationResponse));
-            RegisterHandler(new EvosMessageDelegate<GroupSuggestionResponse>(HandleGroupSuggestionResponse));
-            RegisterHandler(new EvosMessageDelegate<GroupLeaveRequest>(HandleGroupLeaveRequest));
-            RegisterHandler(new EvosMessageDelegate<GroupKickRequest>(HandleGroupKickRequest));
-            RegisterHandler(new EvosMessageDelegate<GroupPromoteRequest>(HandleGroupPromoteRequest));
-            RegisterHandler(new EvosMessageDelegate<SelectBannerRequest>(HandleSelectBannerRequest));
-            RegisterHandler(new EvosMessageDelegate<SelectTitleRequest>(HandleSelectTitleRequest));
-            RegisterHandler(new EvosMessageDelegate<UseOverconRequest>(HandleUseOverconRequest));
-            RegisterHandler(new EvosMessageDelegate<UseGGPackRequest>(HandleUseGGPackRequest));
-            RegisterHandler(new EvosMessageDelegate<UpdateUIStateRequest>(HandleUpdateUIStateRequest));
-            RegisterHandler(new EvosMessageDelegate<GroupChatRequest>(HandleGroupChatRequest));
-            RegisterHandler(new EvosMessageDelegate<ClientFeedbackReport>(HandleClientFeedbackReport));
-            RegisterHandler(new EvosMessageDelegate<RejoinGameRequest>(HandleRejoinGameRequest));
+            RegisterHandler<RegisterGameClientRequest>(HandleRegisterGame);
+            RegisterHandler<OptionsNotification>(HandleOptionsNotification);
+            RegisterHandler<CustomKeyBindNotification>(HandleCustomKeyBindNotification);
+            RegisterHandler<PricesRequest>(HandlePricesRequest);
+            RegisterHandler<PlayerUpdateStatusRequest>(HandlePlayerUpdateStatusRequest);
+            RegisterHandler<PlayerMatchDataRequest>(HandlePlayerMatchDataRequest);
+            RegisterHandler<SetGameSubTypeRequest>(HandleSetGameSubTypeRequest);
+            RegisterHandler<PlayerInfoUpdateRequest>(HandlePlayerInfoUpdateRequest);
+            RegisterHandler<CheckAccountStatusRequest>(HandleCheckAccountStatusRequest);
+            RegisterHandler<CheckRAFStatusRequest>(HandleCheckRAFStatusRequest);
+            RegisterHandler<ClientErrorSummary>(HandleClientErrorSummary);
+            RegisterHandler<PreviousGameInfoRequest>(HandlePreviousGameInfoRequest);
+            RegisterHandler<PurchaseTintRequest>(HandlePurchaseTintRequest);
+            RegisterHandler<LeaveGameRequest>(HandleLeaveGameRequest);
+            RegisterHandler<JoinMatchmakingQueueRequest>(HandleJoinMatchmakingQueueRequest);
+            RegisterHandler<LeaveMatchmakingQueueRequest>(HandleLeaveMatchmakingQueueRequest);
+            RegisterHandler<ChatNotification>(HandleChatNotification);
+            RegisterHandler<GroupInviteRequest>(HandleGroupInviteRequest);
+            RegisterHandler<GroupConfirmationResponse>(HandleGroupConfirmationResponse);
+            RegisterHandler<GroupSuggestionResponse>(HandleGroupSuggestionResponse);
+            RegisterHandler<GroupLeaveRequest>(HandleGroupLeaveRequest);
+            RegisterHandler<GroupKickRequest>(HandleGroupKickRequest);
+            RegisterHandler<GroupPromoteRequest>(HandleGroupPromoteRequest);
+            RegisterHandler<SelectBannerRequest>(HandleSelectBannerRequest);
+            RegisterHandler<SelectTitleRequest>(HandleSelectTitleRequest);
+            RegisterHandler<UseOverconRequest>(HandleUseOverconRequest);
+            RegisterHandler<UseGGPackRequest>(HandleUseGGPackRequest);
+            RegisterHandler<UpdateUIStateRequest>(HandleUpdateUIStateRequest);
+            RegisterHandler<GroupChatRequest>(HandleGroupChatRequest);
+            RegisterHandler<ClientFeedbackReport>(HandleClientFeedbackReport);
+            RegisterHandler<RejoinGameRequest>(HandleRejoinGameRequest);
 
-            RegisterHandler(new EvosMessageDelegate<PurchaseModRequest>(HandlePurchaseModRequest));
-            RegisterHandler(new EvosMessageDelegate<PurchaseTauntRequest>(HandlePurchaseTauntRequest));
-            RegisterHandler(new EvosMessageDelegate<PurchaseChatEmojiRequest>(HandlePurchaseChatEmojiRequest));
-            RegisterHandler(new EvosMessageDelegate<PurchaseLoadoutSlotRequest>(HandlePurchaseLoadoutSlotRequest));
-            RegisterHandler(new EvosMessageDelegate<PaymentMethodsRequest>(HandlePaymentMethodsRequest));
-            RegisterHandler(new EvosMessageDelegate<StoreOpenedMessage>(HandleStoreOpenedMessage));
-            RegisterHandler(new EvosMessageDelegate<UIActionNotification>(HandleUIActionNotification));
-            RegisterHandler(new EvosMessageDelegate<CrashReportArchiveNameRequest>(HandleCrashReportArchiveNameRequest));
-            RegisterHandler(new EvosMessageDelegate<ClientStatusReport>(HandleClientStatusReport));
-            RegisterHandler(new EvosMessageDelegate<SubscribeToCustomGamesRequest>(HandleSubscribeToCustomGamesRequest));
-            RegisterHandler(new EvosMessageDelegate<UnsubscribeFromCustomGamesRequest>(HandleUnsubscribeFromCustomGamesRequest));
-            RegisterHandler(new EvosMessageDelegate<RankedLeaderboardOverviewRequest>(HandleRankedLeaderboardOverviewRequest));
-            RegisterHandler(new EvosMessageDelegate<CalculateFreelancerStatsRequest>(HandleCalculateFreelancerStatsRequest));
-            RegisterHandler(new EvosMessageDelegate<PlayerPanelUpdatedNotification>(HandlePlayerPanelUpdatedNotification));
+            RegisterHandler<PurchaseModRequest>(HandlePurchaseModRequest);
+            RegisterHandler<PurchaseTauntRequest>(HandlePurchaseTauntRequest);
+            RegisterHandler<PurchaseChatEmojiRequest>(HandlePurchaseChatEmojiRequest);
+            RegisterHandler<PurchaseLoadoutSlotRequest>(HandlePurchaseLoadoutSlotRequest);
+            RegisterHandler<PaymentMethodsRequest>(HandlePaymentMethodsRequest);
+            RegisterHandler<StoreOpenedMessage>(HandleStoreOpenedMessage);
+            RegisterHandler<UIActionNotification>(HandleUIActionNotification);
+            RegisterHandler<CrashReportArchiveNameRequest>(HandleCrashReportArchiveNameRequest);
+            RegisterHandler<ClientStatusReport>(HandleClientStatusReport);
+            RegisterHandler<SubscribeToCustomGamesRequest>(HandleSubscribeToCustomGamesRequest);
+            RegisterHandler<UnsubscribeFromCustomGamesRequest>(HandleUnsubscribeFromCustomGamesRequest);
+            RegisterHandler<RankedLeaderboardOverviewRequest>(HandleRankedLeaderboardOverviewRequest);
+            RegisterHandler<CalculateFreelancerStatsRequest>(HandleCalculateFreelancerStatsRequest);
+            RegisterHandler<PlayerPanelUpdatedNotification>(HandlePlayerPanelUpdatedNotification);
             
             
             
-            RegisterHandler(new EvosMessageDelegate<PurchaseBannerForegroundRequest>(HandlePurchaseEmblemRequest));
-            RegisterHandler(new EvosMessageDelegate<PurchaseBannerBackgroundRequest>(HandlePurchaseBannerRequest));
-            RegisterHandler(new EvosMessageDelegate<PurchaseAbilityVfxRequest>(HandlePurchasAbilityVfx));
+            RegisterHandler<PurchaseBannerForegroundRequest>(HandlePurchaseEmblemRequest);
+            RegisterHandler<PurchaseBannerBackgroundRequest>(HandlePurchaseBannerRequest);
+            RegisterHandler<PurchaseAbilityVfxRequest>(HandlePurchasAbilityVfx);
             
-            RegisterHandler(new EvosMessageDelegate<FriendUpdateRequest>(HandleFriendUpdate));
+            RegisterHandler<FriendUpdateRequest>(HandleFriendUpdate);
         }
 
         protected override void HandleClose(CloseEventArgs e)

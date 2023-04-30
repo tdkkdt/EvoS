@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using CentralServer.LobbyServer.Character;
-using CentralServer.LobbyServer.Config;
 using CentralServer.LobbyServer.Friend;
 using CentralServer.LobbyServer.Gamemode;
 using CentralServer.LobbyServer.Group;
@@ -13,21 +12,18 @@ using CentralServer.LobbyServer.Quest;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
-using EvoS.Framework.Misc;
 using EvoS.Framework.Network;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using EvoS.Framework.Network.WebSocket;
 using log4net;
 using Newtonsoft.Json.Linq;
-using WebSocketSharp;
 
 namespace CentralServer.LobbyServer
 {
-    public class LobbyServerProtocolBase : WebSocketBehaviorBase
+    public class LobbyServerProtocolBase : WebSocketBehaviorBase<WebSocketMessage>
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(LobbyServerProtocolBase));
-        private Dictionary<Type, EvosMessageDelegate<WebSocketMessage>> messageHandlers = new Dictionary<Type, EvosMessageDelegate<WebSocketMessage>>();
         public long AccountId;
         public string UserName;
         public long SessionToken;
@@ -42,51 +38,10 @@ namespace CentralServer.LobbyServer
             return "C " + AccountId;
         }
 
-        protected override void HandleMessage(MessageEventArgs e)
+        protected override WebSocketMessage DeserializeMessage(byte[] data, out int callbackId)
         {
-            MemoryStream stream = new MemoryStream(e.RawData);
-            WebSocketMessage deserialized = null;
-
-            try
-            {
-                deserialized = (WebSocketMessage)EvosSerializer.Instance.Deserialize(stream);
-            }
-            catch (NullReferenceException nullEx)
-            {
-                log.Error("No message handler registered for data: " + BitConverter.ToString(e.RawData));
-            }
-
-            if (deserialized != null)
-            {
-                EvosMessageDelegate<WebSocketMessage> handler = GetHandler(deserialized.GetType());
-                if (handler != null)
-                {
-                    LogMessage("<", deserialized);
-                    handler.Invoke(deserialized);
-                }
-                else
-                {
-                    log.Error("No handler for " + deserialized.GetType().Name + ": " + DefaultJsonSerializer.Serialize(deserialized));
-                }
-            }
-        }
-
-        public void RegisterHandler<T>(EvosMessageDelegate<T> handler) where T : WebSocketMessage
-        {
-            messageHandlers.Add(typeof(T), msg => { handler((T)msg); });
-        }
-
-        private EvosMessageDelegate<WebSocketMessage> GetHandler(Type type)
-        {
-            try
-            {
-                return messageHandlers[type];
-            }
-            catch (KeyNotFoundException e)
-            {
-                log.Error("No handler found for type " + type.Name);
-                return null;
-            }
+            callbackId = 0;
+            return (WebSocketMessage)EvosSerializer.Instance.Deserialize(new MemoryStream(data));
         }
 
         public void Send(WebSocketMessage message)

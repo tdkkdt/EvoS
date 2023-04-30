@@ -161,18 +161,18 @@ namespace CentralServer.LobbyServer.Utils
                     .Key);
         }
 
-        public static List<BadgeAndParticipantInfo> ProcessGameSummary(ServerGameSummaryNotification request)
+        public static List<BadgeAndParticipantInfo> ProcessGameSummary(LobbyGameSummary gameSummary)
         {
             List<BadgeAndParticipantInfo> result = new List<BadgeAndParticipantInfo>();
-            if (request.GameSummary.GameResult != GameResult.TeamAWon
-                && request.GameSummary.GameResult != GameResult.TeamBWon)
+            if (gameSummary.GameResult != GameResult.TeamAWon
+                && gameSummary.GameResult != GameResult.TeamBWon)
             {
                 return result;
             }
-            Dictionary<int, List<BadgeInfo>> badgeInfos = AwardBadges(request.GameSummary);
+            Dictionary<int, List<BadgeInfo>> badgeInfos = AwardBadges(gameSummary);
             Dictionary<TopParticipantSlot,int> accolades = GetAccolades(badgeInfos);
 
-            foreach (PlayerGameSummary player in request.GameSummary.PlayerGameSummaryList)
+            foreach (PlayerGameSummary player in gameSummary.PlayerGameSummaryList)
             {
                 List<TopParticipantSlot> topParticipationEarned = accolades
                     .Where(e => e.Value == player.PlayerId)
