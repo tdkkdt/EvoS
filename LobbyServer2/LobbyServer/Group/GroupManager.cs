@@ -146,7 +146,7 @@ namespace CentralServer.LobbyServer.Group
                 MemberHandle = account.Handle,
                 HasFullAccess = true,
                 IsLeader = groupInfo.IsLeader(account.AccountId),
-                IsReady = session.IsReady,
+                IsReady = session?.IsReady == true,
                 IsInGame = false, // TODO
                 // CreateGameTimestamp = session.CreateGameTimestamp,
                 AccountID = account.AccountId,

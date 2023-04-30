@@ -1177,7 +1177,8 @@ namespace CentralServer.LobbyServer
 
         private void HandleClientStatusReport(ClientStatusReport msg)
         {
-            log.Info($"ClientStatusReport {msg.Status}: {msg.StatusDetails.Split('\n', 2)[0]} ({msg.UserMessage})");
+            string shortDetails = msg.StatusDetails != null ? msg.StatusDetails.Split('\n', 2)[0] : "";
+            log.Info($"ClientStatusReport {msg.Status}: {shortDetails} ({msg.UserMessage})");
         }
 
         private void HandleSubscribeToCustomGamesRequest(SubscribeToCustomGamesRequest request)
