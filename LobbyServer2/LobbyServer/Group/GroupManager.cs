@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
 using EvoS.Framework;
-using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
-using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using EvoS.Framework.Network.WebSocket;
 using log4net;
@@ -20,8 +19,8 @@ namespace CentralServer.LobbyServer.Group
         private static readonly Dictionary<long, GroupInfo> ActiveGroups = new Dictionary<long, GroupInfo>();
         private static readonly Dictionary<long, long> PlayerToGroup = new Dictionary<long, long>();
         private static readonly Dictionary<long, GroupRequestInfo> GroupRequests = new Dictionary<long, GroupRequestInfo>();
-        private static long _nextGroupId = 0;
-        private static long _nextGroupRequestId = 0;
+        private static long _lastGroupId = -1;
+        private static long _lastGroupRequestId = -1;
         private static readonly object _lock = new object();
 
         public static object Lock => _lock;
@@ -50,7 +49,7 @@ namespace CentralServer.LobbyServer.Group
                     throw new ArgumentException("Invalid group id");
                 }
 
-                long requestId = _nextGroupRequestId++;
+                long requestId = Interlocked.Increment(ref _lastGroupRequestId);
                 // TODO
                 // GroupRequests.Add(
                 //     requestId,
@@ -64,7 +63,7 @@ namespace CentralServer.LobbyServer.Group
             long groupId;
             lock (_lock)
             {
-                groupId = _nextGroupId++;
+                groupId = Interlocked.Increment(ref _lastGroupId);
                 ActiveGroups.Add(groupId, new GroupInfo(groupId));
             }
             JoinGroup(groupId, leader);
