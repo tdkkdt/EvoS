@@ -124,7 +124,7 @@ namespace CentralServer.BridgeServer
         }
 
 
-        protected override void HandleOpen()
+        public BridgeServerProtocol()
         {
             RegisterHandler<RegisterGameServerRequest>(HandleRegisterGameServerRequest);
             RegisterHandler<ServerGameSummaryNotification>(HandleServerGameSummaryNotification);
@@ -317,6 +317,7 @@ namespace CentralServer.BridgeServer
 
         protected override void HandleClose(CloseEventArgs e)
         {
+            UnregisterAllHandlers();
             ServerManager.RemoveServer(ProcessCode);
             IsConnected = false;
         }

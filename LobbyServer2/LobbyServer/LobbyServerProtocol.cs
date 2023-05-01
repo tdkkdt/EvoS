@@ -59,7 +59,7 @@ namespace CentralServer.LobbyServer
         public event Action<LobbyServerProtocol, GroupChatRequest> OnGroupChatRequest = delegate {};
         
 
-        protected override void HandleOpen()
+        public LobbyServerProtocol()
         {
             RegisterHandler<RegisterGameClientRequest>(HandleRegisterGame);
             RegisterHandler<OptionsNotification>(HandleOptionsNotification);
