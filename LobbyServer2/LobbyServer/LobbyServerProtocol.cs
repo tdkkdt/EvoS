@@ -121,6 +121,7 @@ namespace CentralServer.LobbyServer
 
         protected override void HandleClose(CloseEventArgs e)
         {
+            UnregisterAllHandlers();
             if (!SessionCleaned)
             {
                 SessionCleaned = true;
@@ -749,6 +750,19 @@ namespace CentralServer.LobbyServer
             PersistedAccountData requester = DB.Get().AccountDao.GetAccount(AccountId);
             PersistedAccountData leader = DB.Get().AccountDao.GetAccount(group.Leader);
             LobbyServerProtocol friend = SessionManager.GetClientConnection((long) friendAccountId);
+
+            if (friend == null)  // can be offline
+            {
+                log.Info($"{AccountId}/{requester.Handle} failed to invite {friend.AccountId}/{request.FriendHandle} to group {group.GroupId} for they are offline");
+                Send(new GroupInviteResponse
+                {
+                    FriendHandle = request.FriendHandle,
+                    ResponseId = request.RequestId,
+                    Success = false
+                });
+                return;
+            }
+            
             if (group.Leader == AccountId)
             {
                 friend.Send(new GroupConfirmationRequest

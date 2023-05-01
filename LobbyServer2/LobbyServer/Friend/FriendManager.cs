@@ -30,19 +30,23 @@ namespace CentralServer.LobbyServer.Friend
                     .Where(id => id != accountId)
                     .Select(id => DB.Get().AccountDao.GetAccount(id))
                     .ToDictionary(acc => acc.AccountId,
-                        acc => new FriendInfo()
+                        acc =>
                         {
-                            FriendAccountId = acc.AccountId,
-                            FriendHandle = acc.Handle,
-                            FriendStatus = socialComponent?.IsBlocked(acc.AccountId) == true ? FriendStatus.Blocked : FriendStatus.Friend,
-                            IsOnline = true,
-                            StatusString = GetStatusString(SessionManager.GetClientConnection(acc.AccountId)),
-                            // FriendNote = 
-                            BannerID = acc.AccountComponent.SelectedBackgroundBannerID,
-                            EmblemID = acc.AccountComponent.SelectedForegroundBannerID,
-                            TitleID = acc.AccountComponent.SelectedTitleID,
-                            TitleLevel = acc.AccountComponent.TitleLevels.GetValueOrDefault(acc.AccountComponent.SelectedTitleID, 0),
-                            RibbonID = acc.AccountComponent.SelectedRibbonID,
+                            LobbyServerProtocol conn = SessionManager.GetClientConnection(acc.AccountId);
+                            return new FriendInfo
+                            {
+                                FriendAccountId = acc.AccountId,
+                                FriendHandle = acc.Handle,
+                                FriendStatus = socialComponent?.IsBlocked(acc.AccountId) == true ? FriendStatus.Blocked : FriendStatus.Friend,
+                                IsOnline = conn != null,
+                                StatusString = GetStatusString(conn),
+                                // FriendNote = 
+                                BannerID = acc.AccountComponent.SelectedBackgroundBannerID,
+                                EmblemID = acc.AccountComponent.SelectedForegroundBannerID,
+                                TitleID = acc.AccountComponent.SelectedTitleID,
+                                TitleLevel = acc.AccountComponent.TitleLevels.GetValueOrDefault(acc.AccountComponent.SelectedTitleID, 0),
+                                RibbonID = acc.AccountComponent.SelectedRibbonID,
+                            };
                         }),
                 IsDelta = false
             };

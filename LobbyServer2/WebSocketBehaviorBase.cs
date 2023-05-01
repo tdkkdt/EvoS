@@ -15,6 +15,7 @@ namespace CentralServer
         private static readonly ILog log = LogManager.GetLogger("WebSocketBehaviorBase");
         
         private readonly Dictionary<Type, Action<TMessage, int>> messageHandlers = new Dictionary<Type, Action<TMessage, int>>();
+        private bool unregistered = false;
 
         protected static void LogMessage(string prefix, object message)
         {
@@ -133,17 +134,20 @@ namespace CentralServer
             messageHandlers.Add(typeof(T), (msg, callbackId) => { handler((T)msg); });
         }
 
+        protected void UnregisterAllHandlers()
+        {
+            unregistered = true;
+            messageHandlers.Clear();
+        }
+
         private Action<TMessage, int> GetHandler(Type type)
         {
-            try
-            {
-                return messageHandlers[type];
-            }
-            catch (KeyNotFoundException e)
+            messageHandlers.TryGetValue(type, out Action<TMessage, int> handler);
+            if (handler == null && !unregistered)
             {
                 log.Error("No handler found for type " + type.Name);
-                return null;
             }
+            return handler;
         }
 
         protected abstract string GetConnContext();
