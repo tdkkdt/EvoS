@@ -113,6 +113,8 @@ namespace CentralServer.LobbyServer
             RegisterHandler<PurchaseBannerForegroundRequest>(HandlePurchaseEmblemRequest);
             RegisterHandler<PurchaseBannerBackgroundRequest>(HandlePurchaseBannerRequest);
             RegisterHandler<PurchaseAbilityVfxRequest>(HandlePurchasAbilityVfx);
+            RegisterHandler<PurchaseInventoryItemRequest>(HandlePurchaseInventoryItemRequest);
+            
             
             RegisterHandler<FriendUpdateRequest>(HandleFriendUpdate);
         }
@@ -1104,6 +1106,18 @@ namespace CentralServer.LobbyServer
             Send(new PlayerAccountDataUpdateNotification()
             {
                 AccountData = account,
+            });
+        }
+
+        private void HandlePurchaseInventoryItemRequest(PurchaseInventoryItemRequest request)
+        {
+            Send(new PurchaseInventoryItemResponse
+            {
+                Result = PurchaseResult.Failed,
+                InventoryItemID = request.InventoryItemID,
+                CurrencyType = request.CurrencyType,
+                Success = false,
+                ResponseId = request.RequestId
             });
         }
 
