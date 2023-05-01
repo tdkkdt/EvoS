@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using CentralServer.LobbyServer.Matchmaking;
 using EvoS.Framework.Constants.Enums;
@@ -10,20 +9,26 @@ namespace CentralServer.BridgeServer
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(ServerManager));
         
-        private static Dictionary<string, BridgeServerProtocol> ServerPool = new Dictionary<string, BridgeServerProtocol>();
+        private static readonly Dictionary<string, BridgeServerProtocol> ServerPool = new Dictionary<string, BridgeServerProtocol>();
 
         public static void AddServer(BridgeServerProtocol gameServer)
         {
-            ServerPool.Add(gameServer.ProcessCode, gameServer);
+            lock (ServerPool)
+            {
+                ServerPool.Add(gameServer.ProcessCode, gameServer);
 
-            log.Info($"New game server connected with address {gameServer.Address}:{gameServer.Port}");
-            MatchmakingManager.Update();
+                log.Info($"New game server connected with address {gameServer.Address}:{gameServer.Port}");
+                MatchmakingManager.Update();
+            }
         }
 
         public static void RemoveServer(string processCode)
         {
-            ServerPool.Remove(processCode);
-            log.Info($"Game server disconnected");
+            lock (ServerPool)
+            {
+                ServerPool.Remove(processCode);
+                log.Info($"Game server disconnected");
+            }
         }
 
         public static BridgeServerProtocol GetServer()
@@ -45,29 +50,37 @@ namespace CentralServer.BridgeServer
 
         public static BridgeServerProtocol GetServerWithPlayer(long accountId)
         {
-            foreach (BridgeServerProtocol server in ServerPool.Values)
+            lock (ServerPool)
             {
-                if (server.ServerGameStatus == GameStatus.Started) // TODO why started only?
-                { 
-                    foreach (long player in server.GetPlayers())
+                foreach (BridgeServerProtocol server in ServerPool.Values)
+                {
+                    if (server.ServerGameStatus == GameStatus.Started) // TODO why started only?
                     {
-                        if (player.Equals(accountId))
+                        foreach (long player in server.GetPlayers())
                         {
-                            return server;
+                            if (player.Equals(accountId))
+                            {
+                                return server;
+                            }
                         }
                     }
                 }
+
+                return null;
             }
-            return null;
         }
 
         public static bool IsAnyServerAvailable()
         {
-            foreach (BridgeServerProtocol server in ServerPool.Values)
+            lock (ServerPool)
             {
-                if (server.IsAvailable()) return true;
+                foreach (BridgeServerProtocol server in ServerPool.Values)
+                {
+                    if (server.IsAvailable()) return true;
+                }
+
+                return false;
             }
-            return false;
         }
     }
 }
