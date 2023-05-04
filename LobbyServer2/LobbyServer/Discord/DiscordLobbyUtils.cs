@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Session;
+using CentralServer.LobbyServer.Utils;
 using Discord;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
@@ -34,7 +35,7 @@ namespace CentralServer.LobbyServer.Discord
                     if (conn.CurrentServer != null)
                     {
                         serverInfo = $"{conn.CurrentServer.Name} " +
-                                     $"{new DateTime(conn.CurrentServer.GameInfo.CreateTimestamp):yyyy_MM_dd__HH_mm_ss}\n" +
+                                     $"{LobbyServerUtils.GameIdString(conn.CurrentServer.GameInfo)}\n" +
                                      $"{conn.CurrentServer.GameInfo.GameConfig.Map} " +
                                      $"{conn.CurrentServer.GameInfo.GameConfig.GameType} ";
                         playerInfo = conn.CurrentServer.GetPlayerInfo(notification.SenderAccountId);

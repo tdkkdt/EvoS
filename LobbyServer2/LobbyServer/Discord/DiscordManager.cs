@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Chat;
+using CentralServer.LobbyServer.Session;
+using CentralServer.LobbyServer.Utils;
 using Discord;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
@@ -273,7 +276,7 @@ namespace CentralServer.LobbyServer.Discord
 
             EmbedFooterBuilder footer = new EmbedFooterBuilder
             {
-                Text = $"{serverName} - {serverVersion} - {new DateTime(gameInfo.CreateTimestamp):yyyy_MM_dd__HH_mm_ss}"
+                Text = $"{serverName} - {serverVersion} - {LobbyServerUtils.GameIdString(gameInfo)}"
             };
             eb.Footer = footer;
             return eb.Build();
@@ -298,6 +301,12 @@ namespace CentralServer.LobbyServer.Discord
                 if (message.ReportedPlayerHandle != null)
                 {
                     eb.AddField("Reported Account", $"{message.ReportedPlayerHandle} #{message.ReportedPlayerAccountId}", true);
+                }
+
+                BridgeServerProtocol server = SessionManager.GetClientConnection(accountId)?.CurrentServer;
+                if (server != null)
+                {
+                    eb.AddField("Game", $"{server.Name} {LobbyServerUtils.GameIdString(server.GameInfo)}", true);
                 }
                 await adminChannel.SendMessageAsync(
                     null,
