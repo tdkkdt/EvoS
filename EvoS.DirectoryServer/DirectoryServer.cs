@@ -63,13 +63,13 @@ namespace EvoS.DirectoryServer
 
                 AssignGameClientRequest request = JsonConvert.DeserializeObject<AssignGameClientRequest>(requestBody);
                 log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
-                AssignGameClientResponse response = ProcessRequest(request);
+                AssignGameClientResponse response = ProcessRequest(request, context);
                 log.Debug($"> {response.GetType().Name} {DefaultJsonSerializer.Serialize(response)}");
                 return context.Response.WriteAsync(JsonConvert.SerializeObject(response));
             });
         }
 
-        private static AssignGameClientResponse ProcessRequest(AssignGameClientRequest request)
+        private static AssignGameClientResponse ProcessRequest(AssignGameClientRequest request, HttpContext context)
         {
             // If we received a valid TicketData, it means we were previously logged on (reconnection)
             SessionTicketData ticketData = SessionTicketData.FromString(request.AuthInfo.GetTicket());
@@ -79,13 +79,21 @@ namespace EvoS.DirectoryServer
                 request.SessionInfo.SessionToken = ticketData.SessionToken;
                 request.SessionInfo.ReconnectSessionToken = ticketData.ReconnectionSessionToken;
 
-                return HandleReconnection(request);
+                AssignGameClientResponse resp = HandleReconnection(request, context);
+                if (resp != null)
+                {
+                    return resp;
+                }
             }
 
+            return HandleConnection(request, context);
+        }
+
+        private static AssignGameClientResponse HandleConnection(AssignGameClientRequest request, HttpContext context)
+        {
             AssignGameClientResponse response = new AssignGameClientResponse
             {
-                RequestId = request.RequestId,
-                ResponseId = request.ResponseId,
+                ResponseId = request.RequestId,
                 Success = true,
                 ErrorMessage = ""
             };
@@ -110,6 +118,12 @@ namespace EvoS.DirectoryServer
             catch (ApplicationException e)
             {
                 return Fail(request, e.Message);
+            }
+
+            if (SessionManager.GetSessionInfo(accountId) != null)
+            {
+                log.Info($"Concurrent login: {accountId}");
+                return Fail(request, "This account is already logged in");
             }
 
             PersistedAccountData account;
@@ -150,14 +164,14 @@ namespace EvoS.DirectoryServer
                 DB.Get().AccountDao.UpdateAccount(account);
             }
 
-            response.SessionInfo = SessionManager.CreateSession(accountId);
+            response.SessionInfo = SessionManager.CreateSession(accountId, request.SessionInfo, context.Connection.RemoteIpAddress);
             response.LobbyServerAddress = EvosConfiguration.GetLobbyServerAddress();
 
             LobbyGameClientProxyInfo proxyInfo = new LobbyGameClientProxyInfo
             {
                 AccountId = response.SessionInfo.AccountId,
                 SessionToken = request.SessionInfo.SessionToken,
-                AssignmentTime = 1565574095,
+                AssignmentTime = DateTimeOffset.Now.ToUnixTimeSeconds(),
                 Handle = request.SessionInfo.Handle,
                 Status = ClientProxyStatus.Assigned
             };
@@ -166,9 +180,15 @@ namespace EvoS.DirectoryServer
             return response;
         }
 
-        private static AssignGameClientResponse HandleReconnection(AssignGameClientRequest request)
+        private static AssignGameClientResponse HandleReconnection(AssignGameClientRequest request, HttpContext context)
         {
-            LobbySessionInfo session = SessionManager.GetSessionInfo(request.SessionInfo.AccountId);
+            LobbySessionInfo session = SessionManager.GetDisconnectedSessionInfo(request.SessionInfo.AccountId);
+
+            if (session == null)
+            {
+                return null;
+            }
+            
             if (session.SessionToken != request.SessionInfo.SessionToken)
             {
                 return Fail(request, "ReconnectionError: SessionToken invalid");
@@ -179,14 +199,12 @@ namespace EvoS.DirectoryServer
                 return Fail(request, "ReconnectionError: ReconnectSessionToken invalid");
             }
 
-            SessionManager.CleanSessionAfterReconnect(request.SessionInfo.AccountId);
-            session = SessionManager.CreateSession(request.SessionInfo.AccountId);
-
-
+            // SessionManager.CleanSessionAfterReconnect(request.SessionInfo.AccountId);
+            session = SessionManager.CreateSession(request.SessionInfo.AccountId, request.SessionInfo, context.Connection.RemoteIpAddress);
+            
             return new AssignGameClientResponse
             {
                 Success = true,
-                RequestId = 0,
                 ResponseId = request.RequestId,
                 LobbyServerAddress = EvosConfiguration.GetLobbyServerAddress(),
                 SessionInfo = session,
@@ -194,7 +212,7 @@ namespace EvoS.DirectoryServer
                 {
                     AccountId = session.AccountId,
                     SessionToken = session.SessionToken,
-                    AssignmentTime = 1565574095,
+                    AssignmentTime = DateTimeOffset.Now.ToUnixTimeSeconds(),
                     Handle = session.Handle,
                     Status = ClientProxyStatus.Assigned
                 }

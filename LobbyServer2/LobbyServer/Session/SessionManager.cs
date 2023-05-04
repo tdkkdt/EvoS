@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Group;
 using EvoS.Framework.Constants.Enums;
@@ -21,8 +22,26 @@ namespace CentralServer.LobbyServer.Session
             public LobbyServerProtocol conn;
             public LobbySessionInfo session;
         }
+
+        private class DisconnectedSessionInfo
+        {
+            public readonly LobbySessionInfo sessionInfo;
+            public readonly DateTime disconnectedAt;
+
+            public DisconnectedSessionInfo(LobbySessionInfo sessionInfo, DateTime disconnectedAt)
+            {
+                this.sessionInfo = sessionInfo;
+                this.disconnectedAt = disconnectedAt;
+            }
+        }
+
+        private static readonly TimeSpan SessionExpiry = new TimeSpan(0, 10, 0);
         
-        private static readonly ConcurrentDictionary<long, SessionInfo> SessionInfos = new ConcurrentDictionary<long, SessionInfo>();
+        private static readonly ConcurrentDictionary<long, SessionInfo> SessionInfos =
+            new ConcurrentDictionary<long, SessionInfo>();
+
+        private static readonly ConcurrentDictionary<long, DisconnectedSessionInfo> DisconnectedSessionInfos =
+            new ConcurrentDictionary<long, DisconnectedSessionInfo>();
 
         private static readonly ILog log = LogManager.GetLogger(typeof(SessionManager));
         
@@ -127,9 +146,12 @@ namespace CentralServer.LobbyServer.Session
                 // To avoid deleting the new connection, we check if the session token is the same
                 if (sessionInfo != null && sessionInfo.session.SessionToken == client.SessionToken)
                 {
-                    SessionInfos.TryRemove(client.AccountId, out _);
-                    // TODO: this sends to every player even if its in game and the disconnected player is not
-                    //client.Broadcast(new ChatNotification() { Text = $"{client.UserName} disconnected", ConsoleMessageType = ConsoleMessageType.SystemMessage });
+                    if (SessionInfos.TryRemove(client.AccountId, out SessionInfo disconnectedSession))
+                    {
+                        DisconnectedSessionInfos.TryAdd(client.AccountId, new DisconnectedSessionInfo(disconnectedSession.session, DateTime.Now));
+                        // TODO: this sends to every player even if its in game and the disconnected player is not
+                        //client.Broadcast(new ChatNotification() { Text = $"{client.UserName} disconnected", ConsoleMessageType = ConsoleMessageType.SystemMessage });
+                    }
                 }
 
                 OnPlayerDisconnected(client);
@@ -164,68 +186,70 @@ namespace CentralServer.LobbyServer.Session
             return new HashSet<long>(SessionInfos.Keys);
         }
 
-        public static LobbySessionInfo CreateSession(long accountId)
+        public static LobbySessionInfo CreateSession(long accountId, LobbySessionInfo connectingSessionInfo, IPAddress ipAddress)
         {
             lock (SessionInfos) {
                 // If we have a game with this accountId do not remove the session we need the info to be able to reconnect
                 // Else remove it and create a new Session
                 BridgeServerProtocol server = ServerManager.GetServerWithPlayer(accountId);
-                if (server == null)
+                LobbySessionInfo oldSession = null;
+                if (server != null)
                 {
-                    SessionInfos.TryRemove(accountId, out _);
+                    oldSession = GetDisconnectedSessionInfo(accountId);
+                    if (oldSession == null)
+                    {
+                        oldSession = KillSession(accountId);
+                        if (oldSession != null)
+                        {
+                            log.Warn($"Account {accountId} reconnected before disconnecting previous session");
+                        }
+                    }
                 }
+                DisconnectedSessionInfos.TryRemove(accountId, out _);
 
-                SessionInfos.TryGetValue(accountId, out SessionInfo session);
-                LobbySessionInfo sessionInfo;
                 PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
-
-                if (session == null)
+                LobbySessionInfo sessionInfo = new LobbySessionInfo
                 {
-                    sessionInfo = new LobbySessionInfo
-                    {
-                        AccountId = accountId,
-                        Handle = account.Handle,
-                        UserName = account.Handle,
-                        ConnectionAddress = "127.0.0.1",
-                        BuildVersion = "STABLE-122-100",
-                        LanguageCode = "",
-                        FakeEntitlements = "",
-                        ProcessCode = "",
-                        ProcessType = ProcessType.AtlasReactor,
-                        SessionToken = GenerateToken(account.Handle),
-                        ReconnectSessionToken = GenerateToken(account.Handle),
-                        Region = Region.EU,
-                    };
-
-                    // Add session for account
-                    SessionInfos.TryAdd(accountId, new SessionInfo
-                    {
-                        session = sessionInfo
-                    });
-                }
-                else
+                    AccountId = accountId,
+                    Handle = account.Handle,
+                    UserName = account.UserName,
+                    ConnectionAddress = ipAddress.ToString(),
+                    BuildVersion = connectingSessionInfo?.BuildVersion ?? "unknown",
+                    LanguageCode = connectingSessionInfo?.LanguageCode ??"",
+                    FakeEntitlements = "",
+                    ProcessCode = connectingSessionInfo?.ProcessCode ?? "",
+                    ProcessType = connectingSessionInfo?.ProcessType ?? ProcessType.AtlasReactor,
+                    SessionToken = oldSession?.SessionToken ?? GenerateToken(account.Handle),
+                    ReconnectSessionToken = GenerateToken(account.Handle), // This can be regenerated even on reconnection since we send ReconnectPlayerRequest that sends the new ReconnectSessionToken
+                    Region = connectingSessionInfo?.Region ?? Region.EU,
+                };
+                
+                KillSession(accountId);
+                SessionInfos.TryAdd(accountId, new SessionInfo
                 {
-                    sessionInfo = new LobbySessionInfo
-                    {
-                        AccountId = accountId,
-                        Handle = account.Handle,
-                        UserName = account.Handle,
-                        ConnectionAddress = "127.0.0.1",
-                        BuildVersion = "STABLE-122-100",
-                        LanguageCode = "",
-                        FakeEntitlements = "",
-                        ProcessCode = "",
-                        ProcessType = ProcessType.AtlasReactor,
-                        SessionToken = session.session.SessionToken,
-                        ReconnectSessionToken = GenerateToken(account.Handle), // This can be regenerated since we send ReconnectPlayerRequest that sends the new ReconnectSessionToken
-                        Region = Region.EU,
-                    };
-                    // TODO why is it not saved
-                }
+                    session = sessionInfo
+                });
+                
                 return sessionInfo;
             }
         }
 
+        public static LobbySessionInfo GetDisconnectedSessionInfo(long accountId)
+        {
+            if (!DisconnectedSessionInfos.TryGetValue(accountId, out DisconnectedSessionInfo session))
+            {
+                return null;
+            }
+            if (DateTime.Now - session.disconnectedAt > SessionExpiry)
+            {
+                log.Warn($"Attempted to access an expired session for {accountId}");
+                DisconnectedSessionInfos.TryRemove(accountId, out _);
+                return null;
+            }
+            return session.sessionInfo;
+        }
+
+        // TODO remove?
         public static void CleanSessionAfterReconnect(long accountId)
         {
             lock (SessionInfos)
@@ -235,14 +259,26 @@ namespace CentralServer.LobbyServer.Session
                 {
                     return;
                 }
+                log.Info($"Cleaning session for {accountId}");
                 if (!client.conn.SessionCleaned)
                 {
                     client.conn.SessionCleaned = true;
                     GroupManager.LeaveGroup(accountId, false);
                 }
-                client.conn.WebSocket.Close();
-                SessionInfos.TryRemove(accountId, out _);
+
+                KillSession(accountId);
             }
+        }
+
+        private static LobbySessionInfo KillSession(long accountId)
+        {
+            if (SessionInfos.TryRemove(accountId, out SessionInfo sessionInfo))
+            {
+                sessionInfo.conn?.CloseConnection();
+                return sessionInfo.session;
+            }
+
+            return null;
         }
 
         private static long GenerateToken(string a)
