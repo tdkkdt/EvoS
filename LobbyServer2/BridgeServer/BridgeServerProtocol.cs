@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using CentralServer.LobbyServer;
 using CentralServer.LobbyServer.Character;
@@ -16,7 +14,6 @@ using EvoS.Framework.DataAccess;
 using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
-using EvoS.Framework.Network.Unity;
 using log4net;
 using WebSocketSharp;
 
@@ -78,52 +75,14 @@ namespace CentralServer.BridgeServer
 
         protected override AllianceMessageBase DeserializeMessage(byte[] data, out int callbackId)
         {
-            NetworkReader networkReader = new NetworkReader(data);
-            short messageType = networkReader.ReadInt16();
-            callbackId = networkReader.ReadInt32();
-            List<Type> messageTypes = GetMessageTypes();
-            if (messageType >= messageTypes.Count)
-            {
-                log.Error($"Unknown bridge message type {messageType}");
-                throw new NullReferenceException();
-            }
-
-            Type type = messageTypes[messageType];
-            return Deserialize(type, networkReader);
-        }
-
-        public static readonly List<Type> BridgeMessageTypes = new List<Type>
-        {
-            typeof(RegisterGameServerRequest),
-            typeof(RegisterGameServerResponse),
-            typeof(LaunchGameRequest),
-            typeof(JoinGameServerRequest),
-            null, // typeof(JoinGameAsObserverRequest),
-            typeof(ShutdownGameRequest),
-            typeof(DisconnectPlayerRequest),
-            typeof(ReconnectPlayerRequest),
-            null, // typeof(MonitorHeartbeatResponse),
-            typeof(ServerGameSummaryNotification),
-            typeof(PlayerDisconnectedNotification),
-            typeof(ServerGameMetricsNotification),
-            typeof(ServerGameStatusNotification),
-            typeof(MonitorHeartbeatNotification),
-            typeof(LaunchGameResponse),
-            typeof(JoinGameServerResponse),
-            null, // typeof(JoinGameAsObserverResponse)
-        };
-
-        protected List<Type> GetMessageTypes()
-        {
-            return BridgeMessageTypes;
+            return BridgeMessageSerializer.DeserializeMessage(data, out callbackId);
         }
 
         protected override string GetConnContext()
         {
             return $"S {Address}:{Port}";
         }
-
-
+        
         public BridgeServerProtocol()
         {
             RegisterHandler<RegisterGameServerRequest>(HandleRegisterGameServerRequest);
@@ -299,22 +258,6 @@ namespace CentralServer.BridgeServer
                 $"joined {GameInfo?.Name}  ({response.GameServerProcessCode})");
         }
 
-        private AllianceMessageBase Deserialize(Type type, NetworkReader reader)
-        {
-            if (!typeof(AllianceMessageBase).IsAssignableFrom(type))
-            {
-                throw new Exception("Class " + type + " is not AllianceMessageBase");
-            }
-            ConstructorInfo constructor = type.GetConstructor(Type.EmptyTypes);
-            if (constructor == null)
-            {
-                throw new Exception("No default constructor in class " + type);
-            }
-            AllianceMessageBase o = (AllianceMessageBase)constructor.Invoke(Array.Empty<object>());
-            o.Deserialize(reader);
-            return o;
-        }
-
         protected override void HandleClose(CloseEventArgs e)
         {
             UnregisterAllHandlers();
@@ -395,7 +338,7 @@ namespace CentralServer.BridgeServer
 
         public bool Send(AllianceMessageBase msg, int originalCallbackId = 0)
         {
-            short messageType = GetMessageType(msg);
+            short messageType = BridgeMessageSerializer.GetMessageType(msg);
             if (messageType >= 0)
             {
                 Send(messageType, msg, originalCallbackId);
@@ -408,25 +351,9 @@ namespace CentralServer.BridgeServer
             return false;
         }
 
-        private bool Send(short msgType, AllianceMessageBase msg, int originalCallbackId = 0)
+        private void Send(short msgType, AllianceMessageBase msg, int originalCallbackId = 0)
         {
-            NetworkWriter networkWriter = new NetworkWriter();
-            networkWriter.Write(msgType);
-            networkWriter.Write(originalCallbackId);
-            msg.Serialize(networkWriter);
-            Send(networkWriter.ToArray());
-            return true;
-        }
-
-        public short GetMessageType(AllianceMessageBase msg)
-        {
-            short num = (short)GetMessageTypes().IndexOf(msg.GetType());
-            if (num < 0)
-            {
-                log.Error($"Message type {msg.GetType().Name} is not in the MonitorGameServerInsightMessages MessageTypes list and doesnt have a type");
-            }
-
-            return num;
+            Send(BridgeMessageSerializer.SerializeMessage(msgType, msg, originalCallbackId));
         }
 
         public void FillTeam(List<long> players, Team team)
