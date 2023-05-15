@@ -14,11 +14,13 @@ namespace CentralServer
     public class CentralServer
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(CentralServer));
-        
-        public static void Main(string[] args)
+
+        private static WebSocketServer server;
+
+        public static void Init(string[] args)
         {
             int port = EvosConfiguration.GetLobbyServerPort();
-            WebSocketServer server = new WebSocketServer(port);
+            server = new WebSocketServer(port);
             server.AddWebSocketService<LobbyServerProtocol>("/LobbyGameClientSessionManager");
             server.AddWebSocketService<BridgeServerProtocol>("/BridgeServer");
             server.Log.Level = LogLevel.Debug;
@@ -33,7 +35,10 @@ namespace CentralServer
                 log.Warn("GameServerExecutable not set in settings.yaml. " +
                          "Automatic game server launch is disabled. Game servers can still connect to this lobby");
             }
+        }
 
+        public static void MainLoop()
+        {
             while (server.IsListening)
             {
                 Thread.Sleep(5000);

@@ -21,11 +21,13 @@ namespace EvoS.Sandbox
             Banner.PrintBanner();
             DB.Get();
 
+            // Start Central Server
+            CentralServer.CentralServer.Init(new string[] { });
+
             // Start Directory Server
             new Thread(() => StartDirServer()).Start();
-            
-            // Start Central Server
-            CentralServer.CentralServer.Main(new string[] { });            
+
+            CentralServer.CentralServer.MainLoop();
         }
 
         /// <summary>
