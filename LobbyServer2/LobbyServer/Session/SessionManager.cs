@@ -178,7 +178,7 @@ namespace CentralServer.LobbyServer.Session
 
         public static long? GetOnlinePlayerByHandle(string handle)
         {
-            return SessionInfos.Values.FirstOrDefault(si => si.playerInfo?.Handle == handle)?.playerInfo.AccountId;
+            return SessionInfos.Values.FirstOrDefault(si => si.playerInfo?.Handle == handle)?.playerInfo?.AccountId;
         }
 
         public static HashSet<long> GetOnlinePlayers()

@@ -56,6 +56,11 @@ namespace CentralServer.LobbyServer
 
         private void SendImpl(WebSocketMessage message)
         {
+            if (!IsConnected)
+            {
+                log.Warn($"Attempted to send {message.GetType()} to a disconnected socket");
+                return;
+            }
             MemoryStream stream = new MemoryStream();
             EvosSerializer.Instance.Serialize(stream, message);
             Send(stream.ToArray());

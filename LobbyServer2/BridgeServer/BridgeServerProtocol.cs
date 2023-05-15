@@ -39,7 +39,6 @@ namespace CentralServer.BridgeServer
         public string Name => SessionInfo?.UserName ?? "ATLAS";
         public string BuildVersion => SessionInfo?.BuildVersion ?? "";
         public bool IsPrivate { get; private set; }
-        public bool IsConnected { get; private set; } = true;
 
         public LobbyServerPlayerInfo GetPlayerInfo(long accountId)
         {
@@ -185,7 +184,11 @@ namespace CentralServer.BridgeServer
                 }
             }
 
-            GetPlayerInfo(request.PlayerInfo.AccountId).ReplacedWithBots = true;
+            LobbyServerPlayerInfo playerInfo = GetPlayerInfo(request.PlayerInfo.AccountId);
+            if (playerInfo != null)
+            {
+                playerInfo.ReplacedWithBots = true;
+            }
         }
 
         private void HandleDisconnectPlayerRequest(DisconnectPlayerRequest request)
@@ -262,7 +265,6 @@ namespace CentralServer.BridgeServer
         {
             UnregisterAllHandlers();
             ServerManager.RemoveServer(ProcessCode);
-            IsConnected = false;
         }
 
         public void OnPlayerUsedGGPack(long accountId)
