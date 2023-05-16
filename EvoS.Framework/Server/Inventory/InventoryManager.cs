@@ -21,13 +21,13 @@ namespace EvoS.DirectoryServer.Inventory
             return new List<int>() { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 1 };
         }
 
-        public static Dictionary<int, bool> GetActivatedLoadingScreenBackgroundIds(long accountId)
+        public static Dictionary<int, bool> GetActivatedLoadingScreenBackgroundIds(long accountId, bool activated = true)
         {
             Dictionary<int, bool> backgrounds = new Dictionary<int, bool>();
 
             for (int i = 1; i <= 18; i++)
             {
-                backgrounds.Add(i, true);
+                backgrounds.Add(i, activated);
             }
 
             return backgrounds;

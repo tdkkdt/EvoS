@@ -109,6 +109,7 @@ namespace CentralServer.LobbyServer
             
             
             
+            RegisterHandler<LoadingScreenToggleRequest>(HandleLoadingScreenToggleRequest);
             RegisterHandler<PurchaseBannerForegroundRequest>(HandlePurchaseEmblemRequest);
             RegisterHandler<PurchaseBannerBackgroundRequest>(HandlePurchaseBannerRequest);
             RegisterHandler<PurchaseAbilityVfxRequest>(HandlePurchasAbilityVfx);
@@ -1242,6 +1243,33 @@ namespace CentralServer.LobbyServer
 
         private void HandlePlayerPanelUpdatedNotification(PlayerPanelUpdatedNotification msg)
         {
+        }
+
+        private void HandleLoadingScreenToggleRequest(LoadingScreenToggleRequest request)
+        {
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+            Dictionary<int, bool> bgs = account.AccountComponent.UnlockedLoadingScreenBackgroundIdsToActivatedState;
+            if (bgs.ContainsKey(request.LoadingScreenId))
+            {
+                bgs[request.LoadingScreenId] = request.NewState;
+                DB.Get().AccountDao.UpdateAccount(account);
+                Send(new LoadingScreenToggleResponse
+                {
+                    LoadingScreenId = request.LoadingScreenId,
+                    CurrentState = request.NewState,
+                    Success = true,
+                    ResponseId = request.RequestId
+                });
+            }
+            else
+            {
+                Send(new LoadingScreenToggleResponse
+                {
+                    LoadingScreenId = request.LoadingScreenId,
+                    Success = false,
+                    ResponseId = request.RequestId
+                });
+            }
         }
 
         public void HandleGroupChatRequest(GroupChatRequest request)
