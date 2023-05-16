@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using EvoS.Framework.Network.Static;
 
@@ -41,6 +42,7 @@ namespace EvoS.Framework.DataAccess.Daos
 
         public void UpdateAccount(PersistedAccountData data)
         {
+            data.UpdateDate = DateTime.UtcNow;
             dao.UpdateAccount(data);
             Cache(data);
         }

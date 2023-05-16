@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using EvoS.Framework.Constants.Enums;
 
 namespace EvoS.Framework.Network.Static
@@ -58,6 +59,26 @@ namespace EvoS.Framework.Network.Static
 
         public DateTime GameLeavingLastForgivenessCheckpoint { get; set; }
 
+        [NonSerialized] public Dictionary<string, LoginStats> LoginHistory;
+
+        public void RecordLogin(IPAddress ipAddress)
+        {
+            DateTime time = DateTime.UtcNow;
+            LastLogin = time;
+            LoginHistory ??= new Dictionary<string, LoginStats>();
+
+            string ip = ipAddress.ToString();
+            if (LoginHistory.TryGetValue(ip, out LoginStats stats))
+            {
+                stats.lastLogin = time;
+                stats.totalLogins++;
+            }
+            else
+            {
+                LoginHistory.Add(ip, new LoginStats { lastLogin = time, totalLogins = 1 });
+            }
+        }
+
         [EvosMessage(597)]
         public enum AdminActionType
         {
@@ -82,6 +103,12 @@ namespace EvoS.Framework.Network.Static
             public string Description { get; set; }
 
             public DateTime Time { get; set; }
+        }
+
+        public class LoginStats
+        {
+            public int totalLogins;
+            public DateTime lastLogin;
         }
     }
 }

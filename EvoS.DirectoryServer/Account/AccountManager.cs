@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using EvoS.DirectoryServer.Character;
 using EvoS.DirectoryServer.Inventory;
 using EvoS.Framework.Constants.Enums;
@@ -39,7 +40,9 @@ namespace EvoS.DirectoryServer.Account
                     }
                 },
                 SchemaVersion = new SchemaVersion<AccountSchemaChange>(0x1FFFF),
-                UserName = username
+                UserName = username,
+                CreateDate = DateTime.UtcNow,
+                UpdateDate = DateTime.UtcNow
             };
 
             return accountData;

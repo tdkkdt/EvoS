@@ -152,6 +152,11 @@ namespace CentralServer.LobbyServer.Session
                         // TODO: this sends to every player even if its in game and the disconnected player is not
                         //client.Broadcast(new ChatNotification() { Text = $"{client.UserName} disconnected", ConsoleMessageType = ConsoleMessageType.SystemMessage });
                     }
+
+                    PersistedAccountData account = DB.Get().AccountDao.GetAccount(client.AccountId);
+                    account.AdminComponent.LastLogout = DateTime.UtcNow;
+                    account.AdminComponent.LastLogoutSessionToken = $"{sessionInfo.session.SessionToken}";
+                    DB.Get().AccountDao.UpdateAccount(account);
                 }
 
                 OnPlayerDisconnected(client);
@@ -229,6 +234,9 @@ namespace CentralServer.LobbyServer.Session
                 {
                     session = sessionInfo
                 });
+
+                account.AdminComponent.RecordLogin(ipAddress);
+                DB.Get().AccountDao.UpdateAccount(account);
                 
                 return sessionInfo;
             }
