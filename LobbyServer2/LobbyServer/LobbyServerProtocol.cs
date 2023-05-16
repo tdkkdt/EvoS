@@ -106,10 +106,11 @@ namespace CentralServer.LobbyServer
             RegisterHandler<RankedLeaderboardOverviewRequest>(HandleRankedLeaderboardOverviewRequest);
             RegisterHandler<CalculateFreelancerStatsRequest>(HandleCalculateFreelancerStatsRequest);
             RegisterHandler<PlayerPanelUpdatedNotification>(HandlePlayerPanelUpdatedNotification);
-            
-            
-            
+
+            RegisterHandler<SetRegionRequest>(HandleSetRegionRequest);
             RegisterHandler<LoadingScreenToggleRequest>(HandleLoadingScreenToggleRequest);
+            RegisterHandler<SendRAFReferralEmailsRequest>(HandleSendRAFReferralEmailsRequest);
+
             RegisterHandler<PurchaseBannerForegroundRequest>(HandlePurchaseEmblemRequest);
             RegisterHandler<PurchaseBannerBackgroundRequest>(HandlePurchaseBannerRequest);
             RegisterHandler<PurchaseAbilityVfxRequest>(HandlePurchasAbilityVfx);
@@ -1245,6 +1246,10 @@ namespace CentralServer.LobbyServer
         {
         }
 
+        private void HandleSetRegionRequest(SetRegionRequest request)
+        {
+        }
+
         private void HandleLoadingScreenToggleRequest(LoadingScreenToggleRequest request)
         {
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
@@ -1272,6 +1277,15 @@ namespace CentralServer.LobbyServer
             }
         }
 
+        private void HandleSendRAFReferralEmailsRequest(SendRAFReferralEmailsRequest request)
+        {
+            Send(new SendRAFReferralEmailsResponse
+            {
+                Success = false,
+                ResponseId = request.RequestId
+            });
+        }
+        
         public void HandleGroupChatRequest(GroupChatRequest request)
         {
             OnGroupChatRequest(this, request);
