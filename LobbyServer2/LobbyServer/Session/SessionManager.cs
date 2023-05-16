@@ -16,6 +16,8 @@ namespace CentralServer.LobbyServer.Session
 {
     public static class SessionManager
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(SessionManager));
+        
         private class SessionInfo
         {
             public LobbyServerPlayerInfo playerInfo;
@@ -36,14 +38,12 @@ namespace CentralServer.LobbyServer.Session
         }
 
         private static readonly TimeSpan SessionExpiry = new TimeSpan(0, 10, 0);
-        
         private static readonly ConcurrentDictionary<long, SessionInfo> SessionInfos =
             new ConcurrentDictionary<long, SessionInfo>();
-
+        private static readonly ConcurrentDictionary<long, LobbySessionInfo> ConnectingSessions =
+            new ConcurrentDictionary<long, LobbySessionInfo>();
         private static readonly ConcurrentDictionary<long, DisconnectedSessionInfo> DisconnectedSessionInfos =
             new ConcurrentDictionary<long, DisconnectedSessionInfo>();
-
-        private static readonly ILog log = LogManager.GetLogger(typeof(SessionManager));
         
         public static event Action<LobbyServerProtocol> OnPlayerConnected = delegate {};
         public static event Action<LobbyServerProtocol> OnPlayerDisconnected = delegate {};
@@ -57,10 +57,10 @@ namespace CentralServer.LobbyServer.Session
                 
                 if (registerRequest.SessionInfo == null) 
                     throw new RegisterGameException("Session Info not received");
-                if (registerRequest.SessionInfo.SessionToken == null || registerRequest.SessionInfo.SessionToken == 0)
+                if (registerRequest.SessionInfo.SessionToken == 0)
                     throw new RegisterGameException("Session Info not received"); ;
                 
-                LobbySessionInfo sessionInfo = GetSessionInfo(registerRequest.SessionInfo.AccountId);
+                LobbySessionInfo sessionInfo = ConnectingSessions.GetValueOrDefault(registerRequest.SessionInfo.AccountId);
 
                 if (sessionInfo == null)
                     throw new RegisterGameException("Session not found. User not logged"); ; // Session not found
@@ -85,6 +85,7 @@ namespace CentralServer.LobbyServer.Session
                     session = sessionInfo,
                     playerInfo = playerInfo
                 });
+                ConnectingSessions.TryRemove(client.AccountId, out _);
                 
                 OnPlayerConnected(client);
 
@@ -230,10 +231,7 @@ namespace CentralServer.LobbyServer.Session
                 };
                 
                 KillSession(accountId);
-                SessionInfos.TryAdd(accountId, new SessionInfo
-                {
-                    session = sessionInfo
-                });
+                ConnectingSessions[accountId] = sessionInfo;
 
                 account.AdminComponent.RecordLogin(ipAddress);
                 DB.Get().AccountDao.UpdateAccount(account);
