@@ -9,6 +9,7 @@ using CentralServer.LobbyServer.Friend;
 using CentralServer.LobbyServer.Gamemode;
 using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Quest;
+using CentralServer.LobbyServer.Session;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;

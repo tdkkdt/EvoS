@@ -16,16 +16,16 @@ namespace EvoS.Sandbox
             return 0;
         }
         
-        private void OnExecute()
+        private async void OnExecute()
         {
             Banner.PrintBanner();
             DB.Get();
 
             // Start Central Server
-            CentralServer.CentralServer.Init(new string[] { });
+            await CentralServer.CentralServer.Init(new string[] { });
 
             // Start Directory Server
-            new Thread(() => StartDirServer()).Start();
+            new Thread(StartDirServer).Start();
 
             CentralServer.CentralServer.MainLoop();
         }

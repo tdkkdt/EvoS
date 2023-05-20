@@ -12,7 +12,6 @@ namespace CentralServer.LobbyServer.Discord
 
         public string BotToken = "";
         public ulong? BotChannelId;
-        public bool UseDiscordBot;
 
         public bool AdminEnableUserReports;
         public ulong? AdminUserReportThreadId;

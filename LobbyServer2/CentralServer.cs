@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using CentralServer.BridgeServer;
 using CentralServer.LobbyServer;
 using CentralServer.LobbyServer.Chat;
@@ -17,7 +18,7 @@ namespace CentralServer
 
         private static WebSocketServer server;
 
-        public static void Init(string[] args)
+        public static async Task Init(string[] args)
         {
             int port = EvosConfiguration.GetLobbyServerPort();
             server = new WebSocketServer(port);
@@ -26,8 +27,8 @@ namespace CentralServer
             server.Log.Level = LogLevel.Debug;
 
             ChatManager.Get(); // TODO Dependency injection
-            DiscordManager.Get().Start();
-
+            await DiscordManager.Get().Start();
+            
             server.Start();
             log.Info($"Started lobby server on port {port}");
             if (EvosConfiguration.GetGameServerExecutable().IsNullOrEmpty())

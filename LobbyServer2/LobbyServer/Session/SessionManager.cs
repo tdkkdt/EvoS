@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using CentralServer.BridgeServer;
@@ -8,8 +9,11 @@ using CentralServer.LobbyServer.Group;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Exceptions;
+using EvoS.Framework.Misc;
+using EvoS.Framework.Network;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
+using EvoS.Framework.Network.WebSocket;
 using log4net;
 
 namespace CentralServer.LobbyServer.Session
@@ -295,6 +299,11 @@ namespace CentralServer.LobbyServer.Session
                 num = -num;
             }
             return num;
+        }
+
+        public static void Broadcast(WebSocketMessage message)
+        {
+            SessionInfos.Values.FirstOrDefault()?.conn.Broadcast(message);
         }
     }
 }

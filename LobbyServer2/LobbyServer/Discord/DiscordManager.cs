@@ -33,7 +33,7 @@ namespace CentralServer.LobbyServer.Discord
         private readonly DiscordClientWrapper gameLogChannel;
         private readonly DiscordClientWrapper adminChannel;
         private readonly DiscordClientWrapper lobbyChannel;
-        private readonly DiscordBotWrapper discordBot;
+        private DiscordBotWrapper discordBot;
 
         private readonly CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
 
@@ -48,23 +48,6 @@ namespace CentralServer.LobbyServer.Discord
             {
                 log.Info("Discord is not enabled");
                 return;
-            }
-
-            if (!conf.UseDiscordBot)
-            {
-                log.Info("Discord bot is not enabled");
-            }
-            else 
-            {
-                if (conf.BotToken.IsNullOrEmpty() || conf.BotToken.Length < 70 || !conf.BotChannelId.HasValue || conf.BotChannelId == 0)
-                {
-                    log.Info("Discord bot is not configured correctly");
-                } 
-                else
-                {
-                    // Init bot but we dont use it for anything not yet anyway we just want chat from discord to atlas and commands
-                    discordBot = new DiscordBotWrapper(conf);
-                }
             }
 
             if (conf.GameLogChannel.IsChannel())
@@ -91,7 +74,7 @@ namespace CentralServer.LobbyServer.Discord
             return _instance ??= new DiscordManager();
         }
 
-        public void Start()
+        public async Task Start()
         {
             if (lobbyChannel != null)
             {
@@ -102,6 +85,32 @@ namespace CentralServer.LobbyServer.Discord
             {
                 ChatManager.Get().OnChatMessage += SendChatMessageAuditAsync;
             }
+
+            await StartBot();
+        }
+
+        private async Task StartBot()
+        {
+            if (discordBot != null)
+            {
+                log.Error("Attempting to start bot when it is already started!");
+                return;
+            }
+
+            if (conf.BotToken.IsNullOrEmpty())
+            {
+                log.Info("Discord bot is not enabled");
+                return;
+            }
+            if (conf.BotToken.Length < 70)
+            {
+                log.Error("Discord bot token is invalid");
+                return;
+            } 
+            
+            // Init bot but we dont use it for anything not yet anyway we just want chat from discord to atlas and commands
+            discordBot = new DiscordBotWrapper(conf);
+            await discordBot.Login(conf);
         }
 
         public void Shutdown()
