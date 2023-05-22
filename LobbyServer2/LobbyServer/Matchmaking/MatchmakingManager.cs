@@ -317,6 +317,9 @@ namespace CentralServer.LobbyServer.Matchmaking
             }
 
             server.SetGameStatus(GameStatus.Launched);
+            // see AppState_CharacterSelect#Update (AppState_GroupCharacterSelect has HandleGameLaunched, it's much simpler)
+            server.ForceReady();
+            
             server.SendGameInfoNotifications();
 
             server.GetClients().ForEach(c => c.OnStartGame(server));

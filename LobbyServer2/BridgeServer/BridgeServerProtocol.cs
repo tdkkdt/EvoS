@@ -45,6 +45,11 @@ namespace CentralServer.BridgeServer
             return TeamInfo.TeamPlayerInfo.Find(p => p.AccountId == accountId);
         }
 
+        public void ForceReady()
+        {
+            TeamInfo.TeamPlayerInfo.ForEach(p => p.ReadyState = ReadyState.Ready);
+        }
+
         public IEnumerable<long> GetPlayers(Team team)
         {
             return from p in TeamInfo.TeamInfo(team) select p.AccountId;
