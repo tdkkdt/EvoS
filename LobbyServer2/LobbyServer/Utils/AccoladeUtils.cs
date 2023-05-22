@@ -197,15 +197,16 @@ namespace CentralServer.LobbyServer.Utils
     
         public static bool IsFor(this GameBalanceVars.GameResultBadge.BadgeRole role, TopParticipantSlot slot)
         {
-            switch (role) {
-                case GameBalanceVars.GameResultBadge.BadgeRole.General:
+            switch (slot)
+            {
+                case TopParticipantSlot.MostDecorated:
                     return true;
-                case GameBalanceVars.GameResultBadge.BadgeRole.Firepower:
-                    return slot == TopParticipantSlot.Deadliest;
-                case GameBalanceVars.GameResultBadge.BadgeRole.Frontliner:
-                    return slot == TopParticipantSlot.Tankiest;
-                case GameBalanceVars.GameResultBadge.BadgeRole.Support:
-                    return slot == TopParticipantSlot.Supportiest;
+                case TopParticipantSlot.Deadliest:
+                    return role == GameBalanceVars.GameResultBadge.BadgeRole.Firepower;
+                case TopParticipantSlot.Supportiest:
+                    return role == GameBalanceVars.GameResultBadge.BadgeRole.Support;
+                case TopParticipantSlot.Tankiest:
+                    return role == GameBalanceVars.GameResultBadge.BadgeRole.Frontliner;
                 default:
                     return false;
             }
