@@ -58,22 +58,22 @@ namespace CentralServer.LobbyServer.Discord
         {
             SlashCommandBuilder infoCommand = new SlashCommandBuilder()
                 .WithName(CMD_INFO)
-                .WithDescription("Print Atlas Reactor lobby status");
+                .WithDescription("Get lobby status");
 
             SlashCommandBuilder broadcastCommand = new SlashCommandBuilder()
                 .WithName(CMD_BROADCAST)
-                .WithDescription("Send a broadcast to Atlas Reactor lobby")
+                .WithDescription("Send a fullscreen notification to all online players")
                 .AddOption("message", ApplicationCommandOptionType.String, "Message to send", true)
                 .WithDefaultMemberPermissions(GuildPermission.ManageGuild);
 
             SlashCommandBuilder queueDisableCommand = new SlashCommandBuilder()
                 .WithName(CMD_QUEUE_DISABLE)
-                .WithDescription("Disable matchmaking queue")
+                .WithDescription("Pause matchmaking queue")
                 .WithDefaultMemberPermissions(GuildPermission.ManageGuild);
 
             SlashCommandBuilder queueEnableCommand = new SlashCommandBuilder()
                 .WithName(CMD_QUEUE_ENABLE)
-                .WithDescription("Enable matchmaking queue")
+                .WithDescription("Unpause matchmaking queue")
                 .WithDefaultMemberPermissions(GuildPermission.ManageGuild);
 
             try
@@ -154,14 +154,14 @@ namespace CentralServer.LobbyServer.Discord
                 {
                     log.Info($"CMD /{command.Data.Name} - {handle}");
                     MatchmakingManager.Enabled = false;
-                    await command.RespondAsync("Matchmaking queue is disabled", ephemeral: true);
+                    await command.RespondAsync("Matchmaking queue is paused", ephemeral: true);
                     break;
                 }
                 case CMD_QUEUE_ENABLE:
                 {
                     log.Info($"CMD /{command.Data.Name} - {handle}");
                     MatchmakingManager.Enabled = true;
-                    await command.RespondAsync("Matchmaking queue is enabled", ephemeral: true);
+                    await command.RespondAsync("Matchmaking queue is unpaused", ephemeral: true);
                     break;
                 }
             }
