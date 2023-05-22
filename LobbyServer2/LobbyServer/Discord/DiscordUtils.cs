@@ -13,13 +13,13 @@ namespace CentralServer.LobbyServer.Discord
             {
                 case LogSeverity.Debug:
                 case LogSeverity.Verbose:
-                    log.Debug(msg.Message);
+                    log.Debug(msg.Message, msg.Exception);
                     break;
                 case LogSeverity.Info:
-                    log.Info(msg.Message);
+                    log.Info(msg.Message, msg.Exception);
                     break;
                 case LogSeverity.Warning:
-                    log.Warn(msg.Message);
+                    log.Warn(msg.Message, msg.Exception);
                     break;
                 case LogSeverity.Critical:
                     log.Error(msg.Message, msg.Exception);
