@@ -91,10 +91,18 @@ namespace CentralServer.LobbyServer.Matchmaking
         public void Update()
         {
             log.Info($"{GetPlayerCount()} players in {GameType} queue ({QueuedGroups.Count} groups)");
-            
+
             // TODO UpdateSettings when file changes (and only then)
             ReloadConfig();
 
+            if (MatchmakingManager.Enabled)
+            {
+                TryMatch();
+            }
+        }
+        
+        private void TryMatch()
+        {
             foreach (GameSubType subType in MatchmakingQueueInfo.GameConfig.SubTypes)
             {
                 List<MatchmakingGroupInfo> groups = new List<MatchmakingGroupInfo>();

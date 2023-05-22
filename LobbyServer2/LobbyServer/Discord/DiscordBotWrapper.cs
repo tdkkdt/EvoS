@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Threading.Tasks;
+using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
 using Discord;
 using Discord.Net;
@@ -17,6 +18,8 @@ namespace CentralServer.LobbyServer.Discord
 
         private const string CMD_INFO = "info";
         private const string CMD_BROADCAST = "broadcast";
+        private const string CMD_QUEUE_DISABLE = "qoff";
+        private const string CMD_QUEUE_ENABLE = "qon";
         
         private readonly DiscordSocketClient botClient;
         private static readonly DiscordSocketConfig discordConfig = new DiscordSocketConfig
@@ -53,20 +56,32 @@ namespace CentralServer.LobbyServer.Discord
 
         public async Task Ready()
         {
-            SlashCommandBuilder infoCommand = new SlashCommandBuilder();
-            infoCommand.WithName(CMD_INFO);
-            infoCommand.WithDescription("Print Atlas Reactor lobby status");
+            SlashCommandBuilder infoCommand = new SlashCommandBuilder()
+                .WithName(CMD_INFO)
+                .WithDescription("Print Atlas Reactor lobby status");
 
-            SlashCommandBuilder broadcastCommand = new SlashCommandBuilder();
-            broadcastCommand.WithName(CMD_BROADCAST);
-            broadcastCommand.WithDescription("Send a broadcast to Atlas Reactor lobby");
-            broadcastCommand.AddOption("message", ApplicationCommandOptionType.String, "Message to send", true);
-            broadcastCommand.WithDefaultMemberPermissions(GuildPermission.ManageGuild);
+            SlashCommandBuilder broadcastCommand = new SlashCommandBuilder()
+                .WithName(CMD_BROADCAST)
+                .WithDescription("Send a broadcast to Atlas Reactor lobby")
+                .AddOption("message", ApplicationCommandOptionType.String, "Message to send", true)
+                .WithDefaultMemberPermissions(GuildPermission.ManageGuild);
+
+            SlashCommandBuilder queueDisableCommand = new SlashCommandBuilder()
+                .WithName(CMD_QUEUE_DISABLE)
+                .WithDescription("Disable matchmaking queue")
+                .WithDefaultMemberPermissions(GuildPermission.ManageGuild);
+
+            SlashCommandBuilder queueEnableCommand = new SlashCommandBuilder()
+                .WithName(CMD_QUEUE_ENABLE)
+                .WithDescription("Enable matchmaking queue")
+                .WithDefaultMemberPermissions(GuildPermission.ManageGuild);
 
             try
             {
                 await botClient.CreateGlobalApplicationCommandAsync(infoCommand.Build());
                 await botClient.CreateGlobalApplicationCommandAsync(broadcastCommand.Build());
+                await botClient.CreateGlobalApplicationCommandAsync(queueDisableCommand.Build());
+                await botClient.CreateGlobalApplicationCommandAsync(queueEnableCommand.Build());
             }
             catch (HttpException exception)
             {
@@ -106,10 +121,12 @@ namespace CentralServer.LobbyServer.Discord
 
         private async Task SlashCommandHandler(SocketSlashCommand command)
         {
+            string handle = $"{command.User.Username}#{command.User.Discriminator}";
             switch (command.Data.Name)
             {
                 case CMD_INFO:
                 {
+                    log.Info($"CMD /{command.Data.Name} - {handle}");
                     DiscordLobbyUtils.Status status = DiscordLobbyUtils.GetStatus();
                     await command.RespondAsync(embed:
                         new EmbedBuilder
@@ -122,14 +139,29 @@ namespace CentralServer.LobbyServer.Discord
                 case CMD_BROADCAST:
                 {
                     string msg = command.Data.Options.First().Value.ToString();
+                    log.Info($"CMD /{command.Data.Name} - {handle}: {msg}");
                     ChatNotification message = new ChatNotification
                     {
-                        SenderHandle = command.User.Username,
+                        SenderHandle = handle,
                         ConsoleMessageType = ConsoleMessageType.BroadcastMessage,
                         Text = msg,
                     };
                     SessionManager.Broadcast(message);
                     await command.RespondAsync($"Broadcast: {msg}", ephemeral: true);
+                    break;
+                }
+                case CMD_QUEUE_DISABLE:
+                {
+                    log.Info($"CMD /{command.Data.Name} - {handle}");
+                    MatchmakingManager.Enabled = false;
+                    await command.RespondAsync("Matchmaking queue is disabled", ephemeral: true);
+                    break;
+                }
+                case CMD_QUEUE_ENABLE:
+                {
+                    log.Info($"CMD /{command.Data.Name} - {handle}");
+                    MatchmakingManager.Enabled = true;
+                    await command.RespondAsync("Matchmaking queue is enabled", ephemeral: true);
                     break;
                 }
             }

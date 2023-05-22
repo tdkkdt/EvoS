@@ -31,6 +31,26 @@ namespace CentralServer.LobbyServer.Matchmaking
             { GameType.Custom, new MatchmakingQueue(GameType.Custom) }
         };
 
+        private static bool _enabled = true;
+        public static bool Enabled
+        {
+            get => _enabled;
+            set
+            {
+                if (_enabled != value)
+                {
+                    log.Info($"Matchmaking queue is {(value ? "enabled" : "disabled")}");
+                }
+
+                _enabled = value;
+
+                if (_enabled)
+                {
+                    Update();
+                }
+            }
+        }
+
         /// <summary>
         /// Updates all the queues
         /// </summary>
