@@ -11,6 +11,7 @@ using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Utils;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
+using EvoS.Framework.DataAccess.Daos;
 using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
@@ -35,7 +36,7 @@ namespace CentralServer.BridgeServer
         
         // TODO sync with GameInfo.GameStatus or get rid of it (GameInfo can be null)
         public GameStatus ServerGameStatus { get; private set; } = GameStatus.None;
-        public string ProcessCode { get; } = "Artemis" + DateTime.Now.Ticks;
+        public string ProcessCode { get; private set; }
         public string Name => SessionInfo?.UserName ?? "ATLAS";
         public string BuildVersion => SessionInfo?.BuildVersion ?? "";
         public bool IsPrivate { get; private set; }
@@ -108,6 +109,7 @@ namespace CentralServer.BridgeServer
             Port = Convert.ToInt32(data.Split(":")[1]);
             SessionInfo = request.SessionInfo;
             IsPrivate = request.isPrivate;
+            ProcessCode = $"{Name}-{Guid.NewGuid()}";
             ServerManager.AddServer(this);
 
             Send(new RegisterGameServerResponse
@@ -142,6 +144,8 @@ namespace CentralServer.BridgeServer
             {
                 log.Error("Failed to process game summary", ex);
             }
+            
+            DB.Get().MatchHistoryDao.Save(MatchHistoryDao.MatchEntry.Cons(GameInfo, gameSummary));
 
             _ = FinalizeGame(gameSummary);
         }
@@ -390,7 +394,7 @@ namespace CentralServer.BridgeServer
                 LoadoutSelectTimeout = TimeSpan.FromSeconds(30),
                 ActiveHumanPlayers = playerCount,
                 ActivePlayers = playerCount,
-                CreateTimestamp = DateTime.Now.Ticks,
+                CreateTimestamp = DateTime.UtcNow.Ticks,
                 GameConfig = new LobbyGameConfig
                 {
                     GameOptionFlags = GameOptionFlag.NoInputIdleDisconnect & GameOptionFlag.NoInputIdleDisconnect,

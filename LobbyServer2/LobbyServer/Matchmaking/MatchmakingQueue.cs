@@ -259,7 +259,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 ActiveHumanPlayers = 0,
                 ActivePlayers = 0,
                 ActiveSpectators = 0,
-                CreateTimestamp = DateTime.Now.Ticks,
+                CreateTimestamp = DateTime.UtcNow.Ticks,
                 GameConfig = new LobbyGameConfig
                 {
                     GameOptionFlags = GameOptionFlag.AllowDuplicateCharacters & GameOptionFlag.EnableTeamAIOutput & GameOptionFlag.NoInputIdleDisconnect,

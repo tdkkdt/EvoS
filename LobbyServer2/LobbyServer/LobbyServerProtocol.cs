@@ -402,12 +402,11 @@ namespace CentralServer.LobbyServer
 
         public void HandlePlayerMatchDataRequest(PlayerMatchDataRequest request)
         {
-            PlayerMatchDataResponse response = new PlayerMatchDataResponse()
+            PlayerMatchDataResponse response = new PlayerMatchDataResponse
             {
-                MatchData = new List<PersistedCharacterMatchData>(),
+                MatchData = DB.Get().MatchHistoryDao.Find(AccountId),
                 ResponseId = request.RequestId
             };
-
             Send(response);
         }
 

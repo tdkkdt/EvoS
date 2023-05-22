@@ -8,6 +8,45 @@ namespace EvoS.Framework.Network.Static
     [EvosMessage(46)]
     public class MatchFreelancerStats : ICloneable, StatDisplaySettings.IPersistatedStatValueSupplier
     {
+        public MatchFreelancerStats()
+        {
+        }
+
+        public MatchFreelancerStats(PlayerGameSummary playerSummary)
+        {
+            CharacterType = playerSummary.CharacterPlayed;
+            TotalAssists = playerSummary.NumAssists;
+            TotalDeaths = playerSummary.NumDeaths;
+            TotalBadgePoints = playerSummary.TotalBadgePoints;
+            EnergyGainPerTurn = playerSummary.EnergyGainPerTurn;
+            DamagePerTurn = playerSummary.GetDamageDealtPerTurn();
+            NetBoostedOutgoingDamage = playerSummary.MyOutgoingExtraDamageFromEmpowered;
+            DamageEfficiency = playerSummary.DamageEfficiency;
+            KillParticipation = playerSummary.KillParticipation;
+            SupportPerTurn = playerSummary.GetSupportPerTurn();
+            TeamDamageAdjustedByMe = playerSummary.GetTotalTeamDamageAdjustedByMe();
+            TeamExtraEnergyByEnergizedFromMe = playerSummary.TeamExtraEnergyByEnergizedFromMe;
+            MovementDenied = playerSummary.MovementDeniedByMe;
+            DamageTakenPerLife = playerSummary.GetDamageTakenPerLife();
+            IncomingDamageDodgeByEvade = playerSummary.DamageAvoidedByEvades;
+            IncomingDamageReducedByCover = playerSummary.MyIncomingDamageReducedByCover;
+            EnemiesSightedPerTurn = playerSummary.EnemiesSightedPerTurn;
+            TotalTurns = playerSummary.TotalGameTurns;
+            TotalTeamDamageReceived = playerSummary.TotalTeamDamageReceived;
+            TankingPerLife = playerSummary.GetTankingPerLife();
+            TeamMitigation = playerSummary.GetTeamMitigation();
+            SupportPerTurn = playerSummary.GetSupportPerTurn();
+            DamageDonePerLife = playerSummary.GetDamageDonePerLife();
+            DamageTakenPerTurn = playerSummary.GetDamageTakenPerTurn();
+            MMR = null;
+            // TODO Fourlancer?
+            Freelancer0 = null;
+            Freelancer1 = null;
+            Freelancer2 = null;
+            Freelancer3 = null;
+        }
+        
+        
         public PersistedStatBucket PersistedStatBucket { get; set; }
 
         public CharacterType CharacterType { get; set; }

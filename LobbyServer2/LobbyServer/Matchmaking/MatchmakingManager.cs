@@ -155,7 +155,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 AcceptTimeout = new TimeSpan(0, 0, 0),
                 ActiveHumanPlayers = 1,
                 ActivePlayers = 1,
-                CreateTimestamp = DateTime.Now.Ticks,
+                CreateTimestamp = DateTime.UtcNow.Ticks,
                 GameConfig = new LobbyGameConfig
                 {
                     GameOptionFlags = GameOptionFlag.NoInputIdleDisconnect & GameOptionFlag.NoInputIdleDisconnect,

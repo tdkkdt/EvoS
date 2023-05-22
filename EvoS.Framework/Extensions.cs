@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using EvoS.Framework.Constants.Enums;
 
 namespace EvoS.Framework
 {
@@ -57,6 +57,18 @@ namespace EvoS.Framework
             {
                 return "NULL";
             }
+        }
+        
+        public static PlayerGameResult ToPlayerGameResult(this GameResult gameResult, Team team)
+        {
+            return gameResult switch
+            {
+                GameResult.NoResult => PlayerGameResult.NoResult,
+                GameResult.TieGame => PlayerGameResult.Tie,
+                GameResult.TeamAWon => team == Team.TeamA ? PlayerGameResult.Win : PlayerGameResult.Lose,
+                GameResult.TeamBWon => team == Team.TeamB ? PlayerGameResult.Win : PlayerGameResult.Lose,
+                _ => PlayerGameResult.NoResult
+            };
         }
     }
 }
