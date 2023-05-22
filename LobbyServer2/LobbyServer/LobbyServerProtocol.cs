@@ -398,18 +398,19 @@ namespace CentralServer.LobbyServer
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
 
             if (CurrentServer != null
-                && CurrentServer.GameInfo.GameStatus != GameStatus.FreelancerSelecting
+                && CurrentServer.GameInfo.GameStatus == GameStatus.LoadoutSelecting
                 && update.CharacterType != null
                 && update.CharacterType.HasValue
                 && update.CharacterType != account.AccountComponent.LastCharacter)
             {
                 log.Warn($"{account.Handle} attempted to switch from {account.AccountComponent.LastCharacter} " +
-                         $"to {update.CharacterType} while in game and not in FreelancerSelecting status");
+                         $"to {update.CharacterType} during LoadoutSelecting status");
                 Send(new PlayerInfoUpdateResponse
                 {
                     Success = false,
                     ResponseId = request.RequestId
                 });
+                return;
             }
 
             CharacterType selectedCharacter = update.CharacterType ?? account.AccountComponent.LastCharacter;
@@ -425,6 +426,7 @@ namespace CentralServer.LobbyServer
                     Success = false,
                     ResponseId = request.RequestId
                 });
+                return;
             }
 
             // Change Character
