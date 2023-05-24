@@ -1202,8 +1202,7 @@ namespace CentralServer.LobbyServer
         {
             Send(new CrashReportArchiveNameResponse
             {
-                ArchiveName = $"ARCrash_{DateTime.Now:yyyyMMddHHmmss}_{AccountId}",
-                Success = true,
+                Success = false,
                 ResponseId = request.RequestId
             });
         }
