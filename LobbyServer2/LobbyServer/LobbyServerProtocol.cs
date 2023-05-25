@@ -627,6 +627,7 @@ namespace CentralServer.LobbyServer
             });
             Send(new GameStatusNotification
             {
+                GameServerProcessCode = server?.ProcessCode,
                 GameStatus = GameStatus.Stopped
             });
             Send(new GameAssignmentNotification
