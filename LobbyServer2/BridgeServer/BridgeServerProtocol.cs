@@ -180,11 +180,7 @@ namespace CentralServer.BridgeServer
             {
                 if (client.AccountId == request.PlayerInfo.AccountId)
                 {
-                    if (client.CurrentServer == this)
-                    {
-                        client.CurrentServer = null;
-                    }
-
+                    client.LeaveServer(this);
                     break;
                 }
             }
@@ -223,7 +219,7 @@ namespace CentralServer.BridgeServer
             {
                 foreach (LobbyServerProtocol client in GetClients())
                 {
-                    client.CurrentServer = null;
+                    client.LeaveServer(this);
 
                     if (GameInfo != null)
                     {

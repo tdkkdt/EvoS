@@ -32,7 +32,7 @@ namespace CentralServer.LobbyServer
         public BridgeServerProtocol CurrentServer
         {
             get => _currentServer;
-            set
+            private set
             {
                 if (_currentServer != value)
                 {
@@ -156,6 +156,32 @@ namespace CentralServer.LobbyServer
                 SessionManager.OnPlayerDisconnect(this);
             }
             BroadcastRefreshFriendList();
+        }
+
+        public void JoinServer(BridgeServerProtocol server)
+        {
+            if (CurrentServer != null)
+            {
+                log.Debug($"{AccountId} is jumping from {CurrentServer.ProcessCode} to {server.ProcessCode}");
+            }
+
+            CurrentServer = server;
+        }
+
+        public void LeaveServer(BridgeServerProtocol server)
+        {
+            if (CurrentServer == null)
+            {
+                log.Debug($"{AccountId} is asked to leave {server.ProcessCode} while they are not on any server");
+                return;
+            }
+            if (CurrentServer != server)
+            {
+                log.Debug($"{AccountId} is asked to leave {server.ProcessCode} while they are on {CurrentServer.ProcessCode}. Ignoring.");
+                return;
+            }
+
+            CurrentServer = null;
         }
 
         public void BroadcastRefreshFriendList()
@@ -590,7 +616,7 @@ namespace CentralServer.LobbyServer
 
                 if (server.ServerGameStatus == GameStatus.Stopped)
                 {
-                    CurrentServer = null;
+                    LeaveServer(server);
                 }
             }
 
@@ -1341,7 +1367,7 @@ namespace CentralServer.LobbyServer
             // Set OldCharacter to last selected character before reconnect
             OldCharacter = character.CharacterType;
 
-            CurrentServer = server;
+            JoinServer(server);
 
             playerInfo.ReplacedWithBots = false;
 

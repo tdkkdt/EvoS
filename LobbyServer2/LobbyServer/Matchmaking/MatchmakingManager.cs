@@ -248,7 +248,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             SendUnassignQueueNotification(server.GetClients());
 
             // Assign Current Server
-            server.GetClients().ForEach(c => c.CurrentServer = server);
+            server.GetClients().ForEach(c => c.JoinServer(server));
 
             // Store there old CharacterType we set it back when match ends
             // ForcedCharacterChangeFromServerNotification does not persist after a game ends
@@ -317,7 +317,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                     client.OldCharacter = CharacterType.None;
 
                     // Clear CurrentServer
-                    client.CurrentServer = null;
+                    client.LeaveServer(server);
 
                     client.Send(new GameAssignmentNotification
                     {
