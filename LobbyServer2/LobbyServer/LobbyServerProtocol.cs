@@ -454,6 +454,7 @@ namespace CentralServer.LobbyServer
                 return;
             }
 
+            // Everything below is supposed to be validated against what the player has purchased
             // Change Character
             if (update.CharacterType.HasValue)
             {
@@ -1204,11 +1205,41 @@ namespace CentralServer.LobbyServer
 
         private void HandlePurchaseLoadoutSlotRequest(PurchaseLoadoutSlotRequest request)
         {
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+            if (account == null
+                || !account.CharacterData.TryGetValue(request.Character, out PersistedCharacterData characterData)
+                || characterData.CharacterComponent.CharacterLoadouts.Count >= 3) // hardcoded to 10 on the client side but that sounds too many
+            {
+                Send(new PurchaseLoadoutSlotResponse
+                {
+                    Character = request.Character,
+                    Success = false,
+                    ResponseId = request.RequestId
+                });
+                return;
+            }
+
+            List<CharacterLoadout> loadouts = characterData.CharacterComponent.CharacterLoadouts;
+            loadouts.Add(new CharacterLoadout(
+                new CharacterModInfo(),
+                new CharacterAbilityVfxSwapInfo(),
+                $"Loadout {loadouts.Count}",
+                ModStrictness.AllModes));
+            DB.Get().AccountDao.UpdateAccount(account);
+            
             Send(new PurchaseLoadoutSlotResponse
             {
                 Character = request.Character,
-                Success = false,
+                Success = true,
                 ResponseId = request.RequestId
+            });
+            Send(new PlayerCharacterDataUpdateNotification
+            {
+                CharacterData = account.CharacterData[request.Character],
+            });
+            Send(new PlayerAccountDataUpdateNotification
+            {
+                AccountData = account.CloneForClient()
             });
         }
 
