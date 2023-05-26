@@ -223,7 +223,10 @@ namespace CentralServer.BridgeServer
             {
                 foreach (LobbyServerProtocol client in GetClients())
                 {
-                    client.LeaveServer(this);
+                    if (!client.LeaveServer(this))
+                    {
+                        continue;
+                    }
 
                     if (GameInfo != null)
                     {

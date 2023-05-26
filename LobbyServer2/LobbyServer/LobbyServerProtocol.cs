@@ -168,20 +168,21 @@ namespace CentralServer.LobbyServer
             CurrentServer = server;
         }
 
-        public void LeaveServer(BridgeServerProtocol server)
+        public bool LeaveServer(BridgeServerProtocol server)
         {
             if (CurrentServer == null)
             {
                 log.Debug($"{AccountId} is asked to leave {server.ProcessCode} while they are not on any server");
-                return;
+                return true;
             }
             if (CurrentServer != server)
             {
                 log.Debug($"{AccountId} is asked to leave {server.ProcessCode} while they are on {CurrentServer.ProcessCode}. Ignoring.");
-                return;
+                return false;
             }
 
             CurrentServer = null;
+            return true;
         }
 
         public void BroadcastRefreshFriendList()
