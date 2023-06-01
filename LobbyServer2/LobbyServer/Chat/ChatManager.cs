@@ -59,7 +59,7 @@ namespace CentralServer.LobbyServer.Chat
                 SenderAccountId = conn.AccountId,
                 SenderHandle = account.Handle,
                 ResponseId = notification.RequestId,
-                CharacterType = account.AccountComponent.LastCharacter,
+                CharacterType = conn.PlayerInfo?.CharacterType ?? account.AccountComponent.LastCharacter,
                 ConsoleMessageType = notification.ConsoleMessageType,
                 Text = notification.Text,
                 EmojisAllowed = InventoryManager.GetUnlockedEmojiIDs(conn.AccountId),
@@ -179,7 +179,7 @@ namespace CentralServer.LobbyServer.Chat
             {
                 SenderAccountId = conn.AccountId,
                 EmojisAllowed = request.RequestedEmojis,
-                CharacterType = account.AccountComponent.LastCharacter,
+                CharacterType = conn.PlayerInfo?.CharacterType ?? account.AccountComponent.LastCharacter,
                 ConsoleMessageType = ConsoleMessageType.GroupChat,
                 SenderHandle = account.Handle,
                 Text = request.Text
