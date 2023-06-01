@@ -9,11 +9,11 @@ namespace CentralServer.LobbyServer.Matchmaking
 {
     internal class MatchmakingGroupInfo
     {
-        public int GroupID;
+        public long GroupID;
         public int Players;
         public Team Team;
 
-        public MatchmakingGroupInfo(int groupID)
+        public MatchmakingGroupInfo(long groupID)
         {
             GroupID = groupID;
             Players = GroupManager.GetGroup(groupID).Members.Count;

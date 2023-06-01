@@ -19,7 +19,7 @@ namespace CentralServer.LobbyServer.Matchmaking
         private static readonly ILog log = LogManager.GetLogger(typeof(MatchmakingQueue));
         
         Dictionary<string, LobbyGameInfo> Games = new Dictionary<string, LobbyGameInfo>();
-        ConcurrentDictionary<long, byte> QueuedGroups = new ConcurrentDictionary<long, byte>();
+        private readonly ConcurrentDictionary<long, DateTime> QueuedGroups = new ConcurrentDictionary<long, DateTime>();
         public LobbyMatchmakingQueueInfo MatchmakingQueueInfo;
         GameType GameType => MatchmakingQueueInfo.GameType;
         
@@ -55,7 +55,7 @@ namespace CentralServer.LobbyServer.Matchmaking
 
         public LobbyMatchmakingQueueInfo AddGroup(long groupId, out bool added)
         {
-            added = QueuedGroups.TryAdd(groupId, 0);
+            added = QueuedGroups.TryAdd(groupId, DateTime.UtcNow);
             MatchmakingQueueInfo.QueuedPlayers = GetPlayerCount();
             MatchmakingQueueInfo.AverageWaitTime = TimeSpan.FromSeconds(0);
             MatchmakingQueueInfo.QueueStatus = ServerManager.IsAnyServerAvailable() ? QueueStatus.WaitingForHumans : QueueStatus.AllServersBusy;
@@ -110,9 +110,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 lock (GroupManager.Lock)
                 {
                     bool success = false;
-                    // TODO: this add teams one by one until it has enough to form a game, QueuedGroups is a Dictionary
-                    // so Keys might be unsorted (no guarantee of oldest player in queue will find a game first)
-                    foreach (int groupId in QueuedGroups.Keys)
+                    foreach (long groupId in QueuedGroups.OrderBy(kv => kv.Value).Select(kv => kv.Key))
                     {
                         // Add new groups secuentially
                         MatchmakingGroupInfo currentGroup = new MatchmakingGroupInfo(groupId);
