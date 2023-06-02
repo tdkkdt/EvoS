@@ -92,8 +92,6 @@ namespace CentralServer.BridgeServer
             RegisterHandler<RegisterGameServerRequest>(HandleRegisterGameServerRequest);
             RegisterHandler<ServerGameSummaryNotification>(HandleServerGameSummaryNotification);
             RegisterHandler<PlayerDisconnectedNotification>(HandlePlayerDisconnectedNotification);
-            RegisterHandler<DisconnectPlayerRequest>(HandleDisconnectPlayerRequest);
-            RegisterHandler<ReconnectPlayerRequest>(HandleReconnectPlayerRequest);
             RegisterHandler<ServerGameMetricsNotification>(HandleServerGameMetricsNotification);
             RegisterHandler<ServerGameStatusNotification>(HandleServerGameStatusNotification);
             RegisterHandler<MonitorHeartbeatNotification>(HandleMonitorHeartbeatNotification);
@@ -169,16 +167,6 @@ namespace CentralServer.BridgeServer
             {
                 playerInfo.ReplacedWithBots = true;
             }
-        }
-
-        private void HandleDisconnectPlayerRequest(DisconnectPlayerRequest request)
-        {
-            log.Info($"Sending Disconnect player Request for accountId {request.PlayerInfo.AccountId}");
-        }
-
-        private void HandleReconnectPlayerRequest(ReconnectPlayerRequest request)
-        {
-            log.Info($"Sending reconnect player Request for accountId {request.AccountId} with reconectionsession id {request.NewSessionId}");
         }
 
         private void HandleServerGameMetricsNotification(ServerGameMetricsNotification request)
@@ -429,6 +417,16 @@ namespace CentralServer.BridgeServer
         public void Shutdown()
         {
             Send(new ShutdownGameRequest());
+        }
+
+        public void DisconnectPlayer(long accountId)
+        {
+            Send(new DisconnectPlayerRequest
+            {
+                SessionInfo = SessionManager.GetSessionInfo(accountId),
+                PlayerInfo = GetPlayerInfo(accountId),
+                GameResult = GameResult.ClientLeft
+            });
         }
     }
 }

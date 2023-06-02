@@ -130,16 +130,7 @@ namespace CentralServer.LobbyServer
             }
             log.Info(string.Format(Messages.PlayerDisconnected, this.UserName));
 
-            // BridgeServerProtocol server = ServerManager.GetServerWithPlayer(AccountId);
-            // if (server != null)
-            // {
-            //     server.Send(new DisconnectPlayerRequest()
-            //     {
-            //         SessionInfo = SessionManager.GetSessionInfo(this.AccountId),
-            //         PlayerInfo = server.GetPlayerInfo(AccountId),
-            //         GameResult = GameResult.ClientLeft
-            //     });
-            // }
+            // ServerManager.GetServerWithPlayer(AccountId)?.DisconnectPlayer(AccountId);
 
             SessionManager.OnPlayerDisconnect(this);
             BroadcastRefreshFriendList();
@@ -573,6 +564,7 @@ namespace CentralServer.LobbyServer
             if (server != null)
             {
                 LeaveServer(server);
+                server.DisconnectPlayer(AccountId);
             }
             Send(new LeaveGameResponse
             {
