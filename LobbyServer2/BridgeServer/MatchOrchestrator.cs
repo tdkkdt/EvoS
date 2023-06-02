@@ -228,13 +228,19 @@ namespace CentralServer.BridgeServer
             LobbyServerPlayerInfo serverPlayerInfo = server.GetPlayerInfo(accountId);
             LobbyCharacterInfo serverCharacterInfo = serverPlayerInfo.CharacterInfo;
 
-            if (server.GameInfo.GameStatus == GameStatus.LoadoutSelecting
+            if (server.GameInfo.GameStatus >= GameStatus.LoadoutSelecting
                 && update.CharacterType != null
                 && update.CharacterType.HasValue
                 && update.CharacterType != serverCharacterInfo.CharacterType)
             {
                 log.Warn($"{accountId} attempted to switch from {serverCharacterInfo.CharacterType} " +
-                         $"to {update.CharacterType} during LoadoutSelecting status");
+                         $"to {update.CharacterType} while in game");
+                return false;
+            }
+
+            if (server.GameInfo.GameStatus >= GameStatus.Launching)
+            {
+                log.Warn($"{accountId} attempted to update character info while in game");
                 return false;
             }
             
