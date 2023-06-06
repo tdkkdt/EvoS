@@ -97,6 +97,7 @@ namespace CentralServer.BridgeServer
             RegisterHandler<MonitorHeartbeatNotification>(HandleMonitorHeartbeatNotification);
             RegisterHandler<LaunchGameResponse>(HandleLaunchGameResponse);
             RegisterHandler<JoinGameServerResponse>(HandleJoinGameServerResponse);
+            RegisterHandler<ReconnectPlayerResponse>(HandleReconnectPlayerResponse);
         }
 
         private void HandleRegisterGameServerRequest(RegisterGameServerRequest request, int callbackId)
@@ -222,6 +223,14 @@ namespace CentralServer.BridgeServer
             log.Info(
                 $"Player {response.PlayerInfo?.Handle} {response.PlayerInfo?.AccountId} {response.PlayerInfo?.CharacterType} " +
                 $"joined {GameInfo?.Name}  ({response.GameServerProcessCode})");
+        }
+
+        private void HandleReconnectPlayerResponse(ReconnectPlayerResponse response)
+        {
+            if (!response.Success)
+            {
+                log.Error("Reconnecting player is not found on the server");
+            }
         }
 
         protected override void HandleClose(CloseEventArgs e)

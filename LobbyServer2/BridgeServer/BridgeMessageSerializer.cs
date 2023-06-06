@@ -28,7 +28,8 @@ namespace CentralServer.BridgeServer
             typeof(MonitorHeartbeatNotification),
             typeof(LaunchGameResponse),
             typeof(JoinGameServerResponse),
-            null, // typeof(JoinGameAsObserverResponse)
+            null, // typeof(JoinGameAsObserverResponse),
+            typeof(ReconnectPlayerResponse),
         };
 
         private static List<Type> GetMessageTypes()
