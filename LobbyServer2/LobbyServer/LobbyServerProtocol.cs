@@ -1160,7 +1160,7 @@ namespace CentralServer.LobbyServer
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
             if (account == null
                 || !account.CharacterData.TryGetValue(request.Character, out PersistedCharacterData characterData)
-                || characterData.CharacterComponent.CharacterLoadouts.Count >= 3) // hardcoded to 10 on the client side but that sounds too many
+                || characterData.CharacterComponent.CharacterLoadouts.Count >= 10) // hardcoded on the client side too
             {
                 Send(new PurchaseLoadoutSlotResponse
                 {
