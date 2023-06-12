@@ -56,32 +56,36 @@ namespace CentralServer.LobbyServer.Discord
 
         public async Task Ready()
         {
-            SlashCommandBuilder infoCommand = new SlashCommandBuilder()
+            SlashCommandProperties infoCommand = new SlashCommandBuilder()
                 .WithName(CMD_INFO)
-                .WithDescription("Get lobby status");
+                .WithDescription("Get lobby status")
+                .Build();
 
-            SlashCommandBuilder broadcastCommand = new SlashCommandBuilder()
+            SlashCommandProperties broadcastCommand = new SlashCommandBuilder()
                 .WithName(CMD_BROADCAST)
                 .WithDescription("Send a fullscreen notification to all online players")
                 .AddOption("message", ApplicationCommandOptionType.String, "Message to send", true)
-                .WithDefaultMemberPermissions(GuildPermission.ManageGuild);
+                .WithDefaultMemberPermissions(GuildPermission.ManageGuild)
+                .Build();
 
-            SlashCommandBuilder queueDisableCommand = new SlashCommandBuilder()
+            SlashCommandProperties queueDisableCommand = new SlashCommandBuilder()
                 .WithName(CMD_QUEUE_DISABLE)
                 .WithDescription("Pause matchmaking queue")
-                .WithDefaultMemberPermissions(GuildPermission.ManageGuild);
+                .WithDefaultMemberPermissions(GuildPermission.ManageGuild)
+                .Build();
 
-            SlashCommandBuilder queueEnableCommand = new SlashCommandBuilder()
+            SlashCommandProperties queueEnableCommand = new SlashCommandBuilder()
                 .WithName(CMD_QUEUE_ENABLE)
                 .WithDescription("Unpause matchmaking queue")
-                .WithDefaultMemberPermissions(GuildPermission.ManageGuild);
+                .WithDefaultMemberPermissions(GuildPermission.ManageGuild)
+                .Build();
 
             try
             {
-                await botClient.CreateGlobalApplicationCommandAsync(infoCommand.Build());
-                await botClient.CreateGlobalApplicationCommandAsync(broadcastCommand.Build());
-                await botClient.CreateGlobalApplicationCommandAsync(queueDisableCommand.Build());
-                await botClient.CreateGlobalApplicationCommandAsync(queueEnableCommand.Build());
+                await botClient.CreateGlobalApplicationCommandAsync(infoCommand);
+                await botClient.CreateGlobalApplicationCommandAsync(broadcastCommand);
+                await botClient.CreateGlobalApplicationCommandAsync(queueDisableCommand);
+                await botClient.CreateGlobalApplicationCommandAsync(queueEnableCommand);
             }
             catch (HttpException exception)
             {
