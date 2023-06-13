@@ -8,7 +8,7 @@ namespace EvoS.Framework.DataAccess.Daos
 {
     public interface MatchHistoryDao
     {
-        protected const int LIMIT = 20;
+        protected const int LIMIT = 100;
         
         public List<PersistedCharacterMatchData> Find(long accountId);
         public void Save(ICollection<MatchEntry> matchEntries);
