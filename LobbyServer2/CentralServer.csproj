@@ -10,11 +10,16 @@
     <PackageReference Include="Discord.Net.Webhook" Version="3.10.0" />
     <PackageReference Include="Discord.Net.WebSocket" Version="3.10.0" />
     <PackageReference Include="System.ServiceModel.Primitives" Version="4.9.0" />
-    <PackageReference Include="WebSocketSharp" Version="1.0.3-rc11" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\EvoS.Framework\EvoS.Framework.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="websocket-sharp">
+      <HintPath>..\dll\websocket-sharp.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>

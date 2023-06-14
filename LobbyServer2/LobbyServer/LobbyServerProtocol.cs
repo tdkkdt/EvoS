@@ -314,7 +314,7 @@ namespace CentralServer.LobbyServer
                 if (request == null)
                 {
                     SendErrorResponse(new RegisterGameClientResponse(), request.RequestId, Messages.LoginFailed);
-                    CloseConnection();
+                    WebSocket.Close();
                     return;
                 }
                 
@@ -358,7 +358,7 @@ namespace CentralServer.LobbyServer
             catch (Exception e)
             {
                 SendErrorResponse(new RegisterGameClientResponse(), request.RequestId, e);
-                CloseConnection();
+                WebSocket.Close();
             }
             BroadcastRefreshFriendList();
         }
@@ -1377,7 +1377,7 @@ namespace CentralServer.LobbyServer
 
         public void CloseConnection()
         {
-            Context.WebSocket.Close();
+            this.WebSocket.Close();
         }
 
         private void HandleClientFeedbackReport(ClientFeedbackReport message)
