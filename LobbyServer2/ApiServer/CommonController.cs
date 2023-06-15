@@ -36,7 +36,6 @@ namespace CentralServer.ApiServer
         
         public static IResult GetStatus()
         {
-            log.Info("/api/status");
             List<BridgeServerProtocol> servers = ServerManager.GetServers();
             Status status = new Status()
             {
