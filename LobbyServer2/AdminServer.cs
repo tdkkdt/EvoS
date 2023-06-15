@@ -47,11 +47,15 @@ public class AdminServer
                 };
             });
         builder.Services.AddAuthorizationBuilder()
-            .AddPolicy("api_readonly", policy => policy.RequireRole("api_readonly"));
+            .AddPolicy("api_readonly", policy => policy.RequireRole("api_readonly"))
+            .AddPolicy("api_admin", policy => policy.RequireRole("api_admin"));
         var app = builder.Build();
         
         app.MapPost("/api/login", Login).AllowAnonymous();
-        app.MapGet("/api/status", CommonController.GetStatus).RequireAuthorization("api_readonly");
+        app.MapGet("/api/lobby/status", CommonController.GetStatus).RequireAuthorization("api_readonly");
+        app.MapPost("/api/lobby/broadcast",  CommonController.Broadcast).RequireAuthorization("api_admin");
+        app.MapPost("/api/queue/pause", () => CommonController.PauseQueue(true)).RequireAuthorization("api_admin");
+        app.MapPost("/api/queue/unpause", () => CommonController.PauseQueue(false)).RequireAuthorization("api_admin");
         _ = app.RunAsync("http://localhost:3000");
         
         log.Info("Started admin server localhost:3000");
@@ -90,7 +94,8 @@ public class AdminServer
         {
             Subject = new ClaimsIdentity(new[]
             {
-                new Claim(ClaimTypes.Role, "api_readonly")
+                new Claim(ClaimTypes.Role, "api_readonly"),
+                new Claim(ClaimTypes.Role, "api_admin"),
             }),
             Expires = DateTime.UtcNow.AddMinutes(60),
             Issuer = TokenIssuer,

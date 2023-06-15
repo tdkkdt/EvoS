@@ -17,6 +17,20 @@ namespace CentralServer.ApiServer
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(CommonController));
         
+        public static IResult PauseQueue(bool paused)
+        {
+            // TODO log user?
+            MatchmakingManager.Enabled = !paused;
+            return Results.Ok();
+        }
+        
+        public static IResult Broadcast(string msg)
+        {
+            // TODO log user?
+            SessionManager.Broadcast(msg);
+            return Results.Ok();
+        }
+        
         public static IResult GetStatus()
         {
             log.Info("/api/status");
