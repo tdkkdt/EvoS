@@ -31,6 +31,9 @@ namespace CentralServer
             
             server.Start();
             log.Info($"Started lobby server on port {port}");
+
+            var api = new AdminServer().Init();
+
             if (EvosConfiguration.GetGameServerExecutable().IsNullOrEmpty())
             {
                 log.Warn("GameServerExecutable not set in settings.yaml. " +

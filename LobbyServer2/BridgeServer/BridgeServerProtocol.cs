@@ -38,6 +38,12 @@ namespace CentralServer.BridgeServer
         public string BuildVersion => SessionInfo?.BuildVersion ?? "";
         public bool IsPrivate { get; private set; }
 
+        public ServerGameMetrics GameMetrics { get; private set; } = new ServerGameMetrics();
+
+        public LobbyGameInfo GetGameInfo => GameInfo;
+
+        public LobbyServerTeamInfo GetTeamInfo => TeamInfo;
+
         public LobbyServerPlayerInfo GetPlayerInfo(long accountId)
         {
             return TeamInfo.TeamPlayerInfo.Find(p => p.AccountId == accountId);
@@ -172,6 +178,7 @@ namespace CentralServer.BridgeServer
 
         private void HandleServerGameMetricsNotification(ServerGameMetricsNotification request)
         {
+            GameMetrics = request.GameMetrics;
             log.Info($"Game {GameInfo?.Name} Turn {request.GameMetrics?.CurrentTurn}, " +
                      $"{request.GameMetrics?.TeamAPoints}-{request.GameMetrics?.TeamBPoints}, " +
                      $"frame time: {request.GameMetrics?.AverageFrameTime}");

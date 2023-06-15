@@ -14,14 +14,19 @@ using WebSocketSharp;
 
 namespace CentralServer.LobbyServer.Matchmaking
 {
-    class MatchmakingQueue
+    public class MatchmakingQueue
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(MatchmakingQueue));
         
         Dictionary<string, LobbyGameInfo> Games = new Dictionary<string, LobbyGameInfo>();
         private readonly ConcurrentDictionary<long, DateTime> QueuedGroups = new ConcurrentDictionary<long, DateTime>();
         public LobbyMatchmakingQueueInfo MatchmakingQueueInfo;
-        GameType GameType => MatchmakingQueueInfo.GameType;
+        public GameType GameType => MatchmakingQueueInfo.GameType;
+
+        public List<long> GetQueuesGroups()
+        {
+            return QueuedGroups.OrderBy(kv => kv.Value).Select(kv => kv.Key).ToList();
+        }
         
         private static int GameID = 0;
 
@@ -110,7 +115,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 lock (GroupManager.Lock)
                 {
                     bool success = false;
-                    foreach (long groupId in QueuedGroups.OrderBy(kv => kv.Value).Select(kv => kv.Key))
+                    foreach (long groupId in GetQueuesGroups())
                     {
                         // Add new groups secuentially
                         MatchmakingGroupInfo currentGroup = new MatchmakingGroupInfo(groupId);

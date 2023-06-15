@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Newtonsoft.Json;
 
 namespace EvoS.DirectoryServer
@@ -55,6 +56,12 @@ namespace EvoS.DirectoryServer
 
             app.Run((context) =>
             {
+                var syncIOFeature = context.Features.Get<IHttpBodyControlFeature>();
+                if (syncIOFeature != null)
+                {
+                    syncIOFeature.AllowSynchronousIO = true;
+                }
+                
                 context.Response.ContentType = "application/json";
                 MemoryStream ms = new MemoryStream();
                 context.Request.Body.CopyTo(ms);

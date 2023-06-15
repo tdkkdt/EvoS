@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using CentralServer.LobbyServer.Matchmaking;
 using EvoS.Framework.Constants.Enums;
 using log4net;
@@ -85,6 +86,11 @@ namespace CentralServer.BridgeServer
 
                 return false;
             }
+        }
+
+        public static List<BridgeServerProtocol> GetServers()
+        {
+            return ServerPool.Values.ToList();
         }
     }
 }

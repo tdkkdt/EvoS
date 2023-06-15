@@ -30,6 +30,11 @@ namespace CentralServer.LobbyServer.Group
             return ActiveGroups.GetValueOrDefault(groupId);
         }
         
+        public static List<GroupInfo> GetGroups()
+        {
+            return ActiveGroups.Values.ToList();
+        }
+        
         public static GroupInfo GetPlayerGroup(long accountId)
         {
             lock (_lock)
