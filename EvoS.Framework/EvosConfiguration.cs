@@ -13,6 +13,7 @@ namespace EvoS.Framework
         public string GameServerExecutableArgs = "";
         public bool AutoRegisterNewUsers = true;
         public DBConfig Database = new DBConfig();
+        public string ApiKey = "";
         
         public bool PingOnGroupRequest = true;
 
@@ -71,6 +72,11 @@ namespace EvoS.Framework
         public static bool GetPingOnGroupRequest()
         {
             return GetInstance().PingOnGroupRequest;
+        }
+
+        public static string GetApiKey()
+        {
+            return GetInstance().ApiKey;
         }
 
         public enum DBType
