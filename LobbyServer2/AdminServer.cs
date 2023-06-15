@@ -8,12 +8,14 @@ using EvoS.Framework;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.Static;
 using log4net;
+using log4net.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using WebSocketSharp;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace CentralServer;
 
@@ -23,6 +25,8 @@ public class AdminServer
 
     private static readonly string TokenIssuer = "AtlasReactor";
     private static readonly string TokenAudience = "AtlasReactor";
+    
+    private static readonly string EndpointLogin = "/api/login";
     
     public WebApplication Init()
     {
@@ -34,7 +38,12 @@ public class AdminServer
         }
         
         var builder = WebApplication.CreateBuilder();
+        builder.Services.AddControllersWithViews();
         builder.Logging.ClearProviders();
+        builder.Logging.AddLog4Net(new Log4NetProviderOptions("log4net.xml")
+        { 
+            LogLevelTranslator = new CustomLogLevelTranslator(),
+        });
         builder.Services.AddAuthentication()
             .AddJwtBearer(o =>
             {
@@ -51,7 +60,14 @@ public class AdminServer
             .AddPolicy("api_admin", policy => policy.RequireRole("api_admin"));
         var app = builder.Build();
         
-        app.MapPost("/api/login", Login).AllowAnonymous();
+        app.Use(async (context, next) =>
+        {
+            log.Info($"API call: {context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "<anon>"} " +
+                     $"{context.Request.Path}{(EndpointLogin.Equals(context.Request.Path) ? string.Empty : context.Request.QueryString)}");
+            await next.Invoke();
+        });
+        
+        app.MapPost(EndpointLogin, Login).AllowAnonymous();
         app.MapGet("/api/lobby/status", CommonController.GetStatus).RequireAuthorization("api_readonly");
         app.MapPost("/api/lobby/broadcast",  CommonController.Broadcast).RequireAuthorization("api_admin");
         app.MapPost("/api/queue/pause", () => CommonController.PauseQueue(true)).RequireAuthorization("api_admin");
@@ -94,6 +110,8 @@ public class AdminServer
         {
             Subject = new ClaimsIdentity(new[]
             {
+                new Claim("AccountId", accountId.ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, account.UserName),
                 new Claim(ClaimTypes.Role, "api_readonly"),
                 new Claim(ClaimTypes.Role, "api_admin"),
             }),
@@ -107,5 +125,20 @@ public class AdminServer
         var stringToken = tokenHandler.WriteToken(token);
         log.Info($"{UserName} logged in for api access");
         return Results.Ok(stringToken);
+    }
+    
+    public class CustomLogLevelTranslator : ILog4NetLogLevelTranslator
+    {
+        public Level TranslateLogLevel(LogLevel logLevel, Log4NetProviderOptions options) {
+            return logLevel switch {
+                LogLevel.Critical    => Level.Critical,
+                LogLevel.Error       => Level.Error,
+                LogLevel.Warning     => Level.Warn,
+                LogLevel.Information => Level.Debug,
+                LogLevel.Debug       => Level.Debug,
+                LogLevel.Trace       => Level.Debug,
+                _ => Level.Debug,
+            };
+        }
     }
 }

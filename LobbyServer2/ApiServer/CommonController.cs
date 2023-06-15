@@ -9,6 +9,7 @@ using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.Static;
 using log4net;
 using Microsoft.AspNetCore.Http;
+using Microsoft.IdentityModel.Tokens;
 
 namespace CentralServer.ApiServer
 {
@@ -19,14 +20,16 @@ namespace CentralServer.ApiServer
         
         public static IResult PauseQueue(bool paused)
         {
-            // TODO log user?
             MatchmakingManager.Enabled = !paused;
             return Results.Ok();
         }
         
         public static IResult Broadcast(string msg)
         {
-            // TODO log user?
+            if (msg.IsNullOrEmpty())
+            {
+                return Results.BadRequest();
+            }
             SessionManager.Broadcast(msg);
             return Results.Ok();
         }
