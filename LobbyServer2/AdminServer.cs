@@ -72,9 +72,10 @@ public class AdminServer
         app.MapPost("/api/lobby/broadcast",  CommonController.Broadcast).RequireAuthorization("api_admin");
         app.MapPost("/api/queue/pause", () => CommonController.PauseQueue(true)).RequireAuthorization("api_admin");
         app.MapPost("/api/queue/unpause", () => CommonController.PauseQueue(false)).RequireAuthorization("api_admin");
-        _ = app.RunAsync("http://localhost:3000");
+        string url = $"http://localhost:{EvosConfiguration.GetApiPort()}";
+        _ = app.RunAsync(url);
         
-        log.Info("Started admin server localhost:3000");
+        log.Info($"Started admin server at {url}");
         return app;
     }
 

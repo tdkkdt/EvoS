@@ -14,6 +14,7 @@ namespace EvoS.Framework
         public bool AutoRegisterNewUsers = true;
         public DBConfig Database = new DBConfig();
         public string ApiKey = "";
+        public int ApiPort = 3001;
         
         public bool PingOnGroupRequest = true;
 
@@ -77,6 +78,11 @@ namespace EvoS.Framework
         public static string GetApiKey()
         {
             return GetInstance().ApiKey;
+        }
+
+        public static int GetApiPort()
+        {
+            return GetInstance().ApiPort;
         }
 
         public enum DBType
