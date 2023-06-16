@@ -2,6 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {getStatus, GroupData, PlayerData, Status} from "../lib/Evos";
 import {LinearProgress} from "@mui/material";
 import Queue from "./Queue";
+import {useAuthHeader} from "react-auth-kit";
 
 function StatusPage() {
     const [loading, setLoading] = useState(true);
@@ -10,9 +11,11 @@ function StatusPage() {
     const [players, setPlayers] = useState<Map<number, PlayerData>>();
     const [groups, setGroups] = useState<Map<number, GroupData>>();
 
+    const authHeader = useAuthHeader()();
+
     useEffect(() => {
         console.log("loading data");
-        getStatus()
+        getStatus(authHeader)
             .then((resp) => {
                 console.log("loaded data");
                 setStatus(resp.data);
@@ -39,7 +42,7 @@ function StatusPage() {
                 }
                 console.log(error.config);
             })
-    }, [])
+    }, [authHeader])
 
     useEffect(() => {
         if (!status) {

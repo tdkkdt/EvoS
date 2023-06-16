@@ -11,6 +11,7 @@ using log4net;
 using log4net.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
@@ -63,7 +64,7 @@ public class AdminServer
             options.AddDefaultPolicy(
                 policy =>
                 {
-                    policy.WithOrigins("http://localhost:3000");
+                    policy.AllowAnyMethod().AllowAnyOrigin().AllowAnyHeader();
                 });
         });
         var app = builder.Build();
@@ -76,7 +77,7 @@ public class AdminServer
         });
         
         app.MapPost(EndpointLogin, Login).AllowAnonymous();
-        app.MapGet("/api/lobby/status", CommonController.GetStatus).AllowAnonymous();//.RequireAuthorization("api_readonly");
+        app.MapGet("/api/lobby/status", CommonController.GetStatus).RequireAuthorization("api_readonly");
         app.MapPost("/api/lobby/broadcast",  CommonController.Broadcast).RequireAuthorization("api_admin");
         app.MapPost("/api/queue/pause", () => CommonController.PauseQueue(true)).RequireAuthorization("api_admin");
         app.MapPost("/api/queue/unpause", () => CommonController.PauseQueue(false)).RequireAuthorization("api_admin");
@@ -96,9 +97,9 @@ public class AdminServer
         return new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
     }
 
-    private static IResult Login(string UserName, string Password)
+    private static IResult Login([FromBody] AuthInfo authInfo)
     {
-        if (UserName.IsNullOrEmpty() || Password.IsNullOrEmpty())
+        if (authInfo.UserName.IsNullOrEmpty() || authInfo._Password.IsNullOrEmpty())
         {
             log.Info($"Attempt to login for api access without credentials");
             return Results.Unauthorized();
@@ -106,17 +107,17 @@ public class AdminServer
         long accountId;
         try
         {
-            accountId = LoginManager.Login(new AuthInfo { UserName = UserName, Password = Password });
+            accountId = LoginManager.Login(authInfo);
         }
         catch (Exception _)
         {
-            log.Info($"Failed to authorize {UserName} for api access");
+            log.Info($"Failed to authorize {authInfo.UserName} for api access");
             return Results.Unauthorized();
         }
         PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
         if (!account.AccountComponent.AppliedEntitlements.ContainsKey("DEVELOPER_ACCESS"))
         {
-            log.Info($"{UserName} attempted to get api access");
+            log.Info($"{authInfo.UserName} attempted to get api access");
             return Results.Unauthorized();
         }
         var tokenDescriptor = new SecurityTokenDescriptor
@@ -136,7 +137,7 @@ public class AdminServer
         var tokenHandler = new JwtSecurityTokenHandler();
         var token = tokenHandler.CreateToken(tokenDescriptor);
         var stringToken = tokenHandler.WriteToken(token);
-        log.Info($"{UserName} logged in for api access");
+        log.Info($"{authInfo.UserName} logged in for api access");
         return Results.Ok(stringToken);
     }
     

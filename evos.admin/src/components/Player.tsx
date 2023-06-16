@@ -1,5 +1,5 @@
 import {PlayerData} from "../lib/Evos";
-import {Button, ButtonBase, styled, Typography} from "@mui/material";
+import {ButtonBase, styled, Typography} from "@mui/material";
 
 interface Props {
     info?: PlayerData;

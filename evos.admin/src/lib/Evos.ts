@@ -54,6 +54,10 @@ export interface GamePlayerData {
     characterType: string;
 }
 
-export function getStatus() {
-    return axios.get<Status>(baseUrl + "/api/lobby/status");
+export function getStatus(authHeader: string) {
+    return axios.get<Status>(baseUrl + "/api/lobby/status", { headers: {'Authorization': authHeader} });
+}
+
+export function login(username: string, password: string) {
+    return axios.post<string>(baseUrl + "/api/login", { UserName: username, Password: password });
 }
