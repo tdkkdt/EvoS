@@ -1,31 +1,11 @@
 import {PlayerData} from "../lib/Evos";
-import {ButtonBase, styled, Typography} from "@mui/material";
+import {ButtonBase, Typography} from "@mui/material";
+import {BgImage, ImageTextWrapper} from "./BasicComponents";
 
 interface Props {
     info?: PlayerData;
 }
 
-const ImageSrc = styled('span')({
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center 40%',
-    zIndex: -1000,
-});
-
-const Image = styled('span')(({ theme }) => ({
-    position: 'absolute',
-    top: '3%',
-    left: '28%',
-    color: theme.palette.common.white,
-    textAlign: 'left',
-    fontSize: '2.5em',
-    fontStretch: 'condensed',
-    width: '100%',
-}));
 
 function Player({info}: Props) {
     let username = 'UNKNOWN', discriminator;
@@ -53,19 +33,19 @@ function Player({info}: Props) {
                     flex: 'none',
                 }}
             >
-                <ImageSrc style={{
+                <BgImage style={{
                     backgroundImage: `url(/banners/Background/95.png)`,
                 }} />
-                <ImageSrc style={{
+                <BgImage style={{
                     marginTop: '-3%',
                     marginLeft: '-3%',
                     backgroundImage: `url(/banners/Foreground/65.png)`,
                     width: '34%',
                 }} />
-                <Image>
+                <ImageTextWrapper>
                     <Typography component={'span'} style={{ fontSize: '1em' }}>{username}</Typography>
                     {discriminator && <Typography component={'span'} style={{ fontSize: '0.8em' }}>#{discriminator}</Typography>}
-                </Image>
+                </ImageTextWrapper>
             </div>
         </ButtonBase>
     </>;
