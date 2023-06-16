@@ -67,9 +67,9 @@ function StatusPage() {
             <header className="App-header">
                 {loading && <LinearProgress />}
                 {notQueuedGroups && groups && players
-                    && <Queue info={{type: "Not queued", groupIds: notQueuedGroups}} groupData={groups} playerData={players} />}
+                    && <Queue key={'not_queued'} info={{type: "Not queued", groupIds: notQueuedGroups}} groupData={groups} playerData={players} />}
                 {status && groups && players
-                    && status.queues.map(q => <Queue info={q} groupData={groups} playerData={players} />)}
+                    && status.queues.map(q => <Queue key={q.type} info={q} groupData={groups} playerData={players} />)}
             </header>
         </div>
     );

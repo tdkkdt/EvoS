@@ -10,11 +10,10 @@ interface Props {
 function Group({info, playerData}: Props) {
     return <>
         <List>
-            {info.accountIds.map((accountId) => <>
+            {info.accountIds.map((accountId) =>
                 <ListItem disablePadding key={`player_${accountId}`}>
                     <Player info={playerData.get(accountId)} />
-                </ListItem>
-            </>)}
+                </ListItem>)}
         </List>
     </>;
 }
