@@ -15,7 +15,7 @@ function Queue({info, groupData, playerData}: Props) {
             {info.groupIds.map((groupId) => {
                 const info = groupData.get(groupId);
                 return <>
-                    <ListItem disablePadding>
+                    <ListItem disablePadding key={`group_${groupId}`}>
                         {info && <Group info={info} playerData={playerData} />}
                     </ListItem>
                 </>;
