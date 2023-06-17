@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using EvoS.Framework.DataAccess.Daos;
+using EvoS.Framework.Misc;
 using EvoS.Framework.Network.Static;
 using MongoDB.Driver;
 
@@ -23,7 +24,10 @@ namespace EvoS.Framework.DataAccess.Mongo
 
         public void Save(ICollection<MatchHistoryDao.MatchEntry> matchEntries)
         {
-            c.InsertMany(matchEntries);
+            if (!matchEntries.IsNullOrEmpty())
+            {
+                c.InsertMany(matchEntries);
+            }
         }
     }
 } 
