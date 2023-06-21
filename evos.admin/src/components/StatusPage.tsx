@@ -4,6 +4,7 @@ import {LinearProgress} from "@mui/material";
 import Queue from "./Queue";
 import {useAuthHeader} from "react-auth-kit";
 import Server from "./Server";
+import {useNavigate} from "react-router-dom";
 
 function StatusPage() {
     const [loading, setLoading] = useState(true);
@@ -14,6 +15,7 @@ function StatusPage() {
     const [games, setGames] = useState<Map<string, GameData>>();
 
     const authHeader = useAuthHeader()();
+    const navigate = useNavigate();
 
     useEffect(() => {
         console.log("loading data");
@@ -25,26 +27,14 @@ function StatusPage() {
             })
             .catch((error) => {
                 console.log("failed loading data");
-                // Error
-                if (error.response) {
-                    // The request was made and the server responded with a status code
-                    // that falls out of the range of 2xx
-                    // console.log(error.response.data);
-                    // console.log(error.response.status);
-                    // console.log(error.response.headers);
-                } else if (error.request) {
-                    // The request was made but no response was received
-                    // `error.request` is an instance of XMLHttpRequest in the
-                    // browser and an instance of
-                    // http.ClientRequest in node.js
-                    console.log(error.request);
-                } else {
-                    // Something happened in setting up the request that triggered an Error
-                    console.log('Error', error.message);
+                if (error.response?.status === 401) {
+                    navigate("/login")
                 }
-                console.log(error.config);
+                else if (error.response?.status === 404) {
+                    console.log("404");
+                }
             })
-    }, [authHeader])
+    }, [authHeader, navigate])
 
     useEffect(() => {
         if (!status) {
@@ -81,7 +71,7 @@ function StatusPage() {
                 {status && groups && players
                     && status.queues.map(q => <Queue key={q.type} info={q} groupData={groups} playerData={players} />)}
                 {notQueuedGroups && groups && players
-                    && <Queue key={'not_queued'} info={{type: "Not queued", groupIds: notQueuedGroups}} groupData={groups} playerData={players} />}n
+                    && <Queue key={'not_queued'} info={{type: "Not queued", groupIds: notQueuedGroups}} groupData={groups} playerData={players} />}
             </header>
         </div>
     );
