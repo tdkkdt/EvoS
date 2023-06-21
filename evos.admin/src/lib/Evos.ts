@@ -13,6 +13,8 @@ export interface PlayerData
 {
     accountId: number;
     handle: string;
+    bannerBg: number;
+    bannerFg: number;
 }
 
 export interface GroupData

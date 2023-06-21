@@ -67,7 +67,9 @@ function StatusPage() {
             <header className="App-header">
                 {loading && <LinearProgress />}
                 {status && players && games
-                    && status.servers.map(s => <Server info={s} game={games.get(s.id)} playerData={players}/>)}
+                    && status.servers
+                        .sort((s1, s2) => s1.name.localeCompare(s2.name))
+                        .map(s => <Server info={s} game={games.get(s.id)} playerData={players}/>)}
                 {status && groups && players
                     && status.queues.map(q => <Queue key={q.type} info={q} groupData={groups} playerData={players} />)}
                 {notQueuedGroups && groups && players

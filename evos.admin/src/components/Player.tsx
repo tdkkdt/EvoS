@@ -7,7 +7,6 @@ interface Props {
     info?: PlayerData;
 }
 
-
 function Player({info}: Props) {
     let username = 'UNKNOWN', discriminator;
     if (info) {
@@ -19,11 +18,12 @@ function Player({info}: Props) {
             focusRipple
             key={info?.handle}
             style={{
-                width: 480,
-                height: 104,
+                width: 240,
+                height: 52,
+                fontSize: '8px',
                 transform: 'skewX(-15deg)',
                 overflow: 'hidden',
-                border: '4px solid black'
+                border: '2px solid black'
             }}
         >
             <div
@@ -35,13 +35,13 @@ function Player({info}: Props) {
                 }}
             >
                 <BgImage style={{
-                    backgroundImage: `url(${playerBanner(BannerType.background, 95)})`,
+                    backgroundImage: info && `url(${playerBanner(BannerType.background, info.bannerBg)})`,
                 }} />
                 <BgImage style={{
                     marginTop: '-3%',
                     marginLeft: '-3%',
-                    backgroundImage: `url(${playerBanner(BannerType.foreground, 65)})`,
-                    width: '34%',
+                    backgroundImage: info && `url(${playerBanner(BannerType.foreground, info.bannerFg)})`,
+                    width: '35%',
                 }} />
                 <ImageTextWrapper>
                     <Typography component={'span'} style={{ fontSize: '1em' }}>{username}</Typography>

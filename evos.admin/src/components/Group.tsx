@@ -9,7 +9,7 @@ interface Props {
 
 function Group({info, playerData}: Props) {
     return <>
-        <List>
+        <List style={{ padding: 4 }}>
             {info.accountIds.map((accountId) =>
                 <ListItem disablePadding key={`player_${accountId}`}>
                     <Player info={playerData.get(accountId)} />

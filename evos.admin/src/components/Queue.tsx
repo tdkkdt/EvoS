@@ -1,6 +1,7 @@
 import {GroupData, PlayerData, QueueData} from "../lib/Evos";
-import {List, ListItem, Typography} from "@mui/material";
+import {Typography} from "@mui/material";
 import Group from "./Group";
+import {FlexBox} from "./BasicComponents";
 
 interface Props {
     info: QueueData;
@@ -11,14 +12,12 @@ interface Props {
 function Queue({info, groupData, playerData}: Props) {
     return <>
         <Typography variant={'h3'}>{info.type}</Typography>
-        <List>
+        <FlexBox style={{ padding: 4 }}>
             {info.groupIds.map((groupId) => {
                 const info = groupData.get(groupId);
-                return <ListItem disablePadding key={`group_${groupId}`}>
-                    {info && <Group info={info} playerData={playerData} />}
-                </ListItem>;
+                return info && <Group key={`group_${groupId}`} info={info} playerData={playerData} />;
             })}
-        </List>
+        </FlexBox>
     </>;
 }
 
