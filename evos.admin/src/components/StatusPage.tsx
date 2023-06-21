@@ -1,8 +1,9 @@
 import React, {useEffect, useState} from 'react';
-import {getStatus, GroupData, PlayerData, Status} from "../lib/Evos";
+import {GameData, getStatus, GroupData, PlayerData, Status} from "../lib/Evos";
 import {LinearProgress} from "@mui/material";
 import Queue from "./Queue";
 import {useAuthHeader} from "react-auth-kit";
+import Server from "./Server";
 
 function StatusPage() {
     const [loading, setLoading] = useState(true);
@@ -10,6 +11,7 @@ function StatusPage() {
     const [status, setStatus] = useState<Status>();
     const [players, setPlayers] = useState<Map<number, PlayerData>>();
     const [groups, setGroups] = useState<Map<number, GroupData>>();
+    const [games, setGames] = useState<Map<string, GameData>>();
 
     const authHeader = useAuthHeader()();
 
@@ -60,6 +62,11 @@ function StatusPage() {
             return res;
         }, new Map<number, GroupData>());
         setGroups(_groups);
+        const _games = status.games.reduce((res, g) => {
+            res.set(g.server, g);
+            return res;
+        }, new Map<string, GameData>());
+        setGames(_games);
     }, [status])
 
     const queuedGroups = new Set(status?.queues?.flatMap(q => q.groupIds));
@@ -69,10 +76,12 @@ function StatusPage() {
         <div className="App">
             <header className="App-header">
                 {loading && <LinearProgress />}
-                {notQueuedGroups && groups && players
-                    && <Queue key={'not_queued'} info={{type: "Not queued", groupIds: notQueuedGroups}} groupData={groups} playerData={players} />}
+                {status && players && games
+                    && status.servers.map(s => <Server info={s} game={games.get(s.id)} playerData={players}/>)}
                 {status && groups && players
                     && status.queues.map(q => <Queue key={q.type} info={q} groupData={groups} playerData={players} />)}
+                {notQueuedGroups && groups && players
+                    && <Queue key={'not_queued'} info={{type: "Not queued", groupIds: notQueuedGroups}} groupData={groups} playerData={players} />}n
             </header>
         </div>
     );

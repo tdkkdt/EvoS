@@ -1,5 +1,5 @@
 import {GroupData, PlayerData, QueueData} from "../lib/Evos";
-import {List, ListItem} from "@mui/material";
+import {List, ListItem, Typography} from "@mui/material";
 import Group from "./Group";
 
 interface Props {
@@ -10,7 +10,7 @@ interface Props {
 
 function Queue({info, groupData, playerData}: Props) {
     return <>
-        <h2>{info.type}</h2>
+        <Typography variant={'h3'}>{info.type}</Typography>
         <List>
             {info.groupIds.map((groupId) => {
                 const info = groupData.get(groupId);
