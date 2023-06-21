@@ -7,11 +7,6 @@ namespace EvoS.Framework.Network.Static
     [Serializable]
     public class LobbyServerPlayerInfo : LobbyPlayerCommonInfo
     {
-        public LobbyServerPlayerInfo Clone()
-        {
-            return (LobbyServerPlayerInfo)base.MemberwiseClone();
-        }
-
         public int AccountLevel;
         public int TotalLevel;
         public int NumWins;
@@ -29,6 +24,11 @@ namespace EvoS.Framework.Network.Static
         public bool GroupLeader;
         public ClientAccessLevel EffectiveClientAccessLevel;
         public int RankedSortKarma;
+
+        public LobbyServerPlayerInfo Clone()
+        {
+            return (LobbyServerPlayerInfo)MemberwiseClone();
+        }
         
         public static LobbyServerPlayerInfo Of(PersistedAccountData account) {
             return new LobbyServerPlayerInfo
@@ -59,5 +59,4 @@ namespace EvoS.Framework.Network.Static
             };
         }
     }
-
 }
