@@ -24,6 +24,10 @@ namespace CentralServer.BridgeServer
 
         public static void RemoveServer(string processCode)
         {
+            if (processCode == null)
+            {
+                return;
+            }
             lock (ServerPool)
             {
                 ServerPool.Remove(processCode);
