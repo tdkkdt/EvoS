@@ -37,18 +37,20 @@ namespace CentralServer.ApiServer
         public static IResult GetStatus()
         {
             List<BridgeServerProtocol> servers = ServerManager.GetServers();
-            Status status = new Status()
+            Status status = new Status
             {
                 players = SessionManager.GetOnlinePlayers()
                     .Select(id => DB.Get().AccountDao.GetAccount(id))
-                    .Select(acc => new Player()
+                    .Select(acc => new Player
                     {
                         accountId = acc.AccountId,
-                        handle = acc.Handle
+                        handle = acc.Handle,
+                        bannerBg = acc.AccountComponent.SelectedBackgroundBannerID,
+                        bannerFg = acc.AccountComponent.SelectedForegroundBannerID,
                     })
                     .ToList(),
                 groups = GroupManager.GetGroups()
-                    .Select(g => new Group()
+                    .Select(g => new Group
                     {
                         accountIds = g.Members,
                         groupId = g.GroupId
@@ -62,7 +64,7 @@ namespace CentralServer.ApiServer
                     })
                     .ToList(),
                 servers = servers
-                    .Select(s => new Server()
+                    .Select(s => new Server
                     {
                         id = s.ID,
                         name = s.Name
@@ -70,7 +72,7 @@ namespace CentralServer.ApiServer
                     .ToList(),
                 games = servers
                     .Where(s => !s.IsAvailable())
-                    .Select(s => new Game()
+                    .Select(s => new Game
                     {
                         id = s.GetGameInfo.GameServerProcessCode,
                         ts = $"{new DateTime(s.GameInfo.CreateTimestamp):yyyy_MM_dd__HH_mm_ss}",
@@ -105,6 +107,8 @@ namespace CentralServer.ApiServer
         {
             public long accountId { get; set; }
             public string handle { get; set; }
+            public int bannerBg { get; set; }
+            public int bannerFg { get; set; }
         }
 
         public struct Group

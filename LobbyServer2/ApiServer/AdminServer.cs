@@ -79,8 +79,7 @@ public class AdminServer
         app.MapPost(EndpointLogin, Login).AllowAnonymous();
         app.MapGet("/api/lobby/status", CommonController.GetStatus).RequireAuthorization("api_readonly");
         app.MapPost("/api/lobby/broadcast",  CommonController.Broadcast).RequireAuthorization("api_admin");
-        app.MapPost("/api/queue/pause", () => CommonController.PauseQueue(true)).RequireAuthorization("api_admin");
-        app.MapPost("/api/queue/unpause", () => CommonController.PauseQueue(false)).RequireAuthorization("api_admin");
+        app.MapPut("/api/queue/paused", CommonController.PauseQueue).RequireAuthorization("api_admin");
         
         app.UseCors();
         app.UseAuthorization();
