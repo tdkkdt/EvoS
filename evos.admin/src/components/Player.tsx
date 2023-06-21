@@ -1,6 +1,7 @@
 import {PlayerData} from "../lib/Evos";
 import {ButtonBase, Typography} from "@mui/material";
 import {BgImage, ImageTextWrapper} from "./BasicComponents";
+import {BannerType, playerBanner} from "../lib/Resources";
 
 interface Props {
     info?: PlayerData;
@@ -34,12 +35,12 @@ function Player({info}: Props) {
                 }}
             >
                 <BgImage style={{
-                    backgroundImage: `url(/banners/Background/95.png)`,
+                    backgroundImage: `url(${playerBanner(BannerType.background, 95)})`,
                 }} />
                 <BgImage style={{
                     marginTop: '-3%',
                     marginLeft: '-3%',
-                    backgroundImage: `url(/banners/Foreground/65.png)`,
+                    backgroundImage: `url(${playerBanner(BannerType.foreground, 65)})`,
                     width: '34%',
                 }} />
                 <ImageTextWrapper>

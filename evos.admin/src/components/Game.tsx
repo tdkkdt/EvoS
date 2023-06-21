@@ -1,6 +1,7 @@
 import {GameData, GamePlayerData, PlayerData} from "../lib/Evos";
 import {Box, ButtonBase, styled, Tooltip, Typography} from "@mui/material";
 import {BgImage, FlexBox} from "./BasicComponents";
+import {characterIcon, mapMiniPic} from "../lib/Resources";
 
 interface Props {
     info: GameData;
@@ -28,7 +29,7 @@ export default function Game({info, playerData}: Props) {
             </TeamFlexBox>
             <Tooltip title={info.map} arrow>
                 <Box flexBasis={120} style={{
-                    backgroundImage: `url(/maps/${info.map}.png)`,
+                    backgroundImage: `url(${mapMiniPic(info.map)})`,
                     backgroundSize: 'cover',
                     borderColor: 'white',
                     borderWidth: 2,
@@ -97,7 +98,7 @@ export function GamePlayer({info, data, isTeamA}: PlayerProps) {
                     }}
                 >
                     <BgImage style={{
-                        backgroundImage: `url(/characters/icons/${info.characterType}.png)`,
+                        backgroundImage: `url(${characterIcon(info.characterType)})`,
                     }} />
                 </div>
             </ButtonBase>
