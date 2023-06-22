@@ -108,10 +108,20 @@ export enum MapType {
     Skyway_Deathmatch = 'Skyway_Deathmatch',
 }
 
-export function getStatus(authHeader: string) {
-    return axios.get<Status>("/api/lobby/status", { headers: {'Authorization': authHeader} });
-}
+const baseUrl = ""
 
 export function login(username: string, password: string) {
-    return axios.post<string>("/api/login", { UserName: username, Password: password });
+    return axios.post<string>(baseUrl + "/api/login", { UserName: username, Password: password });
+}
+
+export function getStatus(authHeader: string) {
+    return axios.get<Status>(baseUrl + "/api/lobby/status", { headers: {'Authorization': authHeader} });
+}
+
+export function pauseQueue(authHeader: string, paused: boolean) {
+    return axios.put(baseUrl + "/api/queue/paused", { Paused: paused }, { headers: {'Authorization': authHeader} });
+}
+
+export function broadcast(authHeader: string, message: string) {
+    return axios.post(baseUrl + "/api/lobby/broadcast", { Msg: message }, { headers: {'Authorization': authHeader} });
 }
