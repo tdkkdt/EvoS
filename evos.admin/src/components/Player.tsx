@@ -43,7 +43,10 @@ function Player({info}: Props) {
                     backgroundImage: info && `url(${playerBanner(BannerType.foreground, info.bannerFg)})`,
                     width: '35%',
                 }} />
-                <ImageTextWrapper>
+                <ImageTextWrapper
+                    style={{
+                        textShadow: '1px 1px black',
+                    }}>
                     <Typography component={'span'} style={{ fontSize: '1em' }}>{username}</Typography>
                     {discriminator && <Typography component={'span'} style={{ fontSize: '0.8em' }}>#{discriminator}</Typography>}
                 </ImageTextWrapper>
