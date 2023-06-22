@@ -12,7 +12,7 @@ interface Props {
 function Queue({info, groupData, playerData}: Props) {
     return <>
         <Typography variant={'h3'}>{info.type}</Typography>
-        <FlexBox style={{ padding: 4 }}>
+        <FlexBox style={{ margin: 4, flexWrap: 'wrap' }}>
             {info.groupIds.map((groupId) => {
                 const info = groupData.get(groupId);
                 return info && <Group key={`group_${groupId}`} info={info} playerData={playerData} />;

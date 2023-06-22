@@ -12,6 +12,7 @@ export const TeamFlexBox = styled(FlexBox)(({ theme }) => ({
     paddingLeft: 20,
     paddingRight: 20,
     width: '40%',
+    flexWrap: 'wrap',
 }));
 
 export default function Game({info, playerData}: Props) {

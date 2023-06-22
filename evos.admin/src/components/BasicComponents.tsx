@@ -28,5 +28,4 @@ export const FlexBox = styled(Box)(({ theme }) => ({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    flexWrap: 'wrap',
 }));

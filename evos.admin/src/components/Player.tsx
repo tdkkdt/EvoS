@@ -45,7 +45,7 @@ function Player({info}: Props) {
                 }} />
                 <ImageTextWrapper
                     style={{
-                        textShadow: '1px 1px black',
+                        textShadow: '1px 1px 2px black, -1px -1px 2px black, 1px -1px 2px black, -1px 1px 2px black',
                     }}>
                     <Typography component={'span'} style={{ fontSize: '1em' }}>{username}</Typography>
                     {discriminator && <Typography component={'span'} style={{ fontSize: '0.8em' }}>#{discriminator}</Typography>}

@@ -6,7 +6,7 @@ import {useAuthHeader} from "react-auth-kit";
 export default function PauseQueue() {
     const authHeader = useAuthHeader();
     return <>
-        <FlexBox style={{ padding: 4 }}>
+        <FlexBox style={{ padding: 4, flexWrap: 'wrap' }}>
             <Button
                 onClick={() => pauseQueue(authHeader(), true)}
                 focusRipple
