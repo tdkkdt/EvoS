@@ -72,6 +72,7 @@ public class AdminServer
         app.Use(async (context, next) =>
         {
             log.Info($"API call: {context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "<anon>"} " +
+                     $"{context.Request.Method} " +
                      $"{context.Request.Path}{(EndpointLogin.Equals(context.Request.Path) ? string.Empty : context.Request.QueryString)}");
             await next.Invoke();
         });
@@ -128,7 +129,7 @@ public class AdminServer
                 new Claim(ClaimTypes.Role, "api_readonly"),
                 new Claim(ClaimTypes.Role, "api_admin"),
             }),
-            Expires = DateTime.UtcNow.AddMinutes(60),
+            Expires = DateTime.UtcNow.AddDays(1),
             Issuer = TokenIssuer,
             Audience = TokenAudience,
             SigningCredentials = new SigningCredentials(Key(EvosConfiguration.GetApiKey()), SecurityAlgorithms.HmacSha512Signature)

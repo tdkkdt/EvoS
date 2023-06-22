@@ -37,6 +37,7 @@ namespace CentralServer.ApiServer
         
         public static IResult Broadcast([FromBody] BroadcastModel data)
         {
+            log.Info($"Broadcast {data.Msg}");
             if (data.Msg.IsNullOrEmpty())
             {
                 return Results.BadRequest();
@@ -52,54 +53,20 @@ namespace CentralServer.ApiServer
             {
                 players = SessionManager.GetOnlinePlayers()
                     .Select(id => DB.Get().AccountDao.GetAccount(id))
-                    .Select(acc => new Player
-                    {
-                        accountId = acc.AccountId,
-                        handle = acc.Handle,
-                        bannerBg = acc.AccountComponent.SelectedBackgroundBannerID,
-                        bannerFg = acc.AccountComponent.SelectedForegroundBannerID,
-                    })
+                    .Select(Player.Of)
                     .ToList(),
                 groups = GroupManager.GetGroups()
-                    .Select(g => new Group
-                    {
-                        accountIds = g.Members,
-                        groupId = g.GroupId
-                    })
+                    .Select(Group.Of)
                     .ToList(),
                 queues = MatchmakingManager.GetQueues()
-                    .Select(q=> new Queue
-                    {
-                        type = q.GameType.ToString(),
-                        groupIds = q.GetQueuesGroups()
-                    })
+                    .Select(Queue.Of)
                     .ToList(),
                 servers = servers
-                    .Select(s => new Server
-                    {
-                        id = s.ID,
-                        name = s.Name
-                    })
+                    .Select(Server.Of)
                     .ToList(),
                 games = servers
                     .Where(s => !s.IsAvailable())
-                    .Select(s => new Game
-                    {
-                        id = s.GetGameInfo.GameServerProcessCode,
-                        ts = $"{new DateTime(s.GameInfo.CreateTimestamp):yyyy_MM_dd__HH_mm_ss}",
-                        map = s.GetGameInfo.GameConfig.Map,
-                        server = s.ID,
-                        teamA = s.GetTeamInfo.TeamAPlayerInfo
-                            .Select(GamePlayer.Of)
-                            .ToList(),
-                        teamB = s.GetTeamInfo.TeamBPlayerInfo
-                            .Select(GamePlayer.Of)
-                            .ToList(),
-                        status = s.GameInfo.GameStatus.ToString(),
-                        turn = s.GameMetrics.CurrentTurn,
-                        teamAScore = s.GameMetrics.TeamAPoints,
-                        teamBScore = s.GameMetrics.TeamBPoints,
-                    })
+                    .Select(Game.Of)
                     .ToList()
             };
             return Results.Json(status);
@@ -120,24 +87,62 @@ namespace CentralServer.ApiServer
             public string handle { get; set; }
             public int bannerBg { get; set; }
             public int bannerFg { get; set; }
+
+            public static Player Of(PersistedAccountData acc)
+            {
+                return new Player
+                {
+                    accountId = acc.AccountId,
+                    handle = acc.Handle,
+                    bannerBg = acc.AccountComponent.SelectedBackgroundBannerID,
+                    bannerFg = acc.AccountComponent.SelectedForegroundBannerID,
+                };
+            }
         }
 
         public struct Group
         {
             public long groupId { get; set; }
             public List<long> accountIds { get; set; }
+
+            public static Group Of(GroupInfo g)
+            {
+                return new Group
+                {
+                    accountIds = g.Members,
+                    groupId = g.GroupId
+                };
+            }
         }
 
         public struct Queue
         {
             public string type { get; set; }
             public List<long> groupIds { get; set; }
+
+            public static Queue Of(MatchmakingQueue q)
+            {
+                return new Queue
+                {
+                    type = q.GameType.ToString(),
+                    groupIds = q.GetQueuesGroups()
+                };
+            }
         }
 
         public struct Server
         {
             public string id { get; set; }
             public string name { get; set; }
+
+            public static Server Of(BridgeServerProtocol s)
+            {
+                return new Server
+                {
+                    id = s.ID,
+                    name = s.Name
+                };
+            }
         }
         
         public struct Game
@@ -152,6 +157,27 @@ namespace CentralServer.ApiServer
             public int turn { get; set; }
             public int teamAScore { get; set; }
             public int teamBScore { get; set; }
+
+            public static Game Of(BridgeServerProtocol s)
+            {
+                return new Game
+                {
+                    id = s.GetGameInfo.GameServerProcessCode,
+                    ts = $"{new DateTime(s.GameInfo.CreateTimestamp):yyyy_MM_dd__HH_mm_ss}",
+                    map = s.GetGameInfo.GameConfig.Map,
+                    server = s.ID,
+                    teamA = s.GetTeamInfo.TeamAPlayerInfo
+                        .Select(GamePlayer.Of)
+                        .ToList(),
+                    teamB = s.GetTeamInfo.TeamBPlayerInfo
+                        .Select(GamePlayer.Of)
+                        .ToList(),
+                    status = s.GameInfo.GameStatus.ToString(),
+                    turn = s.GameMetrics.CurrentTurn,
+                    teamAScore = s.GameMetrics.TeamAPoints,
+                    teamBScore = s.GameMetrics.TeamBPoints,
+                };
+            }
         }
         
         public struct GamePlayer
