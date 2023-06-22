@@ -78,7 +78,7 @@ public class AdminServer
         
         app.MapPost(EndpointLogin, Login).AllowAnonymous();
         app.MapGet("/api/lobby/status", CommonController.GetStatus).RequireAuthorization("api_readonly");
-        app.MapPost("/api/lobby/broadcast",  CommonController.Broadcast).RequireAuthorization("api_admin");
+        app.MapPost("/api/lobby/broadcast", CommonController.Broadcast).RequireAuthorization("api_admin");
         app.MapPut("/api/queue/paused", CommonController.PauseQueue).RequireAuthorization("api_admin");
         
         app.UseCors();
