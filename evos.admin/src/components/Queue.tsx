@@ -7,15 +7,17 @@ interface Props {
     info: QueueData;
     groupData: Map<number, GroupData>;
     playerData: Map<number, PlayerData>;
+    hidePlayers?: Set<number>;
 }
 
-function Queue({info, groupData, playerData}: Props) {
+function Queue({info, groupData, playerData, hidePlayers}: Props) {
     return <>
         <Typography variant={'h3'}>{info.type}</Typography>
         <FlexBox style={{ margin: 4, flexWrap: 'wrap' }}>
             {info.groupIds.map((groupId) => {
                 const info = groupData.get(groupId);
-                return info && <Group key={`group_${groupId}`} info={info} playerData={playerData} />;
+                const hidden = info && hidePlayers && !info.accountIds.some(accId => !hidePlayers.has(accId))
+                return info && !hidden && <Group key={`group_${groupId}`} info={info} playerData={playerData} />;
             })}
         </FlexBox>
     </>;

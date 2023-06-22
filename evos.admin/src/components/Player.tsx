@@ -1,11 +1,23 @@
 import {PlayerData} from "../lib/Evos";
-import {ButtonBase, Typography} from "@mui/material";
-import {BgImage, ImageTextWrapper} from "./BasicComponents";
+import {ButtonBase, styled, Typography} from "@mui/material";
+import {BgImage} from "./BasicComponents";
 import {BannerType, playerBanner} from "../lib/Resources";
+import React from "react";
 
 interface Props {
     info?: PlayerData;
 }
+
+const ImageTextWrapper = styled('span')(({ theme }) => ({
+    position: 'absolute',
+    top: '3%',
+    left: '28%',
+    color: theme.palette.common.white,
+    textAlign: 'left',
+    fontSize: '2.5em',
+    fontStretch: 'condensed',
+    width: '100%',
+}));
 
 function Player({info}: Props) {
     let username = 'UNKNOWN', discriminator;

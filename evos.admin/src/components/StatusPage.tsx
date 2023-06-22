@@ -61,6 +61,9 @@ function StatusPage() {
 
     const queuedGroups = new Set(status?.queues?.flatMap(q => q.groupIds));
     const notQueuedGroups = groups && [...groups.keys()].filter(g => !queuedGroups.has(g));
+    const inGame = games && new Set([...games.values()]
+        .flatMap(g => [...g.teamA, ...g.teamB])
+        .map(t => t.accountId));
 
     return (
         <div className="App">
@@ -69,11 +72,17 @@ function StatusPage() {
                 {status && players && games
                     && status.servers
                         .sort((s1, s2) => s1.name.localeCompare(s2.name))
-                        .map(s => <Server info={s} game={games.get(s.id)} playerData={players}/>)}
+                        .map(s => <Server key={s.id} info={s} game={games.get(s.id)} playerData={players}/>)}
                 {status && groups && players
                     && status.queues.map(q => <Queue key={q.type} info={q} groupData={groups} playerData={players} />)}
-                {notQueuedGroups && groups && players
-                    && <Queue key={'not_queued'} info={{type: "Not queued", groupIds: notQueuedGroups}} groupData={groups} playerData={players} />}
+                {notQueuedGroups && groups && players && inGame
+                    && <Queue
+                        key={'not_queued'}
+                        info={{type: "Not queued", groupIds: notQueuedGroups}}
+                        groupData={groups}
+                        playerData={players}
+                        hidePlayers={inGame}
+                    />}
             </header>
         </div>
     );

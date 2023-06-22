@@ -11,17 +11,6 @@ export const BgImage = styled('span')({
     zIndex: -1000,
 });
 
-export const ImageTextWrapper = styled('span')(({ theme }) => ({
-    position: 'absolute',
-    top: '3%',
-    left: '28%',
-    color: theme.palette.common.white,
-    textAlign: 'left',
-    fontSize: '2.5em',
-    fontStretch: 'condensed',
-    width: '100%',
-}));
-
 export const FlexBox = styled(Box)(({ theme }) => ({
     display: 'inline-flex',
     flexDirection: 'row',
