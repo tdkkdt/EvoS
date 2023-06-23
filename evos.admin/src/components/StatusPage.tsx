@@ -5,10 +5,12 @@ import Queue from "./Queue";
 import {useAuthHeader} from "react-auth-kit";
 import Server from "./Server";
 import {useNavigate} from "react-router-dom";
+import {EvosError, processError} from "../lib/Error";
+import ErrorDialog from "./ErrorDialog";
 
 function StatusPage() {
     const [loading, setLoading] = useState(true);
-    // const [error, setError] = useState<string>();
+    const [error, setError] = useState<EvosError>();
     const [status, setStatus] = useState<Status>();
     const [players, setPlayers] = useState<Map<number, PlayerData>>();
     const [groups, setGroups] = useState<Map<number, GroupData>>();
@@ -21,27 +23,16 @@ function StatusPage() {
         console.log("loading data");
         getStatus(authHeader)
             .then((resp) => {
-                console.log("loaded data");
                 setStatus(resp.data);
                 setLoading(false);
             })
-            .catch((error) => {
-                console.log("failed loading data");
-                if (error.response?.status === 401) {
-                    navigate("/login")
-                }
-                else if (error.response?.status === 404) {
-                    console.log("404");
-                }
-            })
+            .catch((error) => processError(error, setError, navigate))
     }, [authHeader, navigate])
 
     useEffect(() => {
         if (!status) {
-            console.log("no data");
             return;
         }
-        console.log("processing data");
         const _players = status.players.reduce((res, p) => {
             res.set(p.accountId, p);
             return res;
@@ -69,6 +60,7 @@ function StatusPage() {
         <div className="App">
             <header className="App-header">
                 {loading && <LinearProgress />}
+                {error && <ErrorDialog error={error} onDismiss={() => setError(undefined)} />}
                 {status && players && games
                     && status.servers
                         .sort((s1, s2) => s1.name.localeCompare(s2.name))

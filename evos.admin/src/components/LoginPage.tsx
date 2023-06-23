@@ -1,12 +1,15 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {login} from "../lib/Evos";
 import {Box, Button, Container, CssBaseline, TextField, Typography} from "@mui/material";
 import {useSignIn} from "react-auth-kit";
 import {useNavigate} from "react-router-dom";
+import ErrorDialog from "./ErrorDialog";
+import {EvosError, processError} from "../lib/Error";
 
 function LoginPage() {
     const signIn = useSignIn();
     const navigate = useNavigate();
+    const [error, setError] = useState<EvosError>();
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -28,15 +31,14 @@ function LoginPage() {
                 });
                 navigate('/');
             })
-            .catch((error) => {
-                console.log("login failed");
-            })
+            .catch((error) => processError(error, setError, () => setError({text: "Invalid username or password."})))
     };
 
     return (
         <div className="App">
             <header className="App-header">
                 <Container component="main" maxWidth="xs">
+                    {error && <ErrorDialog error={error} onDismiss={() => setError(undefined)} />}
                     <CssBaseline />
                     <Box
                         sx={{

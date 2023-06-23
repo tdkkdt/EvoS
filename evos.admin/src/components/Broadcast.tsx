@@ -1,10 +1,16 @@
-import {Box, Button, TextField} from "@mui/material";
+import {Box, Button, LinearProgress, TextField} from "@mui/material";
 import {broadcast} from "../lib/Evos";
-import React from "react";
+import React, {useState} from "react";
 import {useAuthHeader} from "react-auth-kit";
+import {useNavigate} from "react-router-dom";
+import {processError} from "../lib/Error";
+import BaseDialog from "./BaseDialog";
 
 export default function Broadcast() {
+    const [msg, setMsg] = useState<string>();
+    const [processing, setProcessing] = useState<boolean>();
     const authHeader = useAuthHeader();
+    const navigate = useNavigate();
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -15,11 +21,16 @@ export default function Broadcast() {
             return;
         }
 
-        broadcast(authHeader(), message);
+        setProcessing(true);
+        broadcast(authHeader(), message)
+            .then(() => setMsg("Message sent"))
+            .catch(e => processError(e, err => setMsg(err.text), navigate))
+            .then(() => setProcessing(false));
     };
 
     return <>
         <Box component="form" onSubmit={handleSubmit} noValidate style={{ padding: 4 }}>
+            <BaseDialog title={msg} onDismiss={() => setMsg(undefined)} />
             <TextField
                 margin="normal"
                 required
@@ -30,6 +41,7 @@ export default function Broadcast() {
                 autoFocus
             />
             <Button
+                disabled={processing}
                 type="submit"
                 fullWidth
                 variant="contained"
@@ -37,6 +49,7 @@ export default function Broadcast() {
             >
                 Broadcast
             </Button>
+            {processing && <LinearProgress />}
         </Box>
     </>;
 }
