@@ -71,9 +71,18 @@ public class AdminServer
         
         app.Use(async (context, next) =>
         {
-            log.Info($"API call: {context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "<anon>"} " +
-                     $"{context.Request.Method} " +
-                     $"{context.Request.Path}{(EndpointLogin.Equals(context.Request.Path) ? string.Empty : context.Request.QueryString)}");
+            string msg = $"API call: {context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "<anon>"} " +
+                         $"{context.Request.Method} " +
+                         $"{context.Request.Path}{(EndpointLogin.Equals(context.Request.Path) ? string.Empty : context.Request.QueryString)}";
+
+            if ("OPTIONS".Equals(context.Request.Method.ToUpper()))
+            {
+                log.Debug(msg);
+            }
+            else
+            {
+                log.Info(msg);
+            }
             await next.Invoke();
         });
         
