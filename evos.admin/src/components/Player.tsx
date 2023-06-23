@@ -20,7 +20,7 @@ const ImageTextWrapper = styled('span')(({ theme }) => ({
 }));
 
 function Player({info}: Props) {
-    let username = 'UNKNOWN', discriminator;
+    let username = 'OFFLINE', discriminator;
     if (info) {
         [username, discriminator] = info.handle.split('#', 2)
     }
