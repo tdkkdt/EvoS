@@ -138,7 +138,19 @@ public class AdminServer
         var token = tokenHandler.CreateToken(tokenDescriptor);
         var stringToken = tokenHandler.WriteToken(token);
         log.Info($"{authInfo.UserName} logged in for api access");
-        return Results.Ok(stringToken);
+        return Results.Ok(new LoginResponseModel
+        {
+            handle = account.Handle,
+            token = stringToken,
+            banner = account.AccountComponent.SelectedForegroundBannerID
+        });
+    }
+        
+    public struct LoginResponseModel
+    {
+        public string handle { get; set; }
+        public string token { get; set; }
+        public long banner { get; set; }
     }
     
     public class CustomLogLevelTranslator : ILog4NetLogLevelTranslator
