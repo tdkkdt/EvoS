@@ -1,5 +1,11 @@
 import axios from "axios";
 
+export interface LoginResponse {
+    handle: string;
+    token: string;
+    banner: number;
+}
+
 export interface Status
 {
     players: PlayerData[];
@@ -111,7 +117,7 @@ export enum MapType {
 const baseUrl = ""
 
 export function login(username: string, password: string) {
-    return axios.post<string>(baseUrl + "/api/login", { UserName: username, Password: password });
+    return axios.post<LoginResponse>(baseUrl + "/api/login", { UserName: username, Password: password });
 }
 
 export function getStatus(authHeader: string) {

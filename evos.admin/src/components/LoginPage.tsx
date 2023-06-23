@@ -21,10 +21,10 @@ function LoginPage() {
         login(username, password)
             .then(resp => {
                 signIn({
-                    token: resp.data,
+                    token: resp.data.token,
                     expiresIn: 3600,
                     tokenType: "bearer",
-                    authState: { username: username }
+                    authState: resp.data
                 });
                 navigate('/');
             })

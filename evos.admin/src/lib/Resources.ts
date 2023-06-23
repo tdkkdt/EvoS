@@ -5,6 +5,10 @@ export enum BannerType {
     foreground = "Foreground"
 }
 
+export function logo() {
+    return `/img/logo.png`;
+}
+
 export function playerBanner(type: BannerType, id: number) {
     return `/img/banners/${type}/${id}.png`;
 }
