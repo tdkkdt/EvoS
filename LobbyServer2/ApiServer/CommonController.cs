@@ -162,17 +162,13 @@ namespace CentralServer.ApiServer
             {
                 return new Game
                 {
-                    id = s.GetGameInfo.GameServerProcessCode,
-                    ts = $"{new DateTime(s.GameInfo.CreateTimestamp):yyyy_MM_dd__HH_mm_ss}",
-                    map = s.GetGameInfo.GameConfig.Map,
+                    id = s.GetGameInfo?.GameServerProcessCode,
+                    ts = s.GameInfo != null ? $"{new DateTime(s.GameInfo.CreateTimestamp):yyyy_MM_dd__HH_mm_ss}" : null,
+                    map = s.GetGameInfo?.GameConfig.Map ?? "UNKNOWN",
                     server = s.ID,
-                    teamA = s.GetTeamInfo.TeamAPlayerInfo
-                        .Select(GamePlayer.Of)
-                        .ToList(),
-                    teamB = s.GetTeamInfo.TeamBPlayerInfo
-                        .Select(GamePlayer.Of)
-                        .ToList(),
-                    status = s.GameInfo.GameStatus.ToString(),
+                    teamA = s.GetTeamInfo.TeamAPlayerInfo.Select(GamePlayer.Of).ToList(),
+                    teamB = s.GetTeamInfo.TeamBPlayerInfo.Select(GamePlayer.Of).ToList(),
+                    status = s.GameInfo?.GameStatus.ToString(),
                     turn = s.GameMetrics.CurrentTurn,
                     teamAScore = s.GameMetrics.TeamAPoints,
                     teamBScore = s.GameMetrics.TeamBPoints,
