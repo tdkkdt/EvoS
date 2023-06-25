@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {getStatus, Status} from "../lib/Evos";
 import {LinearProgress} from "@mui/material";
 import Queue from "./Queue";
@@ -7,6 +7,8 @@ import Server from "./Server";
 import {useNavigate} from "react-router-dom";
 import {EvosError, processError} from "../lib/Error";
 import ErrorDialog from "./ErrorDialog";
+import useInterval from "../lib/useInterval";
+import useHasFocus from "../lib/useHasFocus";
 
 function GroupBy<V, K>(key: (item: V) => K, list?: V[]) {
     return list?.reduce((res, p) => {
@@ -14,6 +16,8 @@ function GroupBy<V, K>(key: (item: V) => K, list?: V[]) {
         return res;
     }, new Map<K, V>())
 }
+
+const UPDATE_PERIOD_MS = 20000;
 
 function StatusPage() {
     const [loading, setLoading] = useState(true);
@@ -27,14 +31,16 @@ function StatusPage() {
     const groups = useMemo(() => GroupBy(g => g.groupId, status?.groups), [status]);
     const games = useMemo(() => GroupBy(g => g.server, status?.games), [status]);
 
-    useEffect(() => {
+    const updatePeriodMs = useHasFocus() ? UPDATE_PERIOD_MS : undefined;
+
+    useInterval(() => {
         getStatus(authHeader)
             .then((resp) => {
                 setStatus(resp.data);
                 setLoading(false);
             })
             .catch((error) => processError(error, setError, navigate))
-    }, [authHeader, navigate])
+    }, updatePeriodMs);
 
     const queuedGroups = new Set(status?.queues?.flatMap(q => q.groupIds));
     const notQueuedGroups = groups && [...groups.keys()].filter(g => !queuedGroups.has(g));
