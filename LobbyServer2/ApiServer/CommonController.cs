@@ -169,9 +169,9 @@ namespace CentralServer.ApiServer
                     teamA = s.GetTeamInfo.TeamAPlayerInfo.Select(GamePlayer.Of).ToList(),
                     teamB = s.GetTeamInfo.TeamBPlayerInfo.Select(GamePlayer.Of).ToList(),
                     status = s.GameInfo?.GameStatus.ToString(),
-                    turn = s.GameMetrics.CurrentTurn,
-                    teamAScore = s.GameMetrics.TeamAPoints,
-                    teamBScore = s.GameMetrics.TeamBPoints,
+                    turn = s.GameSummary?.NumOfTurns ?? s.GameMetrics.CurrentTurn,
+                    teamAScore = s.GameSummary?.TeamAPoints ?? s.GameMetrics.TeamAPoints,
+                    teamBScore = s.GameSummary?.TeamBPoints ?? s.GameMetrics.TeamBPoints,
                 };
             }
         }

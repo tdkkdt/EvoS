@@ -39,6 +39,7 @@ namespace CentralServer.BridgeServer
         public bool IsPrivate { get; private set; }
 
         public ServerGameMetrics GameMetrics { get; private set; } = new ServerGameMetrics();
+        public LobbyGameSummary GameSummary { get; private set; }
 
         public LobbyGameInfo GetGameInfo => GameInfo;
 
@@ -136,24 +137,25 @@ namespace CentralServer.BridgeServer
                 GameInfo.GameResult = gameSummary.GameResult;
             }
 
-            log.Info($"Game {GameInfo?.Name} at {gameSummary?.GameServerAddress} finished " +
-                     $"({gameSummary.NumOfTurns} turns), " +
-                     $"{gameSummary.GameResult} {gameSummary.TeamAPoints}-{gameSummary.TeamBPoints}");
+            GameSummary = gameSummary;
+            log.Info($"Game {GameInfo?.Name} at {GameSummary.GameServerAddress} finished " +
+                     $"({GameSummary.NumOfTurns} turns), " +
+                     $"{GameSummary.GameResult} {GameSummary.TeamAPoints}-{GameSummary.TeamBPoints}");
 
             try
             {
-                gameSummary.BadgeAndParticipantsInfo = AccoladeUtils.ProcessGameSummary(gameSummary);
+                GameSummary.BadgeAndParticipantsInfo = AccoladeUtils.ProcessGameSummary(GameSummary);
             }
             catch (Exception ex)
             {
                 log.Error("Failed to process game summary", ex);
             }
             
-            DB.Get().MatchHistoryDao.Save(MatchHistoryDao.MatchEntry.Cons(GameInfo, gameSummary));
+            DB.Get().MatchHistoryDao.Save(MatchHistoryDao.MatchEntry.Cons(GameInfo, GameSummary));
             
             ServerGameStatus = GameStatus.Stopped;
 
-            _ = Orchestrator.FinalizeGame(gameSummary);
+            _ = Orchestrator.FinalizeGame(GameSummary);
         }
 
         private void HandlePlayerDisconnectedNotification(PlayerDisconnectedNotification request)
