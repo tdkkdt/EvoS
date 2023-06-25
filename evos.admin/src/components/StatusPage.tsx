@@ -1,5 +1,5 @@
-import React, {useEffect, useState} from 'react';
-import {GameData, getStatus, GroupData, PlayerData, Status} from "../lib/Evos";
+import React, {useEffect, useMemo, useState} from 'react';
+import {getStatus, Status} from "../lib/Evos";
 import {LinearProgress} from "@mui/material";
 import Queue from "./Queue";
 import {useAuthHeader} from "react-auth-kit";
@@ -8,19 +8,26 @@ import {useNavigate} from "react-router-dom";
 import {EvosError, processError} from "../lib/Error";
 import ErrorDialog from "./ErrorDialog";
 
+function GroupBy<V, K>(key: (item: V) => K, list?: V[]) {
+    return list?.reduce((res, p) => {
+        res.set(key(p), p);
+        return res;
+    }, new Map<K, V>())
+}
+
 function StatusPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<EvosError>();
     const [status, setStatus] = useState<Status>();
-    const [players, setPlayers] = useState<Map<number, PlayerData>>();
-    const [groups, setGroups] = useState<Map<number, GroupData>>();
-    const [games, setGames] = useState<Map<string, GameData>>();
 
     const authHeader = useAuthHeader()();
     const navigate = useNavigate();
 
+    const players = useMemo(() => GroupBy(p => p.accountId, status?.players), [status]);
+    const groups = useMemo(() => GroupBy(g => g.groupId, status?.groups), [status]);
+    const games = useMemo(() => GroupBy(g => g.server, status?.games), [status]);
+
     useEffect(() => {
-        console.log("loading data");
         getStatus(authHeader)
             .then((resp) => {
                 setStatus(resp.data);
@@ -28,27 +35,6 @@ function StatusPage() {
             })
             .catch((error) => processError(error, setError, navigate))
     }, [authHeader, navigate])
-
-    useEffect(() => {
-        if (!status) {
-            return;
-        }
-        const _players = status.players.reduce((res, p) => {
-            res.set(p.accountId, p);
-            return res;
-        }, new Map<number, PlayerData>());
-        setPlayers(_players);
-        const _groups = status.groups.reduce((res, g) => {
-            res.set(g.groupId, g);
-            return res;
-        }, new Map<number, GroupData>());
-        setGroups(_groups);
-        const _games = status.games.reduce((res, g) => {
-            res.set(g.server, g);
-            return res;
-        }, new Map<string, GameData>());
-        setGames(_games);
-    }, [status])
 
     const queuedGroups = new Set(status?.queues?.flatMap(q => q.groupIds));
     const notQueuedGroups = groups && [...groups.keys()].filter(g => !queuedGroups.has(g));
