@@ -1,10 +1,10 @@
 import React, {useState} from 'react';
-import {login} from "../lib/Evos";
+import {login} from "../../lib/Evos";
 import {Box, Button, Container, CssBaseline, TextField, Typography} from "@mui/material";
 import {useSignIn} from "react-auth-kit";
 import {useNavigate} from "react-router-dom";
-import ErrorDialog from "./ErrorDialog";
-import {EvosError, processError} from "../lib/Error";
+import ErrorDialog from "../ErrorDialog";
+import {EvosError, processError} from "../../lib/Error";
 
 function LoginPage() {
     const signIn = useSignIn();

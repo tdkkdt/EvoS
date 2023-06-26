@@ -1,14 +1,14 @@
 import React, {useMemo, useState} from 'react';
-import {getStatus, Status} from "../lib/Evos";
+import {getStatus, Status} from "../../lib/Evos";
 import {LinearProgress} from "@mui/material";
-import Queue from "./Queue";
+import Queue from "../Queue";
 import {useAuthHeader} from "react-auth-kit";
-import Server from "./Server";
+import Server from "../Server";
 import {useNavigate} from "react-router-dom";
-import {EvosError, processError} from "../lib/Error";
-import ErrorDialog from "./ErrorDialog";
-import useInterval from "../lib/useInterval";
-import useHasFocus from "../lib/useHasFocus";
+import {EvosError, processError} from "../../lib/Error";
+import ErrorDialog from "../ErrorDialog";
+import useInterval from "../../lib/useInterval";
+import useHasFocus from "../../lib/useHasFocus";
 
 function GroupBy<V, K>(key: (item: V) => K, list?: V[]) {
     return list?.reduce((res, p) => {

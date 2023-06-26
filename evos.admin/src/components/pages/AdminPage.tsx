@@ -1,6 +1,6 @@
 import React from 'react';
-import PauseQueue from "./PauseQueue";
-import Broadcast from "./Broadcast";
+import PauseQueue from "../PauseQueue";
+import Broadcast from "../Broadcast";
 
 export default function AdminPage() {
     return (

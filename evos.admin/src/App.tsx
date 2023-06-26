@@ -1,10 +1,10 @@
 import React from 'react';
 import './App.css';
-import StatusPage from "./components/StatusPage";
+import StatusPage from "./components/pages/StatusPage";
 import {BrowserRouter, Route, Routes} from "react-router-dom";
-import LoginPage from "./components/LoginPage";
+import LoginPage from "./components/pages/LoginPage";
 import NavBar from "./components/Navbar";
-import AdminPage from "./components/AdminPage";
+import AdminPage from "./components/pages/AdminPage";
 
 function App() {
     return (
