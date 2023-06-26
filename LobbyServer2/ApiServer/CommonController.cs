@@ -9,8 +9,6 @@ using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.Static;
 using log4net;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
 
 namespace CentralServer.ApiServer
 {
@@ -18,33 +16,6 @@ namespace CentralServer.ApiServer
     public static class CommonController
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(CommonController));
-        
-        public class PauseQueueModel
-        {
-            public bool Paused { get; set; }
-        }
-        
-        public static IResult PauseQueue([FromBody] PauseQueueModel data)
-        {
-            MatchmakingManager.Enabled = !data.Paused;
-            return Results.Ok();
-        }
-
-        public class BroadcastModel
-        {
-            public string Msg { get; set; }
-        }
-        
-        public static IResult Broadcast([FromBody] BroadcastModel data)
-        {
-            log.Info($"Broadcast {data.Msg}");
-            if (data.Msg.IsNullOrEmpty())
-            {
-                return Results.BadRequest();
-            }
-            SessionManager.Broadcast(data.Msg);
-            return Results.Ok();
-        }
         
         public static IResult GetStatus()
         {

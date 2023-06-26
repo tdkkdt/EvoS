@@ -29,13 +29,13 @@ namespace EvoS.Framework.Network.Static
             };
         }
 
-        public bool Locked { get; set; }
+        public bool Locked { get; private set; }
 
-        public DateTime LockedUntil { get; set; }
+        public DateTime LockedUntil { get; private set; }
 
-        public bool Muted { get; set; }
+        public bool Muted { get; private set; }
 
-        public DateTime MutedUntil { get; set; }
+        public DateTime MutedUntil { get; private set; }
 
         public bool Online { get; set; }
 
@@ -103,6 +103,21 @@ namespace EvoS.Framework.Network.Static
             public string Description { get; set; }
 
             public DateTime Time { get; set; }
+        }
+
+        public void Mute(TimeSpan duration, string adminUsername, string description)
+        {
+            DateTime time = DateTime.UtcNow;
+            AdminActions.Add(new AdminActionRecord
+            {
+                AdminUsername = adminUsername,
+                ActionType = AdminActionType.Mute,
+                Duration = duration,
+                Description = description,
+                Time = time,
+            });
+            MutedUntil = time + duration;
+            Muted = true;
         }
 
         public class LoginStats

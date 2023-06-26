@@ -71,25 +71,17 @@ public class AdminServer
         
         app.Use(async (context, next) =>
         {
-            string msg = $"API call: {context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "<anon>"} " +
-                         $"{context.Request.Method} " +
-                         $"{context.Request.Path}{(EndpointLogin.Equals(context.Request.Path) ? string.Empty : context.Request.QueryString)}";
-
-            if ("OPTIONS".Equals(context.Request.Method.ToUpper()))
-            {
-                log.Debug(msg);
-            }
-            else
-            {
-                log.Info(msg);
-            }
+            log.Debug($"API call: {context.User.FindFirstValue(ClaimTypes.Name) ?? "<anon>"} " +
+                      $"{context.Request.Method} " +
+                      $"{context.Request.Path}{(EndpointLogin.Equals(context.Request.Path) ? string.Empty : context.Request.QueryString)}");
             await next.Invoke();
         });
         
         app.MapPost(EndpointLogin, Login).AllowAnonymous();
         app.MapGet("/api/lobby/status", CommonController.GetStatus).RequireAuthorization("api_readonly");
-        app.MapPost("/api/lobby/broadcast", CommonController.Broadcast).RequireAuthorization("api_admin");
-        app.MapPut("/api/queue/paused", CommonController.PauseQueue).RequireAuthorization("api_admin");
+        app.MapPost("/api/lobby/broadcast", AdminController.Broadcast).RequireAuthorization("api_admin");
+        app.MapPut("/api/queue/paused", AdminController.PauseQueue).RequireAuthorization("api_admin");
+        app.MapPost("/api/player/muted", AdminController.MuteUser).RequireAuthorization("api_admin");
         
         app.UseCors();
         app.UseAuthorization();
@@ -133,8 +125,8 @@ public class AdminServer
         {
             Subject = new ClaimsIdentity(new[]
             {
-                new Claim("AccountId", accountId.ToString()),
-                new Claim(JwtRegisteredClaimNames.Sub, account.UserName),
+                new Claim(JwtRegisteredClaimNames.UniqueName, account.Handle),
+                new Claim(JwtRegisteredClaimNames.Sub, accountId.ToString()),
                 new Claim(ClaimTypes.Role, "api_readonly"),
                 new Claim(ClaimTypes.Role, "api_admin"),
             }),
