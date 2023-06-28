@@ -23,6 +23,10 @@ export interface PlayerData
     bannerFg: number;
 }
 
+export interface PlayerDetails {
+    player: PlayerData;
+}
+
 export interface GroupData
 {
     groupId: number;
@@ -58,6 +62,12 @@ export interface GameData
 export interface GamePlayerData {
     accountId: number;
     characterType: CharacterType;
+}
+
+export interface PenaltyInfo {
+    accountId: number;
+    durationMinutes: number;
+    description: string
 }
 
 export enum CharacterType {
@@ -124,10 +134,30 @@ export function getStatus(authHeader: string) {
     return axios.get<Status>(baseUrl + "/api/lobby/status", { headers: {'Authorization': authHeader} });
 }
 
+export function getPlayer(authHeader: string, accountId: number) {
+    return axios.get<PlayerDetails>(
+        baseUrl + "/api/player/details",
+        { params: { AccountId: accountId }, headers: {'Authorization': authHeader} });
+}
+
 export function pauseQueue(authHeader: string, paused: boolean) {
     return axios.put(baseUrl + "/api/queue/paused", { Paused: paused }, { headers: {'Authorization': authHeader} });
 }
 
 export function broadcast(authHeader: string, message: string) {
     return axios.post(baseUrl + "/api/lobby/broadcast", { Msg: message }, { headers: {'Authorization': authHeader} });
+}
+
+export function mute(authHeader: string, penaltyInfo: PenaltyInfo) {
+    return axios.post(
+        baseUrl + "/api/player/muted",
+        penaltyInfo,
+        { headers: {'Authorization': authHeader} });
+}
+
+export function ban(authHeader: string, penaltyInfo: PenaltyInfo) {
+    return axios.post(
+        baseUrl + "/api/player/banned",
+        penaltyInfo,
+        { headers: {'Authorization': authHeader} });
 }

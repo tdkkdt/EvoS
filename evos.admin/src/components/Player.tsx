@@ -3,6 +3,7 @@ import {ButtonBase, styled, Typography} from "@mui/material";
 import {BgImage} from "./BasicComponents";
 import {BannerType, playerBanner} from "../lib/Resources";
 import React from "react";
+import {useNavigate} from "react-router-dom";
 
 interface Props {
     info?: PlayerData;
@@ -25,10 +26,20 @@ function Player({info}: Props) {
         [username, discriminator] = info.handle.split('#', 2)
     }
 
+    const navigate = useNavigate();
+
+    const handleClick = () => {
+        if (!info) {
+            return;
+        }
+        navigate(`/account/${info.accountId}`);
+    }
+
     return <>
-        <ButtonBase
+       <ButtonBase
             focusRipple
             key={info?.handle}
+            onClick={handleClick}
             style={{
                 width: 240,
                 height: 52,
