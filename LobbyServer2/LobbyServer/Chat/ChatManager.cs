@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Session;
 using EvoS.DirectoryServer.Inventory;
@@ -19,7 +18,7 @@ namespace CentralServer.LobbyServer.Chat
         private static ChatManager _instance;
 
         public event Action<ChatNotification> OnGlobalChatMessage = delegate {};
-        public event Action<ChatNotification> OnChatMessage = delegate {};
+        public event Action<ChatNotification, bool> OnChatMessage = delegate {};
 
         public static ChatManager Get()
         {
@@ -54,6 +53,9 @@ namespace CentralServer.LobbyServer.Chat
         public void HandleChatNotification(LobbyServerProtocol conn, ChatNotification notification)
         {
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(conn.AccountId);
+            bool isMuted = account.AdminComponent.Muted
+                           && notification.ConsoleMessageType != ConsoleMessageType.WhisperChat
+                           && notification.ConsoleMessageType != ConsoleMessageType.GroupChat;
             ChatNotification message = new ChatNotification
             {
                 SenderAccountId = conn.AccountId,
@@ -85,11 +87,14 @@ namespace CentralServer.LobbyServer.Chat
             {
                 case ConsoleMessageType.GlobalChat:
                 {
-                    foreach (long player in SessionManager.GetOnlinePlayers())
+                    if (!isMuted)
                     {
-                        SendMessageToPlayer(player, message);
+                        foreach (long player in SessionManager.GetOnlinePlayers())
+                        {
+                            SendMessageToPlayer(player, message);
+                        }
+                        OnGlobalChatMessage(message);
                     }
-                    OnGlobalChatMessage(message);
                     break;
                 }
                 case ConsoleMessageType.WhisperChat:
@@ -114,9 +119,12 @@ namespace CentralServer.LobbyServer.Chat
                         log.Warn($"{conn.AccountId} {account.Handle} attempted to use {notification.ConsoleMessageType} while not in game");
                         break;
                     }
-                    foreach (long accountId in conn.CurrentServer.GetPlayers())
+                    if (!isMuted)
                     {
-                        SendMessageToPlayer(accountId, message);
+                        foreach (long accountId in conn.CurrentServer.GetPlayers())
+                        {
+                            SendMessageToPlayer(accountId, message);
+                        }
                     }
                     break;
                 }
@@ -147,9 +155,13 @@ namespace CentralServer.LobbyServer.Chat
                                   $"but they are not in the game they are supposed to be in");
                         break;
                     }
-                    foreach (long teammateAccountId in conn.CurrentServer.GetPlayers(lobbyServerPlayerInfo.TeamId))
+
+                    if (!isMuted)
                     {
-                        SendMessageToPlayer(teammateAccountId, message);
+                        foreach (long teammateAccountId in conn.CurrentServer.GetPlayers(lobbyServerPlayerInfo.TeamId))
+                        {
+                            SendMessageToPlayer(teammateAccountId, message);
+                        }
                     }
                     break;
                 }
@@ -161,7 +173,7 @@ namespace CentralServer.LobbyServer.Chat
                 }
             }
 
-            OnChatMessage(message);
+            OnChatMessage(message, isMuted);
         }
 
         public void HandleGroupChatRequest(LobbyServerProtocol conn, GroupChatRequest request)
@@ -190,7 +202,7 @@ namespace CentralServer.LobbyServer.Chat
                 SendMessageToPlayer(accountID, message);
             }
 
-            OnChatMessage(message);
+            OnChatMessage(message, false);
         }
 
         private void SendMessageToPlayer(long player, ChatNotification message)

@@ -218,12 +218,12 @@ namespace CentralServer.LobbyServer.Discord
             }
         }
 
-        private void SendChatMessageAuditAsync(ChatNotification notification)
+        private void SendChatMessageAuditAsync(ChatNotification notification, bool isMuted)
         {
-            _ = SendChatMessageAudit(notification);
+            _ = SendChatMessageAudit(notification, isMuted);
         }
 
-        private async Task SendChatMessageAudit(ChatNotification notification)
+        private async Task SendChatMessageAudit(ChatNotification notification, bool isMuted)
         {
             if (adminChannel == null || !conf.AdminEnableChatAudit)
             {
@@ -241,7 +241,7 @@ namespace CentralServer.LobbyServer.Discord
                             ? $"to {DiscordLobbyUtils.FormatMessageRecipients(notification.SenderAccountId, recipients)}"
                             : fallback,
                         Color = DiscordLobbyUtils.GetColor(notification.ConsoleMessageType),
-                        Footer = new EmbedFooterBuilder { Text = context }
+                        Footer = new EmbedFooterBuilder { Text = isMuted ? $"MUTED ({context})" : context }
                     }.Build() },
                     threadIdOverride: conf.AdminChatAuditThreadId);
             }

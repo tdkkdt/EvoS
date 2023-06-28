@@ -81,17 +81,16 @@ namespace CentralServer.LobbyServer
             response.Success = false;
             response.ErrorMessage = message;
             response.ResponseId = requestId;
-            log.Error(message);
+            log.Info($"Sending error response: {message}");
             Send(response);
         }
 
-        public void SendErrorResponse(WebSocketResponseMessage response, int requestId, Exception error)
+        public void SendErrorResponse(WebSocketResponseMessage response, int requestId, Exception error = null)
         {
             response.Success = false;
-            response.ErrorMessage = error.Message;
+            response.ErrorMessage = error?.Message;
             response.ResponseId = requestId;
-            log.Error(error.Message);
-            Console.WriteLine(error);
+            log.Info("Sending error response", error);
             Send(response);
         }
 

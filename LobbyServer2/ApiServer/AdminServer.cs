@@ -81,7 +81,9 @@ public class AdminServer
         app.MapGet("/api/lobby/status", CommonController.GetStatus).RequireAuthorization("api_readonly");
         app.MapPost("/api/lobby/broadcast", AdminController.Broadcast).RequireAuthorization("api_admin");
         app.MapPut("/api/queue/paused", AdminController.PauseQueue).RequireAuthorization("api_admin");
+        app.MapGet("/api/player/details", AdminController.GetUser).RequireAuthorization("api_admin");
         app.MapPost("/api/player/muted", AdminController.MuteUser).RequireAuthorization("api_admin");
+        app.MapPost("/api/player/banned", AdminController.BanUser).RequireAuthorization("api_admin");
         
         app.UseCors();
         app.UseAuthorization();

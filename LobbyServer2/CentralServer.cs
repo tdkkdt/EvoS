@@ -28,6 +28,7 @@ namespace CentralServer
 
             ChatManager.Get(); // TODO Dependency injection
             await DiscordManager.Get().Start();
+            AdminManager.Get().Start();
             
             server.Start();
             log.Info($"Started lobby server on port {port}");

@@ -1,5 +1,6 @@
 using System;
 using System.Security.Claims;
+using CentralServer.LobbyServer;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
 using EvoS.Framework.DataAccess;
@@ -41,6 +42,30 @@ namespace CentralServer.ApiServer
             SessionManager.Broadcast(data.Msg);
             return Results.Ok();
         }
+
+        public struct PlayerDetails
+        {
+            public CommonController.Player player { get; set; }
+
+            public static PlayerDetails Of(PersistedAccountData acc)
+            {
+                return new PlayerDetails
+                {
+                    player = CommonController.Player.Of(acc)
+                };
+            }
+        }
+
+        public static IResult GetUser(long accountId)
+        {
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
+            if (account == null)
+            {
+                return Results.NotFound();
+            }
+
+            return Results.Json(PlayerDetails.Of(account));
+        }
         
         public class UserModel
         {
@@ -51,25 +76,65 @@ namespace CentralServer.ApiServer
         
         public static IResult MuteUser([FromBody] UserModel data, ClaimsPrincipal user)
         {
-            if (data.DurationMinutes <= 0)
+            if (!Validate(data, user, out IResult error, out PersistedAccountData account, out long adminAccountId, out string adminHandle))
             {
-                return Results.BadRequest();
+                return error;
             }
-            string adminHandle = user.FindFirstValue(ClaimTypes.Name);
-            if (adminHandle == null || !long.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out long adminAccountId))
+
+            string logString = data.DurationMinutes > 0
+                ? $"MUTE {account.Handle} for {TimeSpan.FromMinutes(data.DurationMinutes)}"
+                : $"UNMUTE {account.Handle}";
+            log.Info($"API {logString} by {adminHandle} ({adminAccountId}): {data.Description}");
+            bool success = AdminManager.Get().Mute(data.AccountId, TimeSpan.FromMinutes(data.DurationMinutes), adminHandle, data.Description);
+            return success ? Results.Ok() : Results.Problem();
+        }
+        
+        public static IResult BanUser([FromBody] UserModel data, ClaimsPrincipal user)
+        {
+            if (!Validate(data, user, out IResult error, out PersistedAccountData account, out long adminAccountId, out string adminHandle))
             {
-                return Results.Unauthorized();
+                return error;
             }
-            PersistedAccountData account = DB.Get().AccountDao.GetAccount(data.AccountId);
+
+            string logString = data.DurationMinutes > 0
+                ? $"BAN {account.Handle} for {TimeSpan.FromMinutes(data.DurationMinutes)}"
+                : $"UNBAN {account.Handle}";
+            log.Info($"API {logString} by {adminHandle} ({adminAccountId}): {data.Description}");
+            bool success = AdminManager.Get().Ban(data.AccountId, TimeSpan.FromMinutes(data.DurationMinutes), adminHandle, data.Description);
+            return success ? Results.Ok() : Results.Problem();
+        }
+
+        private static bool Validate(
+            UserModel data,
+            ClaimsPrincipal user,
+            out IResult error,
+            out PersistedAccountData account,
+            out long adminAccountId,
+            out string adminHandle)
+        {
+            error = null;
+            account = null;
+            adminAccountId = 0;
+            adminHandle = null;
+            if (data.DurationMinutes < 0)
+            {
+                error = Results.BadRequest();
+                return false;
+            }
+            adminHandle = user.FindFirstValue(ClaimTypes.Name);
+            if (adminHandle == null || !long.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out adminAccountId))
+            {
+                error = Results.Unauthorized();
+                return false;
+            }
+            account = DB.Get().AccountDao.GetAccount(data.AccountId);
             if (account == null)
             {
-                return Results.NotFound();
+                error = Results.NotFound();
+                return false;
             }
-            
-            log.Info($"MUTE {account.Handle} for {TimeSpan.FromMinutes(data.DurationMinutes)} by {adminHandle} ({adminAccountId}): {data.Description}");
-            account.AdminComponent.Mute(TimeSpan.FromMinutes(data.DurationMinutes), adminHandle, data.Description);
-            DB.Get().AccountDao.UpdateAccount(account);
-            return Results.Ok();
+
+            return true;
         }
     }
 }

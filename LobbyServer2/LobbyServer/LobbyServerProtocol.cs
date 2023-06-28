@@ -14,6 +14,7 @@ using EvoS.DirectoryServer.Inventory;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
+using EvoS.Framework.Exceptions;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using log4net;
@@ -307,16 +308,16 @@ namespace CentralServer.LobbyServer
 
         public void HandleRegisterGame(RegisterGameClientRequest request)
         {
+            if (request == null)
+            {
+                SendErrorResponse(new RegisterGameClientResponse(), 0, Messages.LoginFailed);
+                WebSocket.Close();
+                return;
+            }
+            
             try
             {
                 SessionManager.OnPlayerConnect(this, request);
-
-                if (request == null)
-                {
-                    SendErrorResponse(new RegisterGameClientResponse(), request.RequestId, Messages.LoginFailed);
-                    WebSocket.Close();
-                    return;
-                }
                 
                 log.Info(string.Format(Messages.LoginSuccess, this.UserName));
                 LobbySessionInfo sessionInfo = SessionManager.GetSessionInfo(request.SessionInfo.AccountId);
@@ -355,10 +356,18 @@ namespace CentralServer.LobbyServer
                     }
                 }
             }
-            catch (Exception e)
+            catch (RegisterGameException e)
             {
                 SendErrorResponse(new RegisterGameClientResponse(), request.RequestId, e);
                 WebSocket.Close();
+                return;
+            }
+            catch (Exception e)
+            {
+                SendErrorResponse(new RegisterGameClientResponse(), request.RequestId);
+                log.Error("Exception while registering game client", e);
+                WebSocket.Close();
+                return;
             }
             BroadcastRefreshFriendList();
         }

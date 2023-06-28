@@ -68,6 +68,12 @@ namespace CentralServer.LobbyServer.Session
                 long accountId = sessionInfo.AccountId;
             
                 PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
+                
+                AdminManager.Get().UpdateBanned(accountId);
+                if (account.AdminComponent.Locked)
+                {
+                    throw new RegisterGameException("This account is temporarily banned. Please, try again later.");
+                }
 
                 client.AccountId = account.AccountId;
                 client.UserName = account.UserName;
