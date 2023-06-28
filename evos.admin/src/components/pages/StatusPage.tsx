@@ -49,26 +49,24 @@ function StatusPage() {
         .map(t => t.accountId));
 
     return (
-        <div className="App">
-            <header className="App-header">
-                {loading && <LinearProgress />}
-                {error && <ErrorDialog error={error} onDismiss={() => setError(undefined)} />}
-                {status && players && games
-                    && status.servers
-                        .sort((s1, s2) => s1.name.localeCompare(s2.name))
-                        .map(s => <Server key={s.id} info={s} game={games.get(s.id)} playerData={players}/>)}
-                {status && groups && players
-                    && status.queues.map(q => <Queue key={q.type} info={q} groupData={groups} playerData={players} />)}
-                {notQueuedGroups && groups && players && inGame
-                    && <Queue
-                        key={'not_queued'}
-                        info={{type: "Not queued", groupIds: notQueuedGroups}}
-                        groupData={groups}
-                        playerData={players}
-                        hidePlayers={inGame}
-                    />}
-            </header>
-        </div>
+        <>
+            {loading && <LinearProgress />}
+            {error && <ErrorDialog error={error} onDismiss={() => setError(undefined)} />}
+            {status && players && games
+                && status.servers
+                    .sort((s1, s2) => s1.name.localeCompare(s2.name))
+                    .map(s => <Server key={s.id} info={s} game={games.get(s.id)} playerData={players}/>)}
+            {status && groups && players
+                && status.queues.map(q => <Queue key={q.type} info={q} groupData={groups} playerData={players} />)}
+            {notQueuedGroups && groups && players && inGame
+                && <Queue
+                    key={'not_queued'}
+                    info={{type: "Not queued", groupIds: notQueuedGroups}}
+                    groupData={groups}
+                    playerData={players}
+                    hidePlayers={inGame}
+                />}
+        </>
     );
 }
 

@@ -1,4 +1,4 @@
-import {Box, styled} from "@mui/material";
+import {Box, Card, Stack, styled} from "@mui/material";
 
 export const BgImage = styled('span')({
     position: 'absolute',
@@ -17,4 +17,15 @@ export const FlexBox = styled(Box)(({ theme }) => ({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
+}));
+
+export const EvosCard = styled(Card)(({ theme }) => ({
+    margin: 4,
+    padding: 8,
+    maxWidth: theme.size.basicWidth,
+}));
+
+export const StackWrapper = styled(Stack)(({theme}) => ({
+    margin: 'auto',
+    maxWidth: theme.size.basicWidth,
 }));

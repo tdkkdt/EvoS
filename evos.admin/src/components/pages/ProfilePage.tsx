@@ -4,9 +4,10 @@ import {EvosError, processError} from "../../lib/Error";
 import {useAuthHeader} from "react-auth-kit";
 import {useNavigate, useParams} from "react-router-dom";
 import Player from "../Player";
-import {LinearProgress, Stack} from "@mui/material";
+import {LinearProgress, Paper} from "@mui/material";
 import ErrorDialog from "../ErrorDialog";
 import MuteBanPlayer from "../MuteBanPlayer";
+import {EvosCard, StackWrapper} from "../BasicComponents";
 
 
 export default function ProfilePage() {
@@ -16,13 +17,11 @@ export default function ProfilePage() {
 
     const {accountId} = useParams();
     const accountIdNumber = accountId && parseInt(accountId);
-    console.log('load', accountId);
 
     const authHeader = useAuthHeader()();
     const navigate = useNavigate();
 
     useEffect(() => {
-        console.log('useEffect', accountIdNumber);
         if (!accountIdNumber) return;
         setLoading(true);
         getPlayer(authHeader, accountIdNumber)
@@ -34,28 +33,26 @@ export default function ProfilePage() {
     }, [accountIdNumber, authHeader, navigate, setPlayerDetails]);
 
     return (
-        <div className="App">
-            <header className="App-header">
-                {error && <ErrorDialog error={error} onDismiss={() => setError(undefined)} />}
-                <Stack>
-                    <Player info={playerDetails?.player} />
-                    {loading && <LinearProgress />}
-                    <MuteBanPlayer
-                        disabled={loading}
-                        accountId={playerDetails?.player.accountId ?? 0}
-                        action={mute}
-                        actionText={"Mute"}
-                        doneText={`${playerDetails?.player.handle ?? "Nobody"} is muted`}
-                    />
-                    <MuteBanPlayer
-                        disabled={loading}
-                        accountId={playerDetails?.player.accountId ?? 0}
-                        action={ban}
-                        actionText={"Ban"}
-                        doneText={`${playerDetails?.player.handle ?? "Nobody"} is banned`}
-                    />
-                </Stack>
-            </header>
-        </div>
+        <Paper>
+            {error && <ErrorDialog error={error} onDismiss={() => setError(undefined)} />}
+            <StackWrapper>
+                <EvosCard variant="outlined"><Player info={playerDetails?.player} /></EvosCard>
+                {loading && <LinearProgress />}
+                <MuteBanPlayer
+                    disabled={loading}
+                    accountId={playerDetails?.player.accountId ?? 0}
+                    action={mute}
+                    actionText={"Mute"}
+                    doneText={`${playerDetails?.player.handle ?? "Nobody"} has been muted`}
+                />
+                <MuteBanPlayer
+                    disabled={loading}
+                    accountId={playerDetails?.player.accountId ?? 0}
+                    action={ban}
+                    actionText={"Ban"}
+                    doneText={`${playerDetails?.player.handle ?? "Nobody"} has been banned`}
+                />
+            </StackWrapper>
+        </Paper>
     );
 }

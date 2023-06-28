@@ -1,14 +1,17 @@
 import React from 'react';
 import PauseQueue from "../PauseQueue";
 import Broadcast from "../Broadcast";
+import {EvosCard, StackWrapper} from "../BasicComponents";
 
 export default function AdminPage() {
     return (
-        <div className="App">
-            <header className="App-header">
+        <StackWrapper>
+            <EvosCard variant="outlined">
                 <PauseQueue />
+            </EvosCard>
+            <EvosCard variant="outlined">
                 <Broadcast />
-            </header>
-        </div>
+            </EvosCard>
+        </StackWrapper>
     );
 }
