@@ -1,7 +1,7 @@
 import React, {useEffect} from 'react';
 import './App.css';
 import StatusPage from "./components/pages/StatusPage";
-import {BrowserRouter, Route, Routes} from "react-router-dom";
+import {BrowserRouter, Route, RouteProps, Routes} from "react-router-dom";
 import LoginPage from "./components/pages/LoginPage";
 import NavBar from "./components/Navbar";
 import AdminPage from "./components/pages/AdminPage";
@@ -75,6 +75,10 @@ function Page(props: PageProps) {
     return <>{props.children}</>;
 }
 
+const page = (title: string, content: React.ReactNode) => {
+    return <Page title={title}>{content}</Page>;
+}
+
 function App() {
     return (
         <ThemeProvider theme={theme}>
@@ -88,10 +92,10 @@ function App() {
                     borderTopRightRadius: 0,
                 }}>
                     <Routes>
-                        <Route path="/" element={<Page title={"Lobby status"}><StatusPage/></Page>}/>
-                        <Route path="/login" element={<Page title={"Atlas Reactor: Login"}><LoginPage/></Page>}/>
-                        <Route path="/admin" element={<Page title={"Admin panel"}><AdminPage/></Page>}/>
-                        <Route path="/account/:accountId" element={<Page title={"Account"}><ProfilePage/></Page>}/>
+                        <Route path="/" element={page("Lobby status", <StatusPage/>)}/>
+                        <Route path="/login" element={page("Atlas Reactor: Login", <LoginPage/>)}/>
+                        <Route path="/admin" element={page("Admin panel", <AdminPage/>)}/>
+                        <Route path="/account/:accountId" element={page("Account", <ProfilePage/>)}/>
                     </Routes>
                 </Paper>
             </BrowserRouter>
