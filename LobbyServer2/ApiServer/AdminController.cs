@@ -67,45 +67,45 @@ namespace CentralServer.ApiServer
             return Results.Json(PlayerDetails.Of(account));
         }
         
-        public class UserModel
+        public class PenaltyInfo
         {
-            public long AccountId { get; set; }
-            public int DurationMinutes { get; set; }
-            public string Description { get; set; }
+            public long accountId { get; set; }
+            public int durationMinutes { get; set; }
+            public string description { get; set; }
         }
         
-        public static IResult MuteUser([FromBody] UserModel data, ClaimsPrincipal user)
+        public static IResult MuteUser([FromBody] PenaltyInfo data, ClaimsPrincipal user)
         {
             if (!Validate(data, user, out IResult error, out PersistedAccountData account, out long adminAccountId, out string adminHandle))
             {
                 return error;
             }
 
-            string logString = data.DurationMinutes > 0
-                ? $"MUTE {account.Handle} for {TimeSpan.FromMinutes(data.DurationMinutes)}"
+            string logString = data.durationMinutes > 0
+                ? $"MUTE {account.Handle} for {TimeSpan.FromMinutes(data.durationMinutes)}"
                 : $"UNMUTE {account.Handle}";
-            log.Info($"API {logString} by {adminHandle} ({adminAccountId}): {data.Description}");
-            bool success = AdminManager.Get().Mute(data.AccountId, TimeSpan.FromMinutes(data.DurationMinutes), adminHandle, data.Description);
+            log.Info($"API {logString} by {adminHandle} ({adminAccountId}): {data.description}");
+            bool success = AdminManager.Get().Mute(data.accountId, TimeSpan.FromMinutes(data.durationMinutes), adminHandle, data.description);
             return success ? Results.Ok() : Results.Problem();
         }
         
-        public static IResult BanUser([FromBody] UserModel data, ClaimsPrincipal user)
+        public static IResult BanUser([FromBody] PenaltyInfo data, ClaimsPrincipal user)
         {
             if (!Validate(data, user, out IResult error, out PersistedAccountData account, out long adminAccountId, out string adminHandle))
             {
                 return error;
             }
 
-            string logString = data.DurationMinutes > 0
-                ? $"BAN {account.Handle} for {TimeSpan.FromMinutes(data.DurationMinutes)}"
+            string logString = data.durationMinutes > 0
+                ? $"BAN {account.Handle} for {TimeSpan.FromMinutes(data.durationMinutes)}"
                 : $"UNBAN {account.Handle}";
-            log.Info($"API {logString} by {adminHandle} ({adminAccountId}): {data.Description}");
-            bool success = AdminManager.Get().Ban(data.AccountId, TimeSpan.FromMinutes(data.DurationMinutes), adminHandle, data.Description);
+            log.Info($"API {logString} by {adminHandle} ({adminAccountId}): {data.description}");
+            bool success = AdminManager.Get().Ban(data.accountId, TimeSpan.FromMinutes(data.durationMinutes), adminHandle, data.description);
             return success ? Results.Ok() : Results.Problem();
         }
 
         private static bool Validate(
-            UserModel data,
+            PenaltyInfo data,
             ClaimsPrincipal user,
             out IResult error,
             out PersistedAccountData account,
@@ -116,7 +116,7 @@ namespace CentralServer.ApiServer
             account = null;
             adminAccountId = 0;
             adminHandle = null;
-            if (data.DurationMinutes < 0)
+            if (data.durationMinutes < 0)
             {
                 error = Results.BadRequest();
                 return false;
@@ -127,7 +127,7 @@ namespace CentralServer.ApiServer
                 error = Results.Unauthorized();
                 return false;
             }
-            account = DB.Get().AccountDao.GetAccount(data.AccountId);
+            account = DB.Get().AccountDao.GetAccount(data.accountId);
             if (account == null)
             {
                 error = Results.NotFound();
