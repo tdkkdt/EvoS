@@ -76,6 +76,7 @@ public class AdminServer
                       $"{context.Request.Path}{(EndpointLogin.Equals(context.Request.Path) ? string.Empty : context.Request.QueryString)}");
             await next.Invoke();
         });
+        app.UseMiddleware<AdminAuthMiddleware>();
         
         app.MapPost(EndpointLogin, Login).AllowAnonymous();
         app.MapGet("/api/lobby/status", CommonController.GetStatus).RequireAuthorization("api_readonly");
@@ -129,8 +130,6 @@ public class AdminServer
             {
                 new Claim(JwtRegisteredClaimNames.UniqueName, account.Handle),
                 new Claim(JwtRegisteredClaimNames.Sub, accountId.ToString()),
-                new Claim(ClaimTypes.Role, "api_readonly"),
-                new Claim(ClaimTypes.Role, "api_admin"),
             }),
             Expires = DateTime.UtcNow.AddDays(1),
             Issuer = TokenIssuer,
