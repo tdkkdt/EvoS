@@ -31,7 +31,7 @@ function StatusPage() {
     const groups = useMemo(() => GroupBy(g => g.groupId, status?.groups), [status]);
     const games = useMemo(() => GroupBy(g => g.server, status?.games), [status]);
 
-    const updatePeriodMs = useHasFocus() ? UPDATE_PERIOD_MS : undefined;
+    const updatePeriodMs = useHasFocus() || !status ? UPDATE_PERIOD_MS : undefined;
 
     useInterval(() => {
         getStatus(authHeader)
