@@ -27,6 +27,7 @@ export default function ProfilePage() {
         getPlayer(authHeader, accountIdNumber)
             .then((resp) => {
                 setPlayerDetails(resp.data);
+                document.title = `Account ${resp.data.player.handle}`;
                 setLoading(false);
             })
             .catch((error) => processError(error, setError, navigate))

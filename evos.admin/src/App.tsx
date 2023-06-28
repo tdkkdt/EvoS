@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import './App.css';
 import StatusPage from "./components/pages/StatusPage";
 import {BrowserRouter, Route, Routes} from "react-router-dom";
@@ -63,6 +63,18 @@ const theme = createTheme({
     }
 });
 
+interface PageProps {
+    title: string;
+    children?: React.ReactNode;
+}
+
+function Page(props: PageProps) {
+    useEffect(() => {
+        document.title = props.title || "Atlas Reactor";
+    }, [props.title]);
+    return <>{props.children}</>;
+}
+
 function App() {
     return (
         <ThemeProvider theme={theme}>
@@ -76,10 +88,10 @@ function App() {
                     borderTopRightRadius: 0,
                 }}>
                     <Routes>
-                        <Route path="/" element={<StatusPage/>}/>
-                        <Route path="/login" element={<LoginPage/>}/>
-                        <Route path="/admin" element={<AdminPage/>}/>
-                        <Route path="/account/:accountId" element={<ProfilePage/>}/>
+                        <Route path="/" element={<Page title={"Lobby status"}><StatusPage/></Page>}/>
+                        <Route path="/login" element={<Page title={"Atlas Reactor: Login"}><LoginPage/></Page>}/>
+                        <Route path="/admin" element={<Page title={"Admin panel"}><AdminPage/></Page>}/>
+                        <Route path="/account/:accountId" element={<Page title={"Account"}><ProfilePage/></Page>}/>
                     </Routes>
                 </Paper>
             </BrowserRouter>
