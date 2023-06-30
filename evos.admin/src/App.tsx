@@ -1,7 +1,7 @@
 import React, {useEffect} from 'react';
 import './App.css';
 import StatusPage from "./components/pages/StatusPage";
-import {BrowserRouter, Route, RouteProps, Routes} from "react-router-dom";
+import {BrowserRouter, Route, Routes} from "react-router-dom";
 import LoginPage from "./components/pages/LoginPage";
 import NavBar from "./components/Navbar";
 import AdminPage from "./components/pages/AdminPage";
@@ -88,6 +88,7 @@ function App() {
                 <Paper sx={{
                     width: 'calc(100% - 16px)',
                     margin: 'auto',
+                    overflow: 'auto',
                     borderTopLeftRadius: 0,
                     borderTopRightRadius: 0,
                 }}>
