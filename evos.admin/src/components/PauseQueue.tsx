@@ -16,10 +16,13 @@ export default function PauseQueue() {
     const handleClick = (paused: boolean) => {
         const text = paused ? "Queue is paused" : "Queue is unpaused";
         setProcessing(true);
-        pauseQueue(authHeader(), paused)
+        const abort = new AbortController();
+        pauseQueue(abort, authHeader(), paused)
             .then(() => setMsg(text))
             .catch(e => processError(e, err => setMsg(err.text), navigate))
             .then(() => setProcessing(false));
+
+        return () => abort.abort();
     }
 
     return <>

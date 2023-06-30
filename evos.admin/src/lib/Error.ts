@@ -13,7 +13,7 @@ export function processError(error: any, setError: (e: EvosError) => void, navig
     else if (error.response?.status === 403) {
         setError({text: "Access denied"});
     }
-    else if (!error.response || error.response?.status === 500) {
+    else if (!error.response || error.response?.status === 500 || error.response?.status === 502) {
         setError({text: "Service unavailable"});
     }
     else {

@@ -21,7 +21,8 @@ function LoginPage() {
             return;
         }
 
-        login(username, password)
+        const abort = new AbortController();
+        login(abort, username, password)
             .then(resp => {
                 signIn({
                     token: resp.data.token,
@@ -32,6 +33,8 @@ function LoginPage() {
                 navigate('/');
             })
             .catch((error) => processError(error, setError, () => setError({text: "Invalid username or password."})))
+
+        return () => abort.abort();
     };
 
     return (

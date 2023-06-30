@@ -22,10 +22,13 @@ export default function Broadcast() {
         }
 
         setProcessing(true);
-        broadcast(authHeader(), message)
+        const abort = new AbortController();
+        broadcast(abort, authHeader(), message)
             .then(() => setMsg("Message sent"))
             .catch(e => processError(e, err => setMsg(err.text), navigate))
             .then(() => setProcessing(false));
+
+        return () => abort.abort();
     };
 
     return <>

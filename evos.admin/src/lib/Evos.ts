@@ -126,26 +126,37 @@ export enum MapType {
 
 const baseUrl = ""
 
-export function login(username: string, password: string) {
-    return axios.post<LoginResponse>(baseUrl + "/api/login", { UserName: username, Password: password });
+export function login(abort: AbortController, username: string, password: string) {
+    return axios.post<LoginResponse>(
+        baseUrl + "/api/login",
+        { UserName: username, Password: password },
+        { signal: abort.signal });
 }
 
 export function getStatus(authHeader: string) {
-    return axios.get<Status>(baseUrl + "/api/lobby/status", { headers: {'Authorization': authHeader} });
+    return axios.get<Status>(
+        baseUrl + "/api/lobby/status",
+        { headers: {'Authorization': authHeader} });
 }
 
-export function getPlayer(authHeader: string, accountId: number) {
+export function getPlayer(abort: AbortController, authHeader: string, accountId: number) {
     return axios.get<PlayerDetails>(
         baseUrl + "/api/player/details",
-        { params: { AccountId: accountId }, headers: {'Authorization': authHeader} });
+        { params: { AccountId: accountId }, headers: {'Authorization': authHeader}, signal: abort.signal });
 }
 
-export function pauseQueue(authHeader: string, paused: boolean) {
-    return axios.put(baseUrl + "/api/queue/paused", { Paused: paused }, { headers: {'Authorization': authHeader} });
+export function pauseQueue(abort: AbortController, authHeader: string, paused: boolean) {
+    return axios.put(
+        baseUrl + "/api/queue/paused",
+        { Paused: paused },
+        { headers: {'Authorization': authHeader}, signal: abort.signal });
 }
 
-export function broadcast(authHeader: string, message: string) {
-    return axios.post(baseUrl + "/api/lobby/broadcast", { Msg: message }, { headers: {'Authorization': authHeader} });
+export function broadcast(abort: AbortController, authHeader: string, message: string) {
+    return axios.post(
+        baseUrl + "/api/lobby/broadcast",
+        { Msg: message },
+        { headers: {'Authorization': authHeader}, signal: abort.signal });
 }
 
 export function mute(authHeader: string, penaltyInfo: PenaltyInfo) {
