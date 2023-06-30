@@ -87,6 +87,7 @@ function App() {
                 <NavBar/>
                 <Paper sx={{
                     width: 'calc(100% - 16px)',
+                    padding: 1,
                     margin: 'auto',
                     overflow: 'auto',
                     borderTopLeftRadius: 0,

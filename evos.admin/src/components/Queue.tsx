@@ -13,7 +13,7 @@ interface Props {
 function Queue({info, groupData, playerData, hidePlayers}: Props) {
     return <>
         <Typography variant={'h3'}>{info.type}</Typography>
-        <FlexBox style={{ margin: 4, flexWrap: 'wrap' }}>
+        <FlexBox style={{ flexWrap: 'wrap' }}>
             {info.groupIds.map((groupId) => {
                 const info = groupData.get(groupId);
                 const hidden = info && hidePlayers && !info.accountIds.some(accId => !hidePlayers.has(accId))
