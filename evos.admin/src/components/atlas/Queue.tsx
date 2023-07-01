@@ -1,7 +1,7 @@
-import {GroupData, PlayerData, QueueData} from "../lib/Evos";
+import {GroupData, PlayerData, QueueData} from "../../lib/Evos";
 import {Typography} from "@mui/material";
 import Group from "./Group";
-import {FlexBox} from "./BasicComponents";
+import {FlexBox} from "../generic/BasicComponents";
 
 interface Props {
     info: QueueData;

@@ -1,7 +1,7 @@
-import {CharacterType, PlayerData} from "../lib/Evos";
+import {CharacterType, PlayerData} from "../../lib/Evos";
 import {ButtonBase, Tooltip} from "@mui/material";
-import {BgImage} from "./BasicComponents";
-import {characterIcon} from "../lib/Resources";
+import {BgImage} from "../generic/BasicComponents";
+import {characterIcon} from "../../lib/Resources";
 import React from "react";
 
 

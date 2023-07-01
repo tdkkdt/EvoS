@@ -1,10 +1,10 @@
 import {Button, LinearProgress, Stack} from "@mui/material";
-import {pauseQueue} from "../lib/Evos";
-import {FlexBox} from "./BasicComponents";
+import {pauseQueue} from "../../lib/Evos";
+import {FlexBox} from "../generic/BasicComponents";
 import {useAuthHeader} from "react-auth-kit";
-import BaseDialog from "./BaseDialog";
+import BaseDialog from "../generic/BaseDialog";
 import React, {useState} from "react";
-import {processError} from "../lib/Error";
+import {processError} from "../../lib/Error";
 import {useNavigate} from "react-router-dom";
 
 export default function PauseQueue() {

@@ -1,7 +1,7 @@
-import {GameData, GamePlayerData, PlayerData} from "../lib/Evos";
+import {GameData, GamePlayerData, PlayerData} from "../../lib/Evos";
 import {Box, Stack, styled, Tooltip, Typography} from "@mui/material";
-import {FlexBox} from "./BasicComponents";
-import {mapMiniPic} from "../lib/Resources";
+import {FlexBox} from "../generic/BasicComponents";
+import {mapMiniPic} from "../../lib/Resources";
 import Player from "./Player";
 import React from "react";
 import {CharacterIcon} from "./CharacterIcon";

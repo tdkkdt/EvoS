@@ -1,10 +1,10 @@
 import {Box, Button, LinearProgress, TextField} from "@mui/material";
-import {broadcast} from "../lib/Evos";
+import {broadcast} from "../../lib/Evos";
 import React, {useState} from "react";
 import {useAuthHeader} from "react-auth-kit";
 import {useNavigate} from "react-router-dom";
-import {processError} from "../lib/Error";
-import BaseDialog from "./BaseDialog";
+import {processError} from "../../lib/Error";
+import BaseDialog from "../generic/BaseDialog";
 
 export default function Broadcast() {
     const [msg, setMsg] = useState<string>();

@@ -3,7 +3,7 @@ import './App.css';
 import StatusPage from "./components/pages/StatusPage";
 import {BrowserRouter, Route, Routes} from "react-router-dom";
 import LoginPage from "./components/pages/LoginPage";
-import NavBar from "./components/Navbar";
+import NavBar from "./components/generic/Navbar";
 import AdminPage from "./components/pages/AdminPage";
 import ProfilePage from "./components/pages/ProfilePage";
 import {colors, createTheme, CssBaseline, Paper, ThemeProvider} from "@mui/material";

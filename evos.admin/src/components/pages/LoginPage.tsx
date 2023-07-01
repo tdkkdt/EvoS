@@ -3,7 +3,7 @@ import {login} from "../../lib/Evos";
 import {Box, Button, Container, CssBaseline, TextField, Typography} from "@mui/material";
 import {useSignIn} from "react-auth-kit";
 import {useNavigate} from "react-router-dom";
-import ErrorDialog from "../ErrorDialog";
+import ErrorDialog from "../generic/ErrorDialog";
 import {EvosError, processError} from "../../lib/Error";
 
 function LoginPage() {

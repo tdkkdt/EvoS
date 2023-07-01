@@ -4,7 +4,7 @@ import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import Container from '@mui/material/Container';
 import Avatar from '@mui/material/Avatar';
-import {BannerType, logo, playerBanner} from "../lib/Resources";
+import {BannerType, logo, playerBanner} from "../../lib/Resources";
 import {NavLink, useNavigate} from "react-router-dom";
 import {useAuthUser, useIsAuthenticated, useSignOut} from "react-auth-kit";
 import {Menu, MenuItem, Stack, styled, Typography} from "@mui/material";

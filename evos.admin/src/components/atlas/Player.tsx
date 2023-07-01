@@ -1,7 +1,7 @@
-import {PlayerData} from "../lib/Evos";
+import {PlayerData} from "../../lib/Evos";
 import {ButtonBase, styled, Typography} from "@mui/material";
-import {BgImage} from "./BasicComponents";
-import {BannerType, playerBanner} from "../lib/Resources";
+import {BgImage} from "../generic/BasicComponents";
+import {BannerType, playerBanner} from "../../lib/Resources";
 import React from "react";
 import {useNavigate} from "react-router-dom";
 

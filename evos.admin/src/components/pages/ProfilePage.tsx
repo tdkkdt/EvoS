@@ -3,11 +3,11 @@ import {ban, getPlayer, mute, PlayerDetails} from "../../lib/Evos";
 import {EvosError, processError} from "../../lib/Error";
 import {useAuthHeader} from "react-auth-kit";
 import {useNavigate, useParams} from "react-router-dom";
-import Player from "../Player";
+import Player from "../atlas/Player";
 import {LinearProgress, Paper} from "@mui/material";
-import ErrorDialog from "../ErrorDialog";
-import MuteBanPlayer from "../MuteBanPlayer";
-import {EvosCard, StackWrapper} from "../BasicComponents";
+import ErrorDialog from "../generic/ErrorDialog";
+import MuteBanPlayer from "../controls/MuteBanPlayer";
+import {EvosCard, StackWrapper} from "../generic/BasicComponents";
 
 
 export default function ProfilePage() {

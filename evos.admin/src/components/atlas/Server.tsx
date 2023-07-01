@@ -1,4 +1,4 @@
-import {GameData, PlayerData, ServerData} from "../lib/Evos";
+import {GameData, PlayerData, ServerData} from "../../lib/Evos";
 import {Tooltip, Typography} from "@mui/material";
 import Game from "./Game";
 

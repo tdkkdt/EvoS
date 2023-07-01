@@ -1,7 +1,7 @@
 import React from 'react';
-import PauseQueue from "../PauseQueue";
-import Broadcast from "../Broadcast";
-import {EvosCard, StackWrapper} from "../BasicComponents";
+import PauseQueue from "../controls/PauseQueue";
+import Broadcast from "../controls/Broadcast";
+import {EvosCard, StackWrapper} from "../generic/BasicComponents";
 
 export default function AdminPage() {
     return (

@@ -1,12 +1,12 @@
 import React, {useMemo, useState} from 'react';
 import {getStatus, Status} from "../../lib/Evos";
 import {LinearProgress, Typography} from "@mui/material";
-import Queue from "../Queue";
+import Queue from "../atlas/Queue";
 import {useAuthHeader} from "react-auth-kit";
-import Server from "../Server";
+import Server from "../atlas/Server";
 import {useNavigate} from "react-router-dom";
 import {EvosError, processError} from "../../lib/Error";
-import ErrorDialog from "../ErrorDialog";
+import ErrorDialog from "../generic/ErrorDialog";
 import useInterval from "../../lib/useInterval";
 import useHasFocus from "../../lib/useHasFocus";
 

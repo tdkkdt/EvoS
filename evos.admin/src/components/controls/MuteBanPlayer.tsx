@@ -1,12 +1,12 @@
 import {Box, Button, LinearProgress, MenuItem, Select, SelectChangeEvent, TextField, Typography} from "@mui/material";
 import React, {useState} from "react";
-import {processError} from "../lib/Error";
+import {processError} from "../../lib/Error";
 import {useAuthHeader} from "react-auth-kit";
-import BaseDialog from "./BaseDialog";
+import BaseDialog from "../generic/BaseDialog";
 import {useNavigate} from "react-router-dom";
 import {AxiosResponse} from "axios";
-import {PenaltyInfo} from "../lib/Evos";
-import {EvosCard} from "./BasicComponents";
+import {PenaltyInfo} from "../../lib/Evos";
+import {EvosCard} from "../generic/BasicComponents";
 
 interface MutePlayerProps {
     disabled: boolean;

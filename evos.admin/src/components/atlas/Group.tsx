@@ -1,4 +1,4 @@
-import {GroupData, PlayerData} from "../lib/Evos";
+import {GroupData, PlayerData} from "../../lib/Evos";
 import {List, ListItem} from "@mui/material";
 import Player from "./Player";
 
