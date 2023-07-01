@@ -1,6 +1,6 @@
 import React, {useMemo, useState} from 'react';
 import {getStatus, Status} from "../../lib/Evos";
-import {LinearProgress} from "@mui/material";
+import {LinearProgress, Typography} from "@mui/material";
 import Queue from "../Queue";
 import {useAuthHeader} from "react-auth-kit";
 import Server from "../Server";
@@ -17,12 +17,31 @@ function GroupBy<V, K>(key: (item: V) => K, list?: V[]) {
     }, new Map<K, V>())
 }
 
+function RoundToNearest5(x: number) {
+    return Math.round(x / 5) * 5;
+}
+
+function FormatAge(ageMs: number) {
+    if (ageMs < 5000) {
+        return 'just now';
+    }
+    if (ageMs < 60000) {
+        return `${RoundToNearest5(ageMs / 1000)} seconds ago`;
+    }
+    if (ageMs < 90000) {
+        return `A minute ago`;
+    }
+    return `${Math.round(ageMs / 60000)} minutes ago`;
+}
+
 const UPDATE_PERIOD_MS = 20000;
 
 function StatusPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<EvosError>();
     const [status, setStatus] = useState<Status>();
+    const [updateTime, setUpdateTime] = useState<Date>();
+    const [age, setAge] = useState<number>();
 
     const authHeader = useAuthHeader()();
     const navigate = useNavigate();
@@ -38,9 +57,17 @@ function StatusPage() {
             .then((resp) => {
                 setStatus(resp.data);
                 setLoading(false);
+                setUpdateTime(new Date());
+                setAge(0);
             })
             .catch((error) => processError(error, setError, navigate))
     }, updatePeriodMs);
+
+    useInterval(() => {
+        if (updateTime) {
+            setAge(new Date().getTime() - updateTime.getTime());
+        }
+    }, 5000);
 
     const queuedGroups = new Set(status?.queues?.flatMap(q => q.groupIds));
     const notQueuedGroups = groups && [...groups.keys()].filter(g => !queuedGroups.has(g));
@@ -52,6 +79,7 @@ function StatusPage() {
         <>
             {loading && <LinearProgress />}
             {error && <ErrorDialog error={error} onDismiss={() => setError(undefined)} />}
+            <Typography variant={'caption'}>{age === undefined ? 'Loading...' : `Updated ${FormatAge(age)}`}</Typography>
             {status && players && games
                 && status.servers
                     .sort((s1, s2) => s1.name.localeCompare(s2.name))
