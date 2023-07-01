@@ -11,6 +11,6 @@ interface Props {
 export default function Server({info, game, playerData}: Props) {
     return <>
         <Tooltip arrow title={info.id}><Typography variant={'h3'}>{info.name}</Typography></Tooltip>
-        {game && <Game info={game} playerData={playerData} />}
+        {game && <Game info={game} playerData={playerData} expanded />}
     </>;
 }

@@ -1,9 +1,9 @@
 import {GameData, GamePlayerData, PlayerData} from "../../lib/Evos";
-import {Box, Stack, styled, Tooltip, Typography} from "@mui/material";
+import {Box, Collapse, Slide, Stack, styled, Tooltip, Typography} from "@mui/material";
 import {FlexBox} from "../generic/BasicComponents";
 import {mapMiniPic} from "../../lib/Resources";
 import Player from "./Player";
-import React from "react";
+import React, {useState} from "react";
 import {CharacterIcon} from "./CharacterIcon";
 
 export const TeamFlexBox = styled(FlexBox)(({ theme }) => ({
@@ -21,9 +21,9 @@ interface TeamProps {
     playerData: Map<number, PlayerData>;
 }
 
-function TeamRow({info, isTeamA, playerData}: TeamProps) {
+const TeamRow = React.forwardRef(({info, isTeamA, playerData}: TeamProps, ref) => {
     return (
-        <TeamFlexBox flexGrow={1} flexShrink={1} flexBasis={'auto'}>
+        <TeamFlexBox ref={ref} flexGrow={1} flexShrink={1} flexBasis={'auto'}>
             {info.map((player, id) =>
                 <CharacterIcon
                     key={`teamA_${id}`}
@@ -33,7 +33,7 @@ function TeamRow({info, isTeamA, playerData}: TeamProps) {
                 />)}
         </TeamFlexBox>
     )
-}
+});
 
 function Team({caption, info, isTeamA, playerData}: TeamProps) {
     return (
@@ -47,6 +47,7 @@ function Team({caption, info, isTeamA, playerData}: TeamProps) {
                         data={playerData.get(p.accountId)}
                         isTeamA={isTeamA}
                         rightSkew
+                        noTooltip
                     />
                 </Stack>
             )}
@@ -57,9 +58,10 @@ function Team({caption, info, isTeamA, playerData}: TeamProps) {
 interface Props {
     info: GameData;
     playerData: Map<number, PlayerData>;
+    expanded?: boolean;
 }
 
-export default function Game({info, playerData}: Props) {
+export default function Game({info, playerData, expanded}: Props) {
     const A = {
         caption: "Team Blue",
         info: info.teamA,
@@ -73,18 +75,21 @@ export default function Game({info, playerData}: Props) {
         isTeamA: false,
     }
 
+    const [collapsed, setCollapsed] = useState<boolean>(!expanded);
+
     return <>
         <Stack width={'100%'}>
             <FlexBox>
-                <TeamRow {...A} />
+                <Slide in={collapsed} direction={"right"} mountOnEnter unmountOnExit><TeamRow {...A} /></Slide>
                 <Tooltip title={`${info.map} ${info.ts}`} arrow>
-                    <Box flexBasis={120} style={{
+                    <Box flexBasis={120} onClick={() => setCollapsed((x) => !x)} style={{
                         backgroundImage: `url(${mapMiniPic(info.map)})`,
                         backgroundSize: 'cover',
                         borderColor: 'white',
                         borderWidth: 2,
                         borderStyle: 'solid',
                         borderRadius: 8,
+                        cursor: 'pointer',
                     }}>
                         <Typography variant={'h3'}>
                             <span style={{ textShadow: '2px 2px blue' }}>{info.teamAScore}</span>
@@ -102,12 +107,14 @@ export default function Game({info, playerData}: Props) {
                         </Typography>
                     </Box>
                 </Tooltip>
-                <TeamRow {...B} />
+                <Slide in={collapsed} direction={"left"} mountOnEnter unmountOnExit><TeamRow {...B} /></Slide>
             </FlexBox>
-            <FlexBox style={{justifyContent : 'space-around', flexWrap: 'wrap'}} >
-                <Team {...A} />
-                <Team {...B} />
-            </FlexBox>
+            <Collapse in={!collapsed}>
+                <FlexBox style={{justifyContent : 'space-around', flexWrap: 'wrap'}} >
+                    <Team {...A} />
+                    <Team {...B} />
+                </FlexBox>
+            </Collapse>
         </Stack>
     </>;
 }

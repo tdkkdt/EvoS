@@ -3,6 +3,7 @@ import {ButtonBase, Tooltip} from "@mui/material";
 import {BgImage} from "../generic/BasicComponents";
 import {characterIcon} from "../../lib/Resources";
 import React from "react";
+import {useNavigate} from "react-router-dom";
 
 
 interface CharacterIconProps {
@@ -10,9 +11,12 @@ interface CharacterIconProps {
     data?: PlayerData;
     isTeamA: boolean;
     rightSkew?: boolean;
+    noTooltip?: boolean;
 }
 
-export function CharacterIcon({characterType, data, isTeamA, rightSkew}: CharacterIconProps) {
+export function CharacterIcon({characterType, data, isTeamA, rightSkew, noTooltip}: CharacterIconProps) {
+    const navigate = useNavigate();
+
     let transformOuter, transformInner;
     if (isTeamA || rightSkew) {
         transformOuter = 'skewX(-15deg)';
@@ -24,36 +28,46 @@ export function CharacterIcon({characterType, data, isTeamA, rightSkew}: Charact
     const borderColor = isTeamA ? 'blue' : 'red';
     const handle = data?.handle ?? "UNKNOWN";
 
-    return <>
-        <Tooltip title={handle} arrow>
-            <ButtonBase
-                focusRipple
-                style={{
-                    width: 80,
-                    height: 50,
-                    transform: transformOuter,
-                    overflow: 'hidden',
-                    borderColor: borderColor,
-                    borderWidth: 2,
-                    borderStyle: 'solid',
-                    borderRadius: 4,
-                    backgroundColor: '#333',
-                    margin: 2,
-                }}
-            >
-                <div
-                    style={{
-                        transform: transformInner,
-                        width: '115%',
-                        height: '100%',
-                        flex: 'none',
-                    }}
-                >
-                    <BgImage style={{
-                        backgroundImage: `url(${characterIcon(characterType)})`,
-                    }} />
-                </div>
-            </ButtonBase>
-        </Tooltip>
-    </>;
+    const handleClick = () => {
+        if (!data) {
+            return;
+        }
+        navigate(`/account/${data.accountId}`);
+    }
+
+    const content = <ButtonBase
+        focusRipple
+        onClick={handleClick}
+        style={{
+            width: 80,
+            height: 50,
+            transform: transformOuter,
+            overflow: 'hidden',
+            borderColor: borderColor,
+            borderWidth: 2,
+            borderStyle: 'solid',
+            borderRadius: 4,
+            backgroundColor: '#333',
+            margin: 2,
+        }}
+    >
+        <div
+            style={{
+                transform: transformInner,
+                width: '115%',
+                height: '100%',
+                flex: 'none',
+            }}
+        >
+            <BgImage style={{
+                backgroundImage: `url(${characterIcon(characterType)})`,
+            }} />
+        </div>
+    </ButtonBase>;
+
+    if (noTooltip) {
+        return content;
+    }
+
+    return <Tooltip title={handle} arrow>{content}</Tooltip>;
 }
