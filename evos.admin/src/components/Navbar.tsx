@@ -5,9 +5,9 @@ import Toolbar from '@mui/material/Toolbar';
 import Container from '@mui/material/Container';
 import Avatar from '@mui/material/Avatar';
 import {BannerType, logo, playerBanner} from "../lib/Resources";
-import {NavLink} from "react-router-dom";
-import {useAuthUser, useIsAuthenticated} from "react-auth-kit";
-import {Stack, styled, Typography} from "@mui/material";
+import {NavLink, useNavigate} from "react-router-dom";
+import {useAuthUser, useIsAuthenticated, useSignOut} from "react-auth-kit";
+import {Menu, MenuItem, Stack, styled, Typography} from "@mui/material";
 
 const pages = [
     { text: "Status", url: '/' },
@@ -34,8 +34,26 @@ export const NavBarText = styled(Typography)({
 
 
 export default function NavBar() {
+    const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+
     const isAuthenticated = useIsAuthenticated();
+    const signOut = useSignOut();
     const auth = useAuthUser();
+    const navigate = useNavigate();
+
+    const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+
+    const handleLogOut = () => {
+        handleClose();
+        signOut();
+        navigate('/login');
+    };
 
     return (
         <AppBar position="static">
@@ -49,14 +67,33 @@ export default function NavBar() {
 
                     </Stack>
                     <Box sx={{ flexGrow: 0 }}>
-                        {isAuthenticated() && <Stack direction={"row"} alignItems="center">
-                            <NavBarText>{auth()?.handle}</NavBarText>
-                            <Avatar
-                                alt="Avatar"
-                                src={playerBanner(BannerType.foreground, auth()?.banner ?? 65)}
-                                sx={{ width: 64, height: 64 }}
-                            />
-                        </Stack>}
+                        {isAuthenticated() && <>
+                            <Stack direction={"row"} alignItems="center" sx={{cursor: "pointer"}} onClick={handleMenu}>
+                                <NavBarText>{auth()?.handle}</NavBarText>
+                                <Avatar
+                                    alt="Avatar"
+                                    src={playerBanner(BannerType.foreground, auth()?.banner ?? 65)}
+                                    sx={{ width: 64, height: 64 }}
+                                />
+                            </Stack>
+                            <Menu
+                                id="menu-appbar"
+                                anchorEl={anchorEl}
+                                anchorOrigin={{
+                                    vertical: 'bottom',
+                                    horizontal: 'right',
+                                }}
+                                keepMounted
+                                transformOrigin={{
+                                    vertical: 'top',
+                                    horizontal: 'right',
+                                }}
+                                open={Boolean(anchorEl)}
+                                onClose={handleClose}
+                            >
+                                <MenuItem onClick={handleLogOut}>Log out</MenuItem>
+                            </Menu>
+                        </>}
                         {!isAuthenticated() && <NavBarLink to='/login' style={(active) => active && { display: 'none' }}>
                             <NavBarText>Log in</NavBarText>
                         </NavBarLink>}
