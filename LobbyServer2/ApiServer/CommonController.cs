@@ -142,7 +142,7 @@ namespace CentralServer.ApiServer
                     server = s.ID,
                     teamA = s.GetTeamInfo.TeamAPlayerInfo.Select(GamePlayer.Of).ToList(),
                     teamB = s.GetTeamInfo.TeamBPlayerInfo.Select(GamePlayer.Of).ToList(),
-                    status = s.GameInfo?.GameStatus.ToString(),
+                    status = s.ServerGameStatus.ToString(),
                     turn = s.GameSummary?.NumOfTurns ?? s.GameMetrics.CurrentTurn,
                     teamAScore = s.GameSummary?.TeamAPoints ?? s.GameMetrics.TeamAPoints,
                     teamBScore = s.GameSummary?.TeamBPoints ?? s.GameMetrics.TeamBPoints,
