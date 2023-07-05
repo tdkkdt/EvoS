@@ -54,7 +54,7 @@ namespace CentralServer.LobbyServer.Friend
             return friendList;
         }
 
-        private static string GetStatusString(LobbyServerProtocol client)
+        public static string GetStatusString(LobbyServerProtocol client)
         {
             if (client == null)
             {

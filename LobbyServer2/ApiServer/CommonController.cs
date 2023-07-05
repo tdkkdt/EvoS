@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CentralServer.BridgeServer;
+using CentralServer.LobbyServer.Friend;
 using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
@@ -58,6 +59,7 @@ namespace CentralServer.ApiServer
             public string handle { get; set; }
             public int bannerBg { get; set; }
             public int bannerFg { get; set; }
+            public string status { get; set; }
 
             public static Player Of(PersistedAccountData acc)
             {
@@ -67,6 +69,7 @@ namespace CentralServer.ApiServer
                     handle = acc.Handle,
                     bannerBg = acc.AccountComponent.SelectedBackgroundBannerID,
                     bannerFg = acc.AccountComponent.SelectedForegroundBannerID,
+                    status = FriendManager.GetStatusString(SessionManager.GetClientConnection(acc.AccountId)),
                 };
             }
         }
