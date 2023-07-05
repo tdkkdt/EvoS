@@ -11,13 +11,12 @@ interface Props {
 
 const ImageTextWrapper = styled('span')(({ theme }) => ({
     position: 'absolute',
-    top: '3%',
     left: '28%',
     color: theme.palette.common.white,
     textAlign: 'left',
-    fontSize: '2.5em',
     fontStretch: 'condensed',
     width: '100%',
+    textShadow: '1px 1px 2px black, -1px -1px 2px black, 1px -1px 2px black, -1px 1px 2px black',
 }));
 
 function Player({info}: Props) {
@@ -69,11 +68,19 @@ function Player({info}: Props) {
                 }} />
                 <ImageTextWrapper
                     style={{
-                        textShadow: '1px 1px 2px black, -1px -1px 2px black, 1px -1px 2px black, -1px 1px 2px black',
+                        top: '3%',
+                        fontSize: '2.5em',
                     }}>
                     <Typography component={'span'} style={{ fontSize: '1em' }}>{username}</Typography>
                     {discriminator && <Typography component={'span'} style={{ fontSize: '0.8em' }}>#{discriminator}</Typography>}
                 </ImageTextWrapper>
+                {info && <ImageTextWrapper
+                    style={{
+                        bottom: '3%',
+                        fontSize: '1.5em',
+                    }}>
+                    <Typography component={'span'} style={{ fontSize: '1em' }}>{info.status}</Typography>
+                </ImageTextWrapper>}
             </div>
         </ButtonBase>
     </>;

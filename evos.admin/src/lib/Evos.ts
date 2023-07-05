@@ -21,6 +21,7 @@ export interface PlayerData
     handle: string;
     bannerBg: number;
     bannerFg: number;
+    status: string;
 }
 
 export interface PlayerDetails {
