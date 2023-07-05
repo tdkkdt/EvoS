@@ -1,5 +1,5 @@
 import {CharacterType, PlayerData} from "../../lib/Evos";
-import {ButtonBase, Tooltip} from "@mui/material";
+import {ButtonBase, Tooltip, useTheme} from "@mui/material";
 import {BgImage} from "../generic/BasicComponents";
 import {characterIcon} from "../../lib/Resources";
 import React from "react";
@@ -16,16 +16,17 @@ interface CharacterIconProps {
 
 export function CharacterIcon({characterType, data, isTeamA, rightSkew, noTooltip}: CharacterIconProps) {
     const navigate = useNavigate();
+    const theme = useTheme();
 
     let transformOuter, transformInner;
     if (isTeamA || rightSkew) {
-        transformOuter = 'skewX(-15deg)';
-        transformInner = 'skewX(15deg)';
+        transformOuter = theme.transform.skewA;
+        transformInner = theme.transform.skewB;
     } else {
-        transformOuter = 'skewX(15deg)';
-        transformInner = 'skewX(-15deg)';
+        transformOuter = theme.transform.skewB;
+        transformInner = theme.transform.skewA;
     }
-    const borderColor = isTeamA ? 'blue' : 'red';
+    const borderColor = isTeamA ? theme.palette.teamA.main : theme.palette.teamB.main;
     const handle = data?.handle ?? "UNKNOWN";
 
     const handleClick = () => {

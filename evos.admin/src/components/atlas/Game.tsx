@@ -1,5 +1,5 @@
 import {GameData, GamePlayerData, PlayerData} from "../../lib/Evos";
-import {Box, Collapse, Slide, Stack, styled, Tooltip, Typography} from "@mui/material";
+import {Box, Collapse, Slide, Stack, styled, Tooltip, Typography, useTheme} from "@mui/material";
 import {FlexBox} from "../generic/BasicComponents";
 import {mapMiniPic} from "../../lib/Resources";
 import Player from "./Player";
@@ -75,6 +75,8 @@ export default function Game({info, playerData, expanded}: Props) {
         isTeamA: false,
     }
 
+    const theme = useTheme();
+
     const [collapsed, setCollapsed] = useState<boolean>(!expanded);
 
     return <>
@@ -92,9 +94,9 @@ export default function Game({info, playerData, expanded}: Props) {
                         cursor: 'pointer',
                     }}>
                         <Typography variant={'h3'}>
-                            <span style={{ textShadow: '2px 2px blue' }}>{info.teamAScore}</span>
+                            <span style={{ textShadow: `2px 2px ${theme.palette.teamA.main}` }}>{info.teamAScore}</span>
                             <span> - </span>
-                            <span style={{ textShadow: '2px 2px red' }}>{info.teamBScore}</span>
+                            <span style={{ textShadow: `2px 2px ${theme.palette.teamB.dark}` }}>{info.teamBScore}</span>
                         </Typography>
                         <Typography
                             variant={'caption'}

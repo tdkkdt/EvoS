@@ -1,5 +1,5 @@
 import {PlayerData} from "../../lib/Evos";
-import {ButtonBase, styled, Typography} from "@mui/material";
+import {ButtonBase, styled, Typography, useTheme} from "@mui/material";
 import {BgImage} from "../generic/BasicComponents";
 import {BannerType, playerBanner} from "../../lib/Resources";
 import React from "react";
@@ -27,6 +27,7 @@ function Player({info}: Props) {
     }
 
     const navigate = useNavigate();
+    const theme = useTheme();
 
     const handleClick = () => {
         if (!info) {
@@ -44,14 +45,14 @@ function Player({info}: Props) {
                 width: 240,
                 height: 52,
                 fontSize: '8px',
-                transform: 'skewX(-15deg)',
+                transform: theme.transform.skewA,
                 overflow: 'hidden',
                 border: '2px solid black'
             }}
         >
             <div
                 style={{
-                    transform: 'skewX(15deg)',
+                    transform: theme.transform.skewB,
                     width: '106%',
                     height: '100%',
                     flex: 'none',

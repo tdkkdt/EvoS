@@ -29,6 +29,10 @@ const theme = createTheme({
     size: {
         basicWidth: 600,
     },
+    transform: {
+        skewA: 'skewX(-15deg)',
+        skewB: 'skewX(15deg)',
+    },
     palette: {
         // mode: 'dark',
         primary: {
@@ -56,9 +60,11 @@ const theme = createTheme({
         divider: 'rgba(255, 255, 255, 0.12)',
         teamA: {
             main: colors.blue[500],
+            dark: colors.blue[900],
         },
         teamB: {
             main: colors.red[500],
+            dark: colors.red[900],
         }
     }
 });
