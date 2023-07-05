@@ -16,14 +16,21 @@ namespace CentralServer.ApiServer
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(AdminController));
         
+        public static event Action<long, PauseQueueModel> OnAdminPauseQueue = delegate {};
+        
         public class PauseQueueModel
         {
             public bool Paused { get; set; }
         }
         
-        public static IResult PauseQueue([FromBody] PauseQueueModel data)
+        public static IResult PauseQueue([FromBody] PauseQueueModel data, ClaimsPrincipal user)
         {
+            if (!ValidateAdmin(user, out IResult error, out long adminAccountId, out string adminHandle))
+            {
+                return error;
+            }
             MatchmakingManager.Enabled = !data.Paused;
+            OnAdminPauseQueue(adminAccountId, data);
             return Results.Ok();
         }
 
@@ -32,9 +39,13 @@ namespace CentralServer.ApiServer
             public string Msg { get; set; }
         }
         
-        public static IResult Broadcast([FromBody] BroadcastModel data)
+        public static IResult Broadcast([FromBody] BroadcastModel data, ClaimsPrincipal user)
         {
-            log.Info($"Broadcast {data.Msg}");
+            if (!ValidateAdmin(user, out IResult error, out long adminAccountId, out string adminHandle))
+            {
+                return error;
+            }
+            log.Info($"Broadcast {adminHandle}: {data.Msg}");
             if (data.Msg.IsNullOrEmpty())
             {
                 return Results.BadRequest();
@@ -76,7 +87,8 @@ namespace CentralServer.ApiServer
         
         public static IResult MuteUser([FromBody] PenaltyInfo data, ClaimsPrincipal user)
         {
-            if (!Validate(data, user, out IResult error, out PersistedAccountData account, out long adminAccountId, out string adminHandle))
+            if (!ValidateAdmin(user, out IResult error, out long adminAccountId, out string adminHandle)
+                || !Validate(data, out error, out PersistedAccountData account))
             {
                 return error;
             }
@@ -91,7 +103,8 @@ namespace CentralServer.ApiServer
         
         public static IResult BanUser([FromBody] PenaltyInfo data, ClaimsPrincipal user)
         {
-            if (!Validate(data, user, out IResult error, out PersistedAccountData account, out long adminAccountId, out string adminHandle))
+            if (!ValidateAdmin(user, out IResult error, out long adminAccountId, out string adminHandle)
+                || !Validate(data, out error, out PersistedAccountData account))
             {
                 return error;
             }
@@ -104,27 +117,34 @@ namespace CentralServer.ApiServer
             return success ? Results.Ok() : Results.Problem();
         }
 
-        private static bool Validate(
-            PenaltyInfo data,
+        private static bool ValidateAdmin(
             ClaimsPrincipal user,
             out IResult error,
-            out PersistedAccountData account,
             out long adminAccountId,
             out string adminHandle)
         {
             error = null;
-            account = null;
             adminAccountId = 0;
-            adminHandle = null;
-            if (data.durationMinutes < 0)
-            {
-                error = Results.BadRequest();
-                return false;
-            }
             adminHandle = user.FindFirstValue(ClaimTypes.Name);
             if (adminHandle == null || !long.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out adminAccountId))
             {
                 error = Results.Unauthorized();
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool Validate(
+            PenaltyInfo data,
+            out IResult error,
+            out PersistedAccountData account)
+        {
+            error = null;
+            account = null;
+            if (data.durationMinutes < 0)
+            {
+                error = Results.BadRequest();
                 return false;
             }
             account = DB.Get().AccountDao.GetAccount(data.accountId);

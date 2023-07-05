@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using CentralServer.ApiServer;
 using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Chat;
 using CentralServer.LobbyServer.Session;
@@ -84,6 +85,8 @@ namespace CentralServer.LobbyServer.Discord
             if (adminChannel != null)
             {
                 ChatManager.Get().OnChatMessage += SendChatMessageAuditAsync;
+                AdminManager.Get().OnAdminAction += SendAdminActionAuditAsync;
+                AdminController.OnAdminPauseQueue += SendAdminPauseQueueAuditAsync;
             }
 
             await StartBot();
@@ -122,6 +125,8 @@ namespace CentralServer.LobbyServer.Discord
             if (adminChannel != null)
             {
                 ChatManager.Get().OnChatMessage -= SendChatMessageAuditAsync;
+                AdminManager.Get().OnAdminAction -= SendAdminActionAuditAsync;
+                AdminController.OnAdminPauseQueue -= SendAdminPauseQueueAuditAsync;
             }
             cancelTokenSource.Cancel();
             cancelTokenSource.Dispose();
@@ -248,6 +253,63 @@ namespace CentralServer.LobbyServer.Discord
             catch (Exception e)
             {
                 log.Error("Failed to send audit chat message to discord webhook", e);
+            }
+        }
+
+        private void SendAdminActionAuditAsync(long accountId, AdminComponent.AdminActionRecord record)
+        {
+            _ = SendAdminActionAudit(accountId, record);
+        }
+
+        private async Task SendAdminActionAudit(long accountId, AdminComponent.AdminActionRecord record)
+        {
+            if (adminChannel == null || !conf.AdminEnableAdminAudit)
+            {
+                return;
+            }
+            try
+            {
+                PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
+                await adminChannel.SendMessageAsync(
+                    username: record.AdminUsername,
+                    embeds: new[] { new EmbedBuilder
+                    {
+                        Title = $"{record.ActionType} {account.Handle ?? $"#{accountId}"} for {record.Duration}",
+                        Description = record.Description,
+                        Color = DiscordUtils.GetLogColor(Level.Warn),
+                    }.Build() });
+            }
+            catch (Exception e)
+            {
+                log.Error("Failed to send admin action audit message to discord webhook", e);
+            }
+        }
+
+        private void SendAdminPauseQueueAuditAsync(long adminAccountId, AdminController.PauseQueueModel action)
+        {
+            _ = SendAdminPauseQueueAudit(adminAccountId, action);
+        }
+
+        private async Task SendAdminPauseQueueAudit(long adminAccountId, AdminController.PauseQueueModel action)
+        {
+            if (adminChannel == null || !conf.AdminEnableAdminAudit)
+            {
+                return;
+            }
+            try
+            {
+                PersistedAccountData account = DB.Get().AccountDao.GetAccount(adminAccountId);
+                await adminChannel.SendMessageAsync(
+                    username: account?.Handle,
+                    embeds: new[] { new EmbedBuilder
+                    {
+                        Title = action.Paused ? "Pause queue" : "Unpause queue",
+                        Color = DiscordUtils.GetLogColor(Level.Warn),
+                    }.Build() });
+            }
+            catch (Exception e)
+            {
+                log.Error("Failed to send admin pause queue audit message to discord webhook", e);
             }
         }
 

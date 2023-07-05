@@ -12,6 +12,8 @@ namespace CentralServer.LobbyServer
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(AdminManager));
         
+        public event Action<long, AdminComponent.AdminActionRecord> OnAdminAction = delegate {};
+        
         private readonly CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
 
         private static AdminManager _instance;
@@ -67,14 +69,15 @@ namespace CentralServer.LobbyServer
             
             DateTime time = DateTime.UtcNow;
             bool muted = duration.Ticks > 0;
-            account.AdminComponent.AdminActions.Add(new AdminComponent.AdminActionRecord
+            AdminComponent.AdminActionRecord record = new AdminComponent.AdminActionRecord
             {
                 AdminUsername = adminUsername,
                 ActionType = muted ? AdminComponent.AdminActionType.Mute : AdminComponent.AdminActionType.Unmute,
                 Duration = duration,
                 Description = description,
                 Time = time,
-            });
+            };
+            account.AdminComponent.AdminActions.Add(record);
             account.AdminComponent.MutedUntil = time + duration;
             account.AdminComponent.Muted = muted;
             DB.Get().AccountDao.UpdateAccount(account);
@@ -83,6 +86,7 @@ namespace CentralServer.LobbyServer
                 ? $"MUTE {account.Handle} for {duration}"
                 : $"UNMUTE {account.Handle}";
             log.Info($"{logString} by {adminUsername}: {description}");
+            OnAdminAction(accountId, record);
             return true;
         }
 
@@ -114,14 +118,15 @@ namespace CentralServer.LobbyServer
             
             DateTime time = DateTime.UtcNow;
             bool banned = duration.Ticks > 0;
-            account.AdminComponent.AdminActions.Add(new AdminComponent.AdminActionRecord
+            AdminComponent.AdminActionRecord record = new AdminComponent.AdminActionRecord
             {
                 AdminUsername = adminUsername,
                 ActionType = banned ? AdminComponent.AdminActionType.Lock : AdminComponent.AdminActionType.Unlock,
                 Duration = duration,
                 Description = description,
                 Time = time,
-            });
+            };
+            account.AdminComponent.AdminActions.Add(record);
             account.AdminComponent.LockedUntil = time + duration;
             account.AdminComponent.Locked = banned;
             DB.Get().AccountDao.UpdateAccount(account);
@@ -130,6 +135,7 @@ namespace CentralServer.LobbyServer
                 ? $"BAN {account.Handle} for {duration}"
                 : $"UNBAN {account.Handle}";
             log.Info($"{logString} by {adminUsername}: {description}");
+            OnAdminAction(accountId, record);
 
             LobbyServerProtocol conn = SessionManager.GetClientConnection(accountId);
             if (conn != null)
