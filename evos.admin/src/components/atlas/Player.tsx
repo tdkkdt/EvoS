@@ -41,6 +41,7 @@ function Player({info}: Props) {
             height: 52,
             fontSize: '8px',
             position: 'relative',
+            display: 'inline-flex',
         }}>
         <ButtonBase
             focusRipple
@@ -66,22 +67,24 @@ function Player({info}: Props) {
                 <BgImage style={{
                     backgroundImage: info && `url(${playerBanner(BannerType.background, info.bannerBg)})`,
                 }} />
-                <BgImage style={{
-                    marginTop: '-3%',
-                    marginLeft: '-3%',
-                    backgroundImage: info && `url(${playerBanner(BannerType.foreground, info.bannerFg)})`,
-                    width: '35%',
-                }} />
             </div>
         </ButtonBase>
         <div
             style={{
                 width: 238,
-                height: 52,
+                height: 49,
                 overflow: 'hidden',
                 position: 'absolute',
-                top: 0,
+                top: 2,
+                pointerEvents: "none",
             }}>
+            <BgImage style={{
+                marginTop: '-3%',
+                marginLeft: '-4%',
+                backgroundImage: info && `url(${playerBanner(BannerType.foreground, info.bannerFg)})`,
+                width: '36%',
+                zIndex: 0,
+            }} />
             <ImageTextWrapper
                 style={{
                     top: '5%',
