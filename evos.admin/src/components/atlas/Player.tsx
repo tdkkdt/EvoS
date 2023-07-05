@@ -87,7 +87,6 @@ function Player({info}: Props) {
             }} />
             <ImageTextWrapper
                 style={{
-                    top: '5%',
                     fontSize: '2.5em',
                 }}>
                 <Typography component={'span'} style={{ fontSize: '1em' }}>{username}</Typography>
@@ -95,7 +94,7 @@ function Player({info}: Props) {
             </ImageTextWrapper>
             {info && <ImageTextWrapper
                 style={{
-                    bottom: '5%',
+                    bottom: '8%',
                     fontSize: '1.7em',
                 }}>
                 <Typography component={'span'} style={{ fontSize: '1em' }}>{info.status === "" ? "Online" : info.status}</Typography>
