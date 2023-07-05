@@ -26,6 +26,8 @@ export interface PlayerData
 
 export interface PlayerDetails {
     player: PlayerData;
+    bannedUntil?: string;
+    mutedUntil?: string;
 }
 
 export interface GroupData
@@ -123,6 +125,14 @@ export enum MapType {
     Reactor_Deathmatch = 'Reactor_Deathmatch',
     RobotFactory_Deathmatch = 'RobotFactory_Deathmatch',
     Skyway_Deathmatch = 'Skyway_Deathmatch',
+}
+
+export function asDate(date?: string) : Date | undefined {
+    return date ? new Date(date) : undefined;
+}
+
+export function cap(txt: string) : string {
+    return txt.charAt(0).toUpperCase() + txt.slice(1);
 }
 
 const baseUrl = ""

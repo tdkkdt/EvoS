@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {ban, getPlayer, mute, PlayerDetails} from "../../lib/Evos";
+import {asDate, ban, getPlayer, mute, PlayerDetails} from "../../lib/Evos";
 import {EvosError, processError} from "../../lib/Error";
 import {useAuthHeader} from "react-auth-kit";
 import {useNavigate, useParams} from "react-router-dom";
@@ -14,12 +14,17 @@ export default function ProfilePage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<EvosError>();
     const [playerDetails, setPlayerDetails] = useState<PlayerDetails>();
+    const [lastAction, setLastAction] = useState<Date>();
 
     const {accountId} = useParams();
     const accountIdNumber = accountId && parseInt(accountId);
 
     const authHeader = useAuthHeader()();
     const navigate = useNavigate();
+
+    const handleCommit = () => {
+        setLastAction(new Date());
+    }
 
     useEffect(() => {
         if (!accountIdNumber) return;
@@ -34,7 +39,9 @@ export default function ProfilePage() {
             .catch((error) => processError(error, setError, navigate));
 
         return () => abort.abort();
-    }, [accountIdNumber, authHeader, navigate, setPlayerDetails]);
+    }, [accountIdNumber, authHeader, navigate, setPlayerDetails, lastAction]);
+
+    const handle = `${playerDetails?.player.handle ?? "Nobody"}`;
 
     return (
         <Paper>
@@ -44,17 +51,23 @@ export default function ProfilePage() {
                 {loading && <LinearProgress />}
                 <MuteBanPlayer
                     disabled={loading}
+                    deadline={asDate(playerDetails?.mutedUntil)}
                     accountId={playerDetails?.player.accountId ?? 0}
                     action={mute}
-                    actionText={"Mute"}
-                    doneText={`${playerDetails?.player.handle ?? "Nobody"} has been muted`}
+                    handle={handle}
+                    actionText={"mute"}
+                    doneText={"muted"}
+                    onCommit={handleCommit}
                 />
                 <MuteBanPlayer
                     disabled={loading}
+                    deadline={asDate(playerDetails?.bannedUntil)}
                     accountId={playerDetails?.player.accountId ?? 0}
                     action={ban}
-                    actionText={"Ban"}
-                    doneText={`${playerDetails?.player.handle ?? "Nobody"} has been banned`}
+                    handle={handle}
+                    actionText={"ban"}
+                    doneText={"banned"}
+                    onCommit={handleCommit}
                 />
             </StackWrapper>
         </Paper>
