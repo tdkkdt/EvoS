@@ -35,8 +35,14 @@ function Player({info}: Props) {
         navigate(`/account/${info.accountId}`);
     }
 
-    return <>
-       <ButtonBase
+    return <div
+        style={{
+            width: 240,
+            height: 52,
+            fontSize: '8px',
+            position: 'relative',
+        }}>
+        <ButtonBase
             focusRipple
             key={info?.handle}
             onClick={handleClick}
@@ -66,24 +72,33 @@ function Player({info}: Props) {
                     backgroundImage: info && `url(${playerBanner(BannerType.foreground, info.bannerFg)})`,
                     width: '35%',
                 }} />
-                <ImageTextWrapper
-                    style={{
-                        top: '3%',
-                        fontSize: '2.5em',
-                    }}>
-                    <Typography component={'span'} style={{ fontSize: '1em' }}>{username}</Typography>
-                    {discriminator && <Typography component={'span'} style={{ fontSize: '0.8em' }}>#{discriminator}</Typography>}
-                </ImageTextWrapper>
-                {info && <ImageTextWrapper
-                    style={{
-                        bottom: '3%',
-                        fontSize: '1.5em',
-                    }}>
-                    <Typography component={'span'} style={{ fontSize: '1em' }}>{info.status}</Typography>
-                </ImageTextWrapper>}
             </div>
         </ButtonBase>
-    </>;
+        <div
+            style={{
+                width: 238,
+                height: 52,
+                overflow: 'hidden',
+                position: 'absolute',
+                top: 0,
+            }}>
+            <ImageTextWrapper
+                style={{
+                    top: '5%',
+                    fontSize: '2.5em',
+                }}>
+                <Typography component={'span'} style={{ fontSize: '1em' }}>{username}</Typography>
+                {discriminator && <Typography component={'span'} style={{ fontSize: '0.8em' }}>#{discriminator}</Typography>}
+            </ImageTextWrapper>
+            {info && <ImageTextWrapper
+                style={{
+                    bottom: '5%',
+                    fontSize: '1.7em',
+                }}>
+                <Typography component={'span'} style={{ fontSize: '1em' }}>{info.status === "" ? "Online" : info.status}</Typography>
+            </ImageTextWrapper>}
+        </div>
+    </div>;
 }
 
 export default Player;
