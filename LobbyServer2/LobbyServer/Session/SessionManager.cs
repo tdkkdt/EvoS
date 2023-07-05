@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using CentralServer.BridgeServer;
-using CentralServer.LobbyServer.Group;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Exceptions;
@@ -69,7 +68,7 @@ namespace CentralServer.LobbyServer.Session
             
                 PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
                 
-                AdminManager.Get().UpdateBanned(accountId);
+                AdminManager.Get().UpdatePenalties(accountId);
                 if (account.AdminComponent.Locked)
                 {
                     throw new RegisterGameException("This account is temporarily banned. Please, try again later.");

@@ -28,6 +28,12 @@ namespace CentralServer.LobbyServer
             _ = UpdateMutedLoop(cancelTokenSource.Token);
         }
 
+        public void UpdatePenalties(long accountId)
+        {
+            UpdateBanned(accountId);
+            UpdateMuted(accountId);
+        }
+
         private async Task UpdateMutedLoop(CancellationToken cancelToken)
         {
             while (true)
@@ -42,19 +48,24 @@ namespace CentralServer.LobbyServer
         {
             foreach (long accountId in SessionManager.GetOnlinePlayers())
             {
-                PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
-                if (account == null)
-                {
-                    log.Warn($"Cannot update muted status: account {accountId} not found");
-                    continue;
-                }
+                UpdateMuted(accountId);
+            }
+        }
 
-                if (account.AdminComponent.Muted && account.AdminComponent.MutedUntil <= DateTime.UtcNow)
-                {
-                    log.Info($"UNMUTE {account.Handle}: time out");
-                    account.AdminComponent.Muted = false;
-                    DB.Get().AccountDao.UpdateAccount(account);
-                }
+        private static void UpdateMuted(long accountId)
+        {
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
+            if (account == null)
+            {
+                log.Warn($"Cannot update muted status: account {accountId} not found");
+                return;
+            }
+
+            if (account.AdminComponent.Muted && account.AdminComponent.MutedUntil <= DateTime.UtcNow)
+            {
+                log.Info($"UNMUTE {account.Handle}: time out");
+                account.AdminComponent.Muted = false;
+                DB.Get().AccountDao.UpdateAccount(account);
             }
         }
 
@@ -90,7 +101,7 @@ namespace CentralServer.LobbyServer
             return true;
         }
 
-        public void UpdateBanned(long accountId)
+        private static void UpdateBanned(long accountId)
         {
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
             if (account == null)
