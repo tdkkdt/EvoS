@@ -1,9 +1,10 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using CentralServer.LobbyServer;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
-using EvoS.DirectoryServer.Account;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.DataAccess.Daos;
 using EvoS.Framework.Network.Static;
@@ -84,38 +85,57 @@ namespace CentralServer.ApiServer
             return Results.Json(PlayerDetails.Of(account));
         }
 
-        public struct AccountIdModel
+        public struct SearchResults
         {
-            public long accountId { get; set; }
+            public List<StatusController.Player> players { get; set; }
             
-            public static AccountIdModel Of(LoginDao.LoginEntry acc)
+            public static SearchResults Of(PersistedAccountData acc)
             {
-                return new AccountIdModel
+                return new SearchResults
                 {
-                    accountId = acc.AccountId,
+                    players = new List<StatusController.Player> { StatusController.Player.Of(acc) },
+                };
+            }
+            
+            public static SearchResults Of(List<PersistedAccountData> accounts)
+            {
+                return new SearchResults
+                {
+                    players = accounts.Select(StatusController.Player.Of).ToList(),
                 };
             }
         }
 
         public static IResult FindUser(string query)
         {
+            query = query.ToLower();
             int delimiter = query.IndexOf('#');
             if (delimiter >= 0)
             {
                 query = query.Substring(0, delimiter);
             }
-            if (!LoginManager.usernameRegex.IsMatch(query))
-            {
-                return Results.BadRequest();
-            }
 
             LoginDao.LoginEntry loginEntry = DB.Get().LoginDao.Find(query);
-            if (loginEntry == null)
+            if (loginEntry != null)
             {
-                return Results.NotFound();
+                PersistedAccountData acc = DB.Get().AccountDao.GetAccount(loginEntry.AccountId);
+                if (acc != null)
+                {
+                    return Results.Json(SearchResults.Of(acc));
+                }
             }
 
-            return Results.Json(AccountIdModel.Of(loginEntry));
+            List<LoginDao.LoginEntry> loginEntries = DB.Get().LoginDao.FindRegex(query);
+            List<PersistedAccountData> accounts = loginEntries
+                .Select(x => DB.Get().AccountDao.GetAccount(x.AccountId))
+                .Where(x => x != null)
+                .ToList();
+            if (!accounts.IsNullOrEmpty())
+            {
+                return Results.Json(SearchResults.Of(accounts));
+            }
+
+            return Results.NotFound();
         }
         
         public class PenaltyInfo

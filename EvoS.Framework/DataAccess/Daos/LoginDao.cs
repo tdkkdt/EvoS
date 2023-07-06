@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace EvoS.Framework.DataAccess.Daos
@@ -7,6 +8,7 @@ namespace EvoS.Framework.DataAccess.Daos
     {
         public LoginEntry? Find(string username);
         public LoginEntry? Find(long accountId);
+        public List<LoginEntry> FindRegex(string username);
         public void Save(LoginEntry entry);
 
         public class LoginEntry

@@ -1,4 +1,8 @@
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+using EvoS.Framework.DataAccess.Mock;
 
 namespace EvoS.Framework.DataAccess.Daos
 {
@@ -47,6 +51,22 @@ namespace EvoS.Framework.DataAccess.Daos
                 Cache(nonCachedAccount);
             }
             return nonCachedAccount;
+        }
+
+        public List<LoginDao.LoginEntry> FindRegex(string username)
+        {
+            if (dao is LoginMockDao)
+            {
+                Regex regex = new Regex(Regex.Escape(username));
+                return usernameCache
+                    .Where(x => regex.IsMatch(x.Key))
+                    .Select(x => x.Value)
+                    .ToList();
+            }
+            
+            List<LoginDao.LoginEntry> daoEntries = dao.FindRegex(username);
+            daoEntries.ForEach(Cache);
+            return daoEntries;
         }
 
         public void Save(LoginDao.LoginEntry entry)
