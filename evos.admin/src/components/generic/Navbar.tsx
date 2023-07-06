@@ -148,6 +148,7 @@ export default function NavBar() {
                                 type="search"
                                 label="Find player"
                                 variant="outlined"
+                                size="small"
                                 value={query}
                                 onChange={handleSearchChange}
                                 onKeyDown={handleSearchKeyDown}
