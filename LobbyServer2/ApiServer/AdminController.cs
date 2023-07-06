@@ -3,7 +3,9 @@ using System.Security.Claims;
 using CentralServer.LobbyServer;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
+using EvoS.DirectoryServer.Account;
 using EvoS.Framework.DataAccess;
+using EvoS.Framework.DataAccess.Daos;
 using EvoS.Framework.Network.Static;
 using log4net;
 using Microsoft.AspNetCore.Http;
@@ -80,6 +82,40 @@ namespace CentralServer.ApiServer
             }
 
             return Results.Json(PlayerDetails.Of(account));
+        }
+
+        public struct AccountIdModel
+        {
+            public long accountId { get; set; }
+            
+            public static AccountIdModel Of(LoginDao.LoginEntry acc)
+            {
+                return new AccountIdModel
+                {
+                    accountId = acc.AccountId,
+                };
+            }
+        }
+
+        public static IResult FindUser(string query)
+        {
+            int delimiter = query.IndexOf('#');
+            if (delimiter >= 0)
+            {
+                query = query.Substring(0, delimiter);
+            }
+            if (!LoginManager.usernameRegex.IsMatch(query))
+            {
+                return Results.BadRequest();
+            }
+
+            LoginDao.LoginEntry loginEntry = DB.Get().LoginDao.Find(query);
+            if (loginEntry == null)
+            {
+                return Results.NotFound();
+            }
+
+            return Results.Json(AccountIdModel.Of(loginEntry));
         }
         
         public class PenaltyInfo

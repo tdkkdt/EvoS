@@ -14,7 +14,7 @@ namespace EvoS.DirectoryServer.Account
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(LoginManager));
         private static readonly HashAlgorithm algorithm = SHA256.Create();
-        private static readonly Regex usernameRegex = new Regex(@"^[A-Za-z][A-Za-z_\-0-9]{3,}$");
+        public static readonly Regex usernameRegex = new Regex(@"^[A-Za-z][A-Za-z_\-0-9]{3,}$");
         private static readonly Regex bannedUsernameRegex = new Regex(@"^(?:(?:changeMeToYour)?user(?:name)?)$", RegexOptions.IgnoreCase);
         private static readonly Regex bannedPasswordRegex = new Regex(@"^(?:(?:changeMeToYour)?password)$", RegexOptions.IgnoreCase);
 
