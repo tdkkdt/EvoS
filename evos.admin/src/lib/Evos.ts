@@ -73,6 +73,10 @@ export interface PenaltyInfo {
     description: string
 }
 
+export interface AccountIdWrapper {
+    accountId: number;
+}
+
 export enum CharacterType {
     None = 'None',
     BattleMonk = 'BattleMonk',
@@ -148,6 +152,12 @@ export function getStatus(authHeader: string) {
     return axios.get<Status>(
         baseUrl + "/api/lobby/status",
         { headers: {'Authorization': authHeader} });
+}
+
+export function findPlayer(abort: AbortController, authHeader: string, query: string) {
+    return axios.get<AccountIdWrapper>(
+        baseUrl + "/api/player/find",
+        { params: { query: query }, headers: {'Authorization': authHeader}, signal: abort.signal });
 }
 
 export function getPlayer(abort: AbortController, authHeader: string, accountId: number) {
