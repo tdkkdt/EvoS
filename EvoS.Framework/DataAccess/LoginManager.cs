@@ -21,7 +21,7 @@ namespace EvoS.DirectoryServer.Account
         public static long RegisterOrLogin(AuthInfo authInfo)
         {
             LoginDao loginDao = DB.Get().LoginDao;
-            LoginDao.LoginEntry entry = loginDao.Find(authInfo.UserName);
+            LoginDao.LoginEntry entry = loginDao.Find(authInfo.UserName.ToLower());
             string hash = Hash(authInfo._Password);
             if (entry != null)
             {
@@ -74,7 +74,7 @@ namespace EvoS.DirectoryServer.Account
                 {
                     AccountId = accountId,
                     Hash = hash,
-                    Username = authInfo.UserName
+                    Username = authInfo.UserName.ToLower()
                 });
                 log.Info($"Successfully registered new user {accountId}/{authInfo.UserName}");
                 return accountId;
