@@ -1,4 +1,5 @@
 import * as React from 'react';
+import {useState} from 'react';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
@@ -6,11 +7,9 @@ import Container from '@mui/material/Container';
 import Avatar from '@mui/material/Avatar';
 import {BannerType, logo, playerBanner} from "../../lib/Resources";
 import {NavLink, useNavigate} from "react-router-dom";
-import {useAuthHeader, useAuthUser, useIsAuthenticated, useSignOut} from "react-auth-kit";
+import {useAuthUser, useIsAuthenticated, useSignOut} from "react-auth-kit";
 import {Menu, MenuItem, Stack, styled, TextField, Typography} from "@mui/material";
-import {useState} from "react";
-import {findPlayer} from "../../lib/Evos";
-import {EvosError, processError} from "../../lib/Error";
+import {EvosError} from "../../lib/Error";
 import ErrorDialog from "./ErrorDialog";
 
 const pages = [
@@ -45,7 +44,6 @@ export default function NavBar() {
     const isAuthenticated = useIsAuthenticated();
     const signOut = useSignOut();
     const auth = useAuthUser();
-    const authHeader = useAuthHeader();
     const navigate = useNavigate();
 
     const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -70,11 +68,7 @@ export default function NavBar() {
         if (event.key !== "Enter" || !query) return;
 
         event.preventDefault();
-        findPlayer(new AbortController(), authHeader(), query)
-            .then((resp) => {
-                navigate(`/account/${resp.data.accountId}`);
-            })
-            .catch((error) => processError(error, setError, navigate))
+        navigate(`/account/?query=${query}`);
     }
 
     return (

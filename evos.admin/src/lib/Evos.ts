@@ -73,8 +73,8 @@ export interface PenaltyInfo {
     description: string
 }
 
-export interface AccountIdWrapper {
-    accountId: number;
+export interface SearchResults {
+    players: PlayerData[];
 }
 
 export enum CharacterType {
@@ -154,8 +154,8 @@ export function getStatus(authHeader: string) {
         { headers: {'Authorization': authHeader} });
 }
 
-export function findPlayer(abort: AbortController, authHeader: string, query: string) {
-    return axios.get<AccountIdWrapper>(
+export function findPlayers(abort: AbortController, authHeader: string, query: string) {
+    return axios.get<SearchResults>(
         baseUrl + "/api/player/find",
         { params: { query: query }, headers: {'Authorization': authHeader}, signal: abort.signal });
 }
