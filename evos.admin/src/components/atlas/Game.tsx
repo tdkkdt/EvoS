@@ -55,6 +55,16 @@ function Team({caption, info, isTeamA, playerData}: TeamProps) {
     )
 }
 
+function statusString(info: GameData) {
+    if (info.status === 'Started') {
+        return `Turn ${info.turn}`;
+    }
+    if (info.turn === 0) {
+        return info.status;
+    }
+    return `${info.status} (turn ${info.turn})`;
+}
+
 interface Props {
     info: GameData;
     playerData: Map<number, PlayerData>;
@@ -105,7 +115,7 @@ export default function Game({info, playerData, expanded}: Props) {
                                 textShadow: '1px 1px 2px black, -1px -1px 2px black, 1px -1px 2px black, -1px 1px 2px black',
                                 marginTop: -10,
                             }}>
-                            {info.status === 'Started' ? `Turn ${info.turn}` : info.status}
+                            {statusString(info)}
                         </Typography>
                     </Box>
                 </Tooltip>
