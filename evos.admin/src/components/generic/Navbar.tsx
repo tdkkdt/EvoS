@@ -5,10 +5,10 @@ import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import Container from '@mui/material/Container';
 import Avatar from '@mui/material/Avatar';
-import {BannerType, logo, playerBanner} from "../../lib/Resources";
+import {BannerType, logo, logoSmall, playerBanner} from "../../lib/Resources";
 import {NavLink, useNavigate} from "react-router-dom";
 import {useAuthUser, useIsAuthenticated, useSignOut} from "react-auth-kit";
-import {Menu, MenuItem, Stack, styled, TextField, Typography} from "@mui/material";
+import {IconButton, Menu, MenuItem, Stack, styled, TextField, Typography} from "@mui/material";
 import {EvosError} from "../../lib/Error";
 import ErrorDialog from "./ErrorDialog";
 
@@ -37,7 +37,8 @@ export const NavBarText = styled(Typography)({
 
 
 export default function NavBar() {
-    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const [anchorUserMenu, setAnchorUserMenu] = useState<null | HTMLElement>(null);
+    const [anchorNavMenu, setAnchorNavMenu] = useState<null | HTMLElement>(null);
     const [query, setQuery] = useState<string>("");
     const [error, setError] = useState<EvosError>();
 
@@ -46,16 +47,24 @@ export default function NavBar() {
     const auth = useAuthUser();
     const navigate = useNavigate();
 
-    const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
-        setAnchorEl(event.currentTarget);
+    const handleUserMenu = (event: React.MouseEvent<HTMLElement>) => {
+        setAnchorUserMenu(event.currentTarget);
     };
 
-    const handleClose = () => {
-        setAnchorEl(null);
+    const handleUserMenuClose = () => {
+        setAnchorUserMenu(null);
+    };
+
+    const handleNavMenu = (event: React.MouseEvent<HTMLElement>) => {
+        setAnchorNavMenu(event.currentTarget);
+    };
+
+    const handleNavMenuClose = () => {
+        setAnchorNavMenu(null);
     };
 
     const handleLogOut = () => {
-        handleClose();
+        handleUserMenuClose();
         signOut();
         navigate('/login');
     };
@@ -68,6 +77,8 @@ export default function NavBar() {
         if (event.key !== "Enter" || !query) return;
 
         event.preventDefault();
+        handleUserMenuClose();
+        handleNavMenuClose();
         navigate(`/account/?query=${query}`);
     }
 
@@ -76,8 +87,58 @@ export default function NavBar() {
             {error && <ErrorDialog error={error} onDismiss={() => setError(undefined)} />}
             <Container maxWidth="xl">
                 <Toolbar disableGutters>
-                    <Avatar alt="logo" variant="square" src={logo()} sx={{ flexShrink: 1, width: 255, height: 40 }}/>
-                    <Stack direction={"row"} alignItems="center" sx={{ flexGrow: 1, display: 'flex', justifyContent: 'space-evenly' }}>
+                    <Avatar alt="logo" variant="square" src={logo()} sx={{ flexShrink: 1, width: 255, height: 40, display: { xs: 'none', md: 'flex' } }}/>
+                    <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>
+                        <IconButton
+                            size="large"
+                            aria-label="account of current user"
+                            aria-controls="menu-appbar"
+                            aria-haspopup="true"
+                            onClick={handleNavMenu}
+                            color="inherit"
+                        >
+                            <Avatar alt="logo" variant="square" src={logoSmall()} sx={{ flexShrink: 1, width: 40, height: 40 }}/>
+                        </IconButton>
+                        {isAuthenticated() && <Menu
+                            id="menu-appbar"
+                            anchorEl={anchorNavMenu}
+                            anchorOrigin={{
+                                vertical: 'bottom',
+                                horizontal: 'left',
+                            }}
+                            keepMounted
+                            transformOrigin={{
+                                vertical: 'top',
+                                horizontal: 'left',
+                            }}
+                            open={Boolean(anchorNavMenu)}
+                            onClose={handleNavMenuClose}
+                            sx={{
+                                display: { xs: 'block', md: 'none' },
+                            }}
+                        >
+                            {pages.map((page) => (
+                                <MenuItem key={page.text} onClick={() => {
+                                    handleNavMenuClose();
+                                    navigate(page.url);
+                                }}>
+                                    <Typography textAlign="center">{page.text}</Typography>
+                                </MenuItem>
+                            ))}
+                            <MenuItem key={'search-item'}>
+                                <TextField
+                                    id="account-search"
+                                    type="search"
+                                    label="Find player"
+                                    variant="outlined"
+                                    value={query}
+                                    onChange={handleSearchChange}
+                                    onKeyDown={handleSearchKeyDown}
+                                />
+                            </MenuItem>
+                        </Menu>}
+                    </Box>
+                    <Stack direction={"row"} alignItems="center" sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' }, justifyContent: 'space-evenly' }}>
                         {isAuthenticated() && pages.map((page) => (
                             <NavBarLink key={page.text} to={page.url}><NavBarText>{page.text}</NavBarText></NavBarLink>
                         ))}
@@ -94,7 +155,7 @@ export default function NavBar() {
                     </Stack>
                     <Box sx={{ flexGrow: 0 }}>
                         {isAuthenticated() && <>
-                            <Stack direction={"row"} alignItems="center" sx={{cursor: "pointer"}} onClick={handleMenu}>
+                            <Stack direction={"row"} alignItems="center" sx={{cursor: "pointer"}} onClick={handleUserMenu}>
                                 <NavBarText>{auth()?.handle}</NavBarText>
                                 <Avatar
                                     alt="Avatar"
@@ -104,7 +165,7 @@ export default function NavBar() {
                             </Stack>
                             <Menu
                                 id="menu-appbar"
-                                anchorEl={anchorEl}
+                                anchorEl={anchorUserMenu}
                                 anchorOrigin={{
                                     vertical: 'bottom',
                                     horizontal: 'right',
@@ -114,8 +175,8 @@ export default function NavBar() {
                                     vertical: 'top',
                                     horizontal: 'right',
                                 }}
-                                open={Boolean(anchorEl)}
-                                onClose={handleClose}
+                                open={Boolean(anchorUserMenu)}
+                                onClose={handleUserMenuClose}
                             >
                                 <MenuItem onClick={handleLogOut}>Log out</MenuItem>
                             </Menu>

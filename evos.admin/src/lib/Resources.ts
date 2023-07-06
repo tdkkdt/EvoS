@@ -8,6 +8,9 @@ export enum BannerType {
 export function logo() {
     return `/img/logo.png`;
 }
+export function logoSmall() {
+    return `/logo.png`;
+}
 
 export function playerBanner(type: BannerType, id: number) {
     return `/img/banners/${type}/${id}.png`;
