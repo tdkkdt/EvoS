@@ -56,7 +56,7 @@ namespace CentralServer.ApiServer
 
         public struct PlayerDetails
         {
-            public CommonController.Player player { get; set; }
+            public StatusController.Player player { get; set; }
             public DateTime? bannedUntil { get; set; }
             public DateTime? mutedUntil { get; set; }
 
@@ -64,7 +64,7 @@ namespace CentralServer.ApiServer
             {
                 return new PlayerDetails
                 {
-                    player = CommonController.Player.Of(acc),
+                    player = StatusController.Player.Of(acc),
                     bannedUntil = acc.AdminComponent.Locked ? acc.AdminComponent.LockedUntil : null,
                     mutedUntil = acc.AdminComponent.Muted ? acc.AdminComponent.MutedUntil : null,
                 };

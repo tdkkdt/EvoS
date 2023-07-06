@@ -14,9 +14,9 @@ using Microsoft.AspNetCore.Http;
 namespace CentralServer.ApiServer
 {
 
-    public static class CommonController
+    public static class StatusController
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(CommonController));
+        private static readonly ILog log = LogManager.GetLogger(typeof(StatusController));
         
         public static IResult GetStatus()
         {

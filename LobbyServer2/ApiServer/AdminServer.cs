@@ -79,7 +79,7 @@ public class AdminServer
         app.UseMiddleware<AdminAuthMiddleware>();
         
         app.MapPost(EndpointLogin, Login).AllowAnonymous();
-        app.MapGet("/api/lobby/status", CommonController.GetStatus).RequireAuthorization("api_readonly");
+        app.MapGet("/api/lobby/status", StatusController.GetStatus).RequireAuthorization("api_readonly");
         app.MapPost("/api/lobby/broadcast", AdminController.Broadcast).RequireAuthorization("api_admin");
         app.MapPut("/api/queue/paused", AdminController.PauseQueue).RequireAuthorization("api_admin");
         app.MapGet("/api/player/details", AdminController.GetUser).RequireAuthorization("api_admin");
