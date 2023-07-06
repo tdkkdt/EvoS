@@ -7,6 +7,7 @@ import {useNavigate} from "react-router-dom";
 
 interface Props {
     info?: PlayerData;
+    greyOut?: boolean;
 }
 
 const ImageTextWrapper = styled('span')(({ theme }) => ({
@@ -19,7 +20,7 @@ const ImageTextWrapper = styled('span')(({ theme }) => ({
     textShadow: '1px 1px 2px black, -1px -1px 2px black, 1px -1px 2px black, -1px 1px 2px black',
 }));
 
-function Player({info}: Props) {
+function Player({info, greyOut}: Props) {
     let username = 'OFFLINE', discriminator;
     if (info) {
         [username, discriminator] = info.handle.split('#', 2)
@@ -42,6 +43,7 @@ function Player({info}: Props) {
             fontSize: '8px',
             position: 'relative',
             display: 'inline-flex',
+            opacity: greyOut ? 0.5 : 1,
         }}>
         <ButtonBase
             focusRipple
