@@ -17,7 +17,7 @@ function Queue({info, groupData, playerData, hidePlayers}: Props) {
             {info.groupIds.map((groupId) => {
                 const info = groupData.get(groupId);
                 const hidden = info && hidePlayers && !info.accountIds.some(accId => !hidePlayers.has(accId))
-                return info && !hidden && <Group key={`group_${groupId}`} info={info} playerData={playerData} />;
+                return info && !hidden && <Group key={`group_${groupId}`} info={info} playerData={playerData} hidePlayers={hidePlayers}/>;
             })}
         </FlexBox>
     </>;
