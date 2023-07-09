@@ -21,6 +21,11 @@ export default function ProfileSearchPage() {
     useEffect(() => {
         const query = searchParams.get('query');
         if (!query) return;
+        if (query.length < 3) {
+            setError({text: "Query is too short"})
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         const abort = new AbortController();
         findPlayers(abort, authHeader, query)
