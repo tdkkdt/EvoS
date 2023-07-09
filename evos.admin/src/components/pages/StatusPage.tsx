@@ -56,11 +56,11 @@ function StatusPage() {
         getStatus(authHeader)
             .then((resp) => {
                 setStatus(resp.data);
-                setLoading(false);
                 setUpdateTime(new Date());
                 setAge(0);
             })
             .catch((error) => processError(error, setError, navigate))
+            .then(() => setLoading(false));
     }, updatePeriodMs);
 
     useInterval(() => {

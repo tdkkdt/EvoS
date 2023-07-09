@@ -25,14 +25,14 @@ export default function ProfileSearchPage() {
         const abort = new AbortController();
         findPlayers(abort, authHeader, query)
             .then((resp) => {
-                setLoading(false);
                 if (resp.data.players.length === 1) {
                     navigate(`/account/${resp.data.players[0].accountId}`);
                     return;
                 }
                 setSearchResults(resp.data);
             })
-            .catch((error) => processError(error, setError, navigate));
+            .catch((error) => processError(error, setError, navigate))
+            .then(() => setLoading(false));
 
         return () => abort.abort();
     }, [searchParams, authHeader, navigate, setSearchResults]);
