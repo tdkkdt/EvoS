@@ -33,7 +33,7 @@ namespace CentralServer.BridgeServer
         
         // TODO sync with GameInfo.GameStatus or get rid of it (GameInfo can be null)
         public GameStatus ServerGameStatus { get; private set; } = GameStatus.None;
-        public string ProcessCode { get; private set; }
+        public string ProcessCode => SessionInfo?.ProcessCode;
         public string Name => SessionInfo?.UserName ?? "ATLAS";
         public string BuildVersion => SessionInfo?.BuildVersion ?? "";
         public bool IsPrivate { get; private set; }
@@ -114,7 +114,6 @@ namespace CentralServer.BridgeServer
             Port = Convert.ToInt32(data.Split(":")[1]);
             SessionInfo = request.SessionInfo;
             IsPrivate = request.isPrivate;
-            ProcessCode = $"{Name}-{Guid.NewGuid()}";
             ServerManager.AddServer(this);
 
             Send(new RegisterGameServerResponse
