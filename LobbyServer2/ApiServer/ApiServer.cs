@@ -102,10 +102,9 @@ public abstract class ApiServer
 
     protected IResult Login(HttpContext httpContext, [FromBody] AuthInfo authInfo)
     {
-        log.Info($"Attempt to login");
         if (authInfo.UserName.IsNullOrEmpty() || authInfo._Password.IsNullOrEmpty())
         {
-            log.Info($"Attempt to login for api access without credentials");
+            log.Info($"Attempt to login for {authContext} access without credentials");
             return Results.Unauthorized();
         }
         long accountId;
@@ -141,6 +140,11 @@ public abstract class ApiServer
         public string handle { get; set; }
         public string token { get; set; }
         public long banner { get; set; }
+    }
+        
+    public struct ErrorResponseModel
+    {
+        public string message { get; set; }
     }
     
     public class CustomLogLevelTranslator : ILog4NetLogLevelTranslator

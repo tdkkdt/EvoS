@@ -222,20 +222,9 @@ namespace EvoS.DirectoryServer
                 account = DB.Get().AccountDao.GetAccount(accountId);
                 if (account == null)
                 {
-                    log.Info($"Player {accountId} does not exist");
+                    log.Error($"Player {accountId} does not exist");
                     string username = request.AuthInfo.UserName;
-                    DB.Get().AccountDao.CreateAccount(AccountManager.CreateAccount(accountId, username));
-                    account = DB.Get().AccountDao.GetAccount(accountId);
-                    if (account != null)
-                    {
-                        log.Info($"Successfully Registered {account.Handle}/{account.AccountId}");
-                    }
-                    else
-                    {
-                        log.Error($"Error creating a new account for player '{username}'/{accountId}");
-                        account = AccountManager.CreateAccount(accountId, username);
-                        log.Error($"Temp user {account.Handle}/{account.AccountId}");
-                    }
+                    account = LoginManager.CreateAccount(accountId, username);
                 }
                 else
                 {

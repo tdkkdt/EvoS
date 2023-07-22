@@ -16,8 +16,5 @@
     <ProjectReference Include="..\LobbyServer2\CentralServer.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Inventory" />
-  </ItemGroup>
 
 </Project>

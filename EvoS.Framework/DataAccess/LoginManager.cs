@@ -43,42 +43,81 @@ namespace EvoS.DirectoryServer.Account
                     log.Info($"Attempt to login as \"{authInfo.UserName}\"");
                     throw new ArgumentException("User does not exist");
                 }
-                if (!usernameRegex.IsMatch(authInfo.UserName))
-                {
-                    log.Info($"Attempt to register as \"{authInfo.UserName}\"");
-                    throw new ArgumentException("Invalid username. " + 
-                        "Please use only latin characters, numbers, underscore and dash, and start with a letter. " +
-                        "4 symbols or more.");
-                }
-                if (bannedUsernameRegex.IsMatch(authInfo.UserName))
-                {
-                    log.Info($"Attempt to register as \"{authInfo.UserName}\"");
-                    throw new ArgumentException("You cannot use this username. Please choose another.");
-                }
-                if (bannedPasswordRegex.IsMatch(authInfo.Password))
-                {
-                    log.Info($"Attempt to register with a bad password");
-                    throw new ArgumentException("You cannot use this password. Please choose another.");
-                }
-                long accountId = GenerateAccountId(authInfo.UserName);
-                for (int i = 0; loginDao.Find(accountId) != null; ++i)
-                {
-                    accountId++;
-                    if (i >= 100)
-                    {
-                        log.Error($"Failed to register new user {authInfo.UserName}");
-                        throw new ApplicationException("Failed to crate an account");
-                    }
-                }
-                loginDao.Save(new LoginDao.LoginEntry
-                {
-                    AccountId = accountId,
-                    Hash = hash,
-                    Username = authInfo.UserName.ToLower()
-                });
-                log.Info($"Successfully registered new user {accountId}/{authInfo.UserName}");
-                return accountId;
+
+                log.Info($"Registering user automatically: {authInfo.UserName}");
+                return Register(authInfo);
             }
+        }
+
+        public static long Register(AuthInfo authInfo)
+        {
+            LoginDao loginDao = DB.Get().LoginDao;
+            string hash = Hash(authInfo._Password);
+            LoginDao.LoginEntry entry = loginDao.Find(authInfo.UserName.ToLower());
+
+            if (entry is not null)
+            {
+                log.Info($"Attempt to register as existing user \"{authInfo.UserName}\"");
+                throw new ArgumentException("This username is already in use. Please choose another.");
+            }
+            
+            if (!usernameRegex.IsMatch(authInfo.UserName))
+            {
+                log.Info($"Attempt to register as \"{authInfo.UserName}\"");
+                throw new ArgumentException("Invalid username. " +
+                                            "Please use only latin characters, numbers, underscore and dash, and start with a letter. " +
+                                            "4 symbols or more.");
+            }
+
+            if (bannedUsernameRegex.IsMatch(authInfo.UserName))
+            {
+                log.Info($"Attempt to register as \"{authInfo.UserName}\"");
+                throw new ArgumentException("You cannot use this username. Please choose another.");
+            }
+
+            if (bannedPasswordRegex.IsMatch(authInfo.Password))
+            {
+                log.Info($"Attempt to register with a bad password");
+                throw new ArgumentException("You cannot use this password. Please choose another.");
+            }
+
+            long accountId = GenerateAccountId(authInfo.UserName);
+            for (int i = 0; loginDao.Find(accountId) != null; ++i)
+            {
+                accountId++;
+                if (i >= 100)
+                {
+                    log.Error($"Failed to register new user {authInfo.UserName}");
+                    throw new ApplicationException("Failed to create an account");
+                }
+            }
+
+            PersistedAccountData account = CreateAccount(accountId, authInfo.UserName);
+            if (account is null)
+            {
+                throw new ApplicationException("Failed to create an account");
+            }
+            
+            loginDao.Save(new LoginDao.LoginEntry
+            {
+                AccountId = accountId,
+                Hash = hash,
+                Username = authInfo.UserName.ToLower()
+            });
+            log.Info($"Successfully registered new user {accountId}/{authInfo.UserName}");
+            return accountId;
+        }
+
+        public static PersistedAccountData CreateAccount(long accountId, string username)
+        {
+            DB.Get().AccountDao.CreateAccount(AccountManager.CreateAccount(accountId, username));
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
+            if (account == null)
+            {
+                log.Error($"Error creating a new account for player '{username}'/{accountId}");
+            }
+
+            return account;
         }
 
         public static long Login(AuthInfo authInfo)
