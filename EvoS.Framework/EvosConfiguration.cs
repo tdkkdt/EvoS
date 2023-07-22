@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using YamlDotNet.Serialization;
+using EvoS.Framework.Misc;
 
 namespace EvoS.Framework
 {
@@ -13,8 +14,12 @@ namespace EvoS.Framework
         public string GameServerExecutableArgs = "";
         public bool AutoRegisterNewUsers = true;
         public DBConfig Database = new DBConfig();
-        public string ApiKey = "";
-        public int ApiPort = 3001;
+        public string UserApiKey = "";
+        public int UserApiPort = 3002;
+        public string AdminApiKey = "";
+        public int AdminApiPort = 3001;
+        public string TicketAuthKey = "";
+        public bool AllowUsernamePasswordAuth = true;
         
         public bool PingOnGroupRequest = true;
 
@@ -75,14 +80,39 @@ namespace EvoS.Framework
             return GetInstance().PingOnGroupRequest;
         }
 
-        public static string GetApiKey()
+        public static string GetAdminApiKey()
         {
-            return GetInstance().ApiKey;
+            return GetInstance().AdminApiKey;
         }
 
-        public static int GetApiPort()
+        public static string GetUserApiKey()
         {
-            return GetInstance().ApiPort;
+            return GetInstance().UserApiKey;
+        }
+
+        public static int GetAdminApiPort()
+        {
+            return GetInstance().AdminApiPort;
+        }
+
+        public static int GetUserApiPort()
+        {
+            return GetInstance().UserApiPort;
+        }
+
+        public static string GetTicketAuthKey()
+        {
+            return GetInstance().TicketAuthKey;
+        }
+
+        public static bool GetAllowUsernamePasswordAuth()
+        {
+            return GetInstance().AllowUsernamePasswordAuth;
+        }
+
+        public static bool GetAllowTicketAuth()
+        {
+            return !GetUserApiKey().IsNullOrEmpty() && !GetTicketAuthKey().IsNullOrEmpty();
         }
 
         public enum DBType

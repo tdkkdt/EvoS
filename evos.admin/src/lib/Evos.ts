@@ -143,53 +143,53 @@ const baseUrl = ""
 
 export function login(abort: AbortController, username: string, password: string) {
     return axios.post<LoginResponse>(
-        baseUrl + "/api/login",
+        baseUrl + "/api/admin/login",
         { UserName: username, Password: password },
         { signal: abort.signal });
 }
 
 export function getStatus(authHeader: string) {
     return axios.get<Status>(
-        baseUrl + "/api/lobby/status",
+        baseUrl + "/api/admin/lobby/status",
         { headers: {'Authorization': authHeader} });
 }
 
 export function findPlayers(abort: AbortController, authHeader: string, query: string) {
     return axios.get<SearchResults>(
-        baseUrl + "/api/player/find",
+        baseUrl + "/api/admin/player/find",
         { params: { query: query }, headers: {'Authorization': authHeader}, signal: abort.signal });
 }
 
 export function getPlayer(abort: AbortController, authHeader: string, accountId: number) {
     return axios.get<PlayerDetails>(
-        baseUrl + "/api/player/details",
+        baseUrl + "/api/admin/player/details",
         { params: { AccountId: accountId }, headers: {'Authorization': authHeader}, signal: abort.signal });
 }
 
 export function pauseQueue(abort: AbortController, authHeader: string, paused: boolean) {
     return axios.put(
-        baseUrl + "/api/queue/paused",
+        baseUrl + "/api/admin/queue/paused",
         { Paused: paused },
         { headers: {'Authorization': authHeader}, signal: abort.signal });
 }
 
 export function broadcast(abort: AbortController, authHeader: string, message: string) {
     return axios.post(
-        baseUrl + "/api/lobby/broadcast",
+        baseUrl + "/api/admin/lobby/broadcast",
         { Msg: message },
         { headers: {'Authorization': authHeader}, signal: abort.signal });
 }
 
 export function mute(authHeader: string, penaltyInfo: PenaltyInfo) {
     return axios.post(
-        baseUrl + "/api/player/muted",
+        baseUrl + "/api/admin/player/muted",
         penaltyInfo,
         { headers: {'Authorization': authHeader} });
 }
 
 export function ban(authHeader: string, penaltyInfo: PenaltyInfo) {
     return axios.post(
-        baseUrl + "/api/player/banned",
+        baseUrl + "/api/admin/player/banned",
         penaltyInfo,
         { headers: {'Authorization': authHeader} });
 }

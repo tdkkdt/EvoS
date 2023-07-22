@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Xml;
+using System.Xml.Linq;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.Misc;
 using EvoS.Framework.Network;
@@ -18,9 +19,11 @@ public class AuthTicket
 	public const string USD = "USD";
 	public const string ACTIVE = "ACTIVE";
 	public const string ACCOUNT_BANNED = "ACCOUNT_BANNED";
-	public Dictionary<long, AuthEntitlement> m_entitlementsByAccountEntitlementId;
-	public Dictionary<string, AuthEntitlement> m_entitlementsByCode;
-
+	public Dictionary<long, AuthEntitlement> m_entitlementsByAccountEntitlementId = new();
+	public Dictionary<string, AuthEntitlement> m_entitlementsByCode = new();
+	
+	public string Token { get; private set; }
+	
 	private static Mutex s_userNameMutex;
 	private static int s_userIndex;
 
@@ -42,10 +45,23 @@ public class AuthTicket
 		s_userIndex = -1;
 	}
 
-	public AuthTicket()
+	private AuthTicket()
 	{
-		m_entitlementsByAccountEntitlementId = new Dictionary<long, AuthEntitlement>();
-		m_entitlementsByCode = new Dictionary<string, AuthEntitlement>();
+		
+	}
+
+	public AuthTicket(string token, PersistedAccountData account)
+	{
+		Token = token;
+		ChannelId = 0;
+		AuthInfo = new AuthInfo
+		{
+			AccountCurrency = USD,
+			AccountId = account.AccountId,
+			AccountStatus = "ACTIVE",
+			Handle = account.Handle,
+			UserName = account.UserName,
+		};
 	}
 
 	public static AuthTicket Parse(string ticketData, string channelName = null)
@@ -77,6 +93,7 @@ public class AuthTicket
 		if (nodeTicket != null)
 		{
 			authTicket.ChannelId = nodeTicket.GetChildNodeAsInt64("channelId");
+			authTicket.Token = nodeTicket.GetChildNodeAsString("token");
 		}
 		authTicket.AuthInfo = new AuthInfo
 		{
@@ -133,6 +150,20 @@ public class AuthTicket
 			}
 		}
 		return authTicket;
+	}
+
+	public XDocument AsXML()
+	{
+		return new XDocument(new XElement("authTicket",
+			new XElement("ticket",
+				new XElement("channelId", ChannelId),
+				new XElement("token", Token)),
+			new XElement("account",
+				new XElement("email", UserName),
+				new XElement("accountId", AccountId),
+				new XElement("glyphTag", Handle),
+				new XElement("accountCurrency", AccountCurrency),
+				new XElement("accountStatus", AccountStatus))));
 	}
 
 	public static AuthTicket Load(string path, string channelName = null)

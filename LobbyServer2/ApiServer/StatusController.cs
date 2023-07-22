@@ -6,6 +6,7 @@ using CentralServer.LobbyServer.Friend;
 using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
+using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.Static;
 using log4net;
@@ -17,6 +18,8 @@ namespace CentralServer.ApiServer
     public static class StatusController
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(StatusController));
+        
+        private static readonly string MAP_UNKNOWN = "UNKNOWN";
         
         public static IResult GetStatus()
         {
@@ -39,6 +42,34 @@ namespace CentralServer.ApiServer
                 games = servers
                     .Where(s => !s.IsAvailable())
                     .Select(Game.Of)
+                    .ToList()
+            };
+            return Results.Json(status);
+        }
+        
+        public static IResult GetSimpleStatus()
+        {
+            List<BridgeServerProtocol> servers = ServerManager.GetServers();
+            HashSet<long> players = SessionManager.GetOnlinePlayers();
+            Status status = new Status
+            {
+                players = players
+                    .Select(id => DB.Get().AccountDao.GetAccount(id))
+                    .Select(Player.Of)
+                    .ToList(),
+                groups = players
+                    .Select(Group.OfPlayer)
+                    .ToList(),
+                queues = MatchmakingManager.GetQueues()
+                    .Select(Queue.OfPlayers)
+                    .ToList(),
+                servers = servers
+                    .Where(s => !s.IsAvailable())
+                    .Select(Server.Of)
+                    .ToList(),
+                games = servers
+                    .Where(s => !s.IsAvailable())
+                    .Select(g => Game.Of(g, true))
                     .ToList()
             };
             return Results.Json(status);
@@ -87,6 +118,15 @@ namespace CentralServer.ApiServer
                     groupId = g.GroupId
                 };
             }
+
+            public static Group OfPlayer(long accountId)
+            {
+                return new Group
+                {
+                    accountIds = new List<long>{ accountId },
+                    groupId = accountId
+                };
+            }
         }
 
         public struct Queue
@@ -99,7 +139,16 @@ namespace CentralServer.ApiServer
                 return new Queue
                 {
                     type = q.GameType.ToString(),
-                    groupIds = q.GetQueuesGroups()
+                    groupIds = q.GetQueuedGroups()
+                };
+            }
+
+            public static Queue OfPlayers(MatchmakingQueue q)
+            {
+                return new Queue
+                {
+                    type = q.GameType.ToString(),
+                    groupIds = q.GetQueuedPlayers()
                 };
             }
         }
@@ -134,14 +183,20 @@ namespace CentralServer.ApiServer
 
             public static Game Of(BridgeServerProtocol s)
             {
+                return Of(s, false);
+            }
+
+            public static Game Of(BridgeServerProtocol s, bool hideTeamSensitiveData)
+            {
+                bool hide = hideTeamSensitiveData && s.ServerGameStatus < GameStatus.LoadoutSelecting;
                 return new Game
                 {
                     id = s.GetGameInfo?.GameServerProcessCode,
                     ts = s.GameInfo != null ? $"{new DateTime(s.GameInfo.CreateTimestamp):yyyy_MM_dd__HH_mm_ss}" : null,
-                    map = s.GetGameInfo?.GameConfig.Map ?? "UNKNOWN",
+                    map = hide ? MAP_UNKNOWN : s.GetGameInfo?.GameConfig.Map ?? MAP_UNKNOWN,
                     server = s.ID,
-                    teamA = s.GetTeamInfo.TeamAPlayerInfo.Select(GamePlayer.Of).ToList(),
-                    teamB = s.GetTeamInfo.TeamBPlayerInfo.Select(GamePlayer.Of).ToList(),
+                    teamA = s.GetTeamInfo.TeamAPlayerInfo.Select(p => GamePlayer.Of(p, hide)).ToList(),
+                    teamB = s.GetTeamInfo.TeamBPlayerInfo.Select(p => GamePlayer.Of(p, hide)).ToList(),
                     status = s.ServerGameStatus.ToString(),
                     turn = s.GameSummary?.NumOfTurns ?? s.GameMetrics.CurrentTurn,
                     teamAScore = s.GameSummary?.TeamAPoints ?? s.GameMetrics.TeamAPoints,
@@ -155,12 +210,12 @@ namespace CentralServer.ApiServer
             public long accountId { get; set; }
             public string characterType { get; set; }
 
-            public static GamePlayer Of(LobbyServerPlayerInfo playerInfo)
+            public static GamePlayer Of(LobbyServerPlayerInfo playerInfo, bool hideTeamSensitiveData)
             {
                 return new GamePlayer
                 {
                     accountId = playerInfo.AccountId,
-                    characterType = playerInfo.CharacterType.ToString()
+                    characterType = (hideTeamSensitiveData ? CharacterType.None : playerInfo.CharacterType).ToString()
                 };
             }
         }

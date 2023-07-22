@@ -8,6 +8,7 @@ using CentralServer.LobbyServer.Session;
 using EvoS.DirectoryServer.Account;
 using EvoS.DirectoryServer.Inventory;
 using EvoS.Framework;
+using EvoS.Framework.Auth;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Misc;
@@ -20,6 +21,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 
 namespace EvoS.DirectoryServer
@@ -79,39 +81,107 @@ namespace EvoS.DirectoryServer
 
         private static AssignGameClientResponse ProcessRequest(AssignGameClientRequest request, HttpContext context)
         {
-            // If we received a valid TicketData, it means we were previously logged on (reconnection)
-            SessionTicketData ticketData = SessionTicketData.FromString(request.AuthInfo.GetTicket());
-            if (ticketData != null)
-            {
-                request.SessionInfo.AccountId = ticketData.AccountID;
-                request.SessionInfo.SessionToken = ticketData.SessionToken;
-                request.SessionInfo.ReconnectSessionToken = ticketData.ReconnectionSessionToken;
+            string ticket = request.AuthInfo.GetTicket();
 
-                AssignGameClientResponse resp = HandleReconnection(request, context);
-                if (resp != null)
+            if (!ticket.IsNullOrEmpty())
+            {
+                // If we received a valid TicketData, it means we were previously logged on (reconnection)
+                SessionTicketData ticketData = SessionTicketData.FromString(ticket);
+                if (ticketData != null)
                 {
-                    return resp;
+                    request.SessionInfo.AccountId = ticketData.AccountID;
+                    request.SessionInfo.SessionToken = ticketData.SessionToken;
+                    request.SessionInfo.ReconnectSessionToken = ticketData.ReconnectionSessionToken;
+
+                    AssignGameClientResponse resp = HandleReconnection(request, context);
+                    if (resp != null)
+                    {
+                        return resp;
+                    }
+                }
+                
+                if (EvosConfiguration.GetAllowTicketAuth())
+                {
+                    try
+                    {
+                        AuthTicket authTicket = AuthTicket.Parse(ticket);
+                        return HandleConnectionWithToken(authTicket.AccountId, authTicket.Token, request, context);
+                    }
+                    catch (Exception)
+                    {
+                        log.Warn("Received ticket data but failed to parse it");
+                    }
                 }
             }
 
-            return HandleConnection(request, context);
-        }
-
-        private static AssignGameClientResponse HandleConnection(AssignGameClientRequest request, HttpContext context)
-        {
-            AssignGameClientResponse response = new AssignGameClientResponse
-            {
-                ResponseId = request.RequestId,
-                Success = true,
-                ErrorMessage = ""
-            };
-
             string username = request.AuthInfo.UserName;
             string password = request.AuthInfo._Password;
+            return HandleConnectionWithPassword(username, password, request, context);
+        }
 
+        private static AssignGameClientResponse HandleConnectionWithToken(long accountId, string token, AssignGameClientRequest request, HttpContext context)
+        {
+            if (token == null)
+            {
+                return Fail(request, "No credentials provided");
+            }
+            
+            EvosAuth.TokenData tokenData;
+            try
+            {
+                tokenData = EvosAuth.ValidateToken(EvosAuth.Context.TICKET_AUTH, token);
+            }
+            // specific token exceptions
+            catch (SecurityTokenInvalidLifetimeException e)
+            {
+                log.Info("Obsolete ticket", e);
+                return Fail(request, "Failed to log in");
+            }
+            // generic exceptions
+            catch (SecurityTokenException e)
+            {
+                log.Info("Invalid ticket", e);
+                return Fail(request, "Failed to log in");
+            }
+            catch (Exception e)
+            {
+                log.Error("Error while validating ticket", e);
+                return Fail(request, "Failed to log in");
+            }
+
+            if (tokenData is null)
+            {
+                return Fail(request, AuthTicket.TICKET_CORRUPT);
+            }
+
+            if (accountId != tokenData.AccountId)
+            {
+                log.Info($"Account id mismatch on auth: {accountId} vs {tokenData.AccountId}");
+                return Fail(request, "Failed to log in");
+            }
+
+            if (!tokenData.IpAddress.Equals(context.Connection.RemoteIpAddress) &&
+                (context.Connection.RemoteIpAddress is null
+                 || !IPAddress.IsLoopback(tokenData.IpAddress)
+                 || !IPAddress.IsLoopback(context.Connection.RemoteIpAddress)))
+            {
+                log.Info($"qIP address mismatch on auth: {context.Connection.RemoteIpAddress} vs {tokenData.IpAddress}");
+                return Fail(request, AuthTicket.INVALID_IP_ADDRESS);
+            }
+
+            return HandleConnection(tokenData.AccountId, request, context);
+        }
+
+        private static AssignGameClientResponse HandleConnectionWithPassword(string username, string password, AssignGameClientRequest request, HttpContext context)
+        {
             if (username == null || password == null)
             {
                 return Fail(request, "No credentials provided");
+            }
+            
+            if (!EvosConfiguration.GetAllowUsernamePasswordAuth())
+            {
+                return Fail(request, "Username and password auth is not allowed");
             }
 
             long accountId;
@@ -128,6 +198,18 @@ namespace EvoS.DirectoryServer
                 return Fail(request, e.Message);
             }
 
+            return HandleConnection(accountId, request, context);
+        }
+
+        private static AssignGameClientResponse HandleConnection(long accountId, AssignGameClientRequest request, HttpContext context)
+        {
+            AssignGameClientResponse response = new AssignGameClientResponse
+            {
+                ResponseId = request.RequestId,
+                Success = true,
+                ErrorMessage = ""
+            };
+
             if (SessionManager.GetSessionInfo(accountId) != null)
             {
                 log.Info($"Concurrent login: {accountId}");
@@ -141,6 +223,7 @@ namespace EvoS.DirectoryServer
                 if (account == null)
                 {
                     log.Info($"Player {accountId} does not exist");
+                    string username = request.AuthInfo.UserName;
                     DB.Get().AccountDao.CreateAccount(AccountManager.CreateAccount(accountId, username));
                     account = DB.Get().AccountDao.GetAccount(accountId);
                     if (account != null)
@@ -206,6 +289,8 @@ namespace EvoS.DirectoryServer
             {
                 return Fail(request, "ReconnectionError: ReconnectSessionToken invalid");
             }
+            
+            // TODO extra security? Reconnect tokens are possible to hijack
 
             // SessionManager.CleanSessionAfterReconnect(request.SessionInfo.AccountId);
             session = SessionManager.CreateSession(request.SessionInfo.AccountId, request.SessionInfo, context.Connection.RemoteIpAddress);
@@ -269,7 +354,7 @@ namespace EvoS.DirectoryServer
             if (EvosStoreConfiguration.AreLoadingScreenBackgroundFree())
             {
                 Dictionary<int, bool> activatedBgs = account.AccountComponent.UnlockedLoadingScreenBackgroundIdsToActivatedState;
-                if (!activatedBgs.IsNullOrEmpty() && activatedBgs.Values.Any(x => !x))
+                if (!CompilerExtensions.IsNullOrEmpty(activatedBgs) && activatedBgs.Values.Any(x => !x))
                 {
                     // preserve which backgrounds are activated
                     account.AccountComponent.UnlockedLoadingScreenBackgroundIdsToActivatedState = InventoryManager.GetActivatedLoadingScreenBackgroundIds(account.AccountId, false);

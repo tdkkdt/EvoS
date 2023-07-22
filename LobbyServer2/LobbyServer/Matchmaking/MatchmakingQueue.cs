@@ -23,9 +23,13 @@ namespace CentralServer.LobbyServer.Matchmaking
         public LobbyMatchmakingQueueInfo MatchmakingQueueInfo;
         public GameType GameType => MatchmakingQueueInfo.GameType;
 
-        public List<long> GetQueuesGroups()
+        public List<long> GetQueuedGroups()
         {
             return QueuedGroups.OrderBy(kv => kv.Value).Select(kv => kv.Key).ToList();
+        }
+        public List<long> GetQueuedPlayers()
+        {
+            return QueuedGroups.Keys.SelectMany(g => GroupManager.GetGroup(g).Members).ToList();
         }
         
         private static int GameID = 0;
@@ -115,7 +119,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 lock (GroupManager.Lock)
                 {
                     bool success = false;
-                    foreach (long groupId in GetQueuesGroups())
+                    foreach (long groupId in GetQueuedGroups())
                     {
                         // Add new groups secuentially
                         MatchmakingGroupInfo currentGroup = new MatchmakingGroupInfo(groupId);

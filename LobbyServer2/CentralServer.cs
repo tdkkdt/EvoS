@@ -33,7 +33,8 @@ namespace CentralServer
             server.Start();
             log.Info($"Started lobby server on port {port}");
 
-            var api = new AdminServer().Init();
+            var adminApi = new ApiServer.AdminApiServer().Init();
+            var userApi = new ApiServer.UserApiServer().Init();
 
             if (EvosConfiguration.GetGameServerExecutable().IsNullOrEmpty())
             {
