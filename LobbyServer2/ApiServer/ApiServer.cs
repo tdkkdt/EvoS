@@ -118,7 +118,7 @@ public abstract class ApiServer
             return Results.Unauthorized();
         }
         PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
-        if (!LoginFilter(httpContext, authInfo, account))
+        if (account is null || !LoginFilter(httpContext, authInfo, account))
         {
             log.Info($"{authInfo.UserName} attempted to get {authContext} access");
             return Results.Unauthorized();

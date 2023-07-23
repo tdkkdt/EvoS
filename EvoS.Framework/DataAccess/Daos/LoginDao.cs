@@ -16,6 +16,7 @@ namespace EvoS.Framework.DataAccess.Daos
             [BsonId]
             public long AccountId;
             public string Username;
+            public string Salt;
             public string Hash;
         }
     }

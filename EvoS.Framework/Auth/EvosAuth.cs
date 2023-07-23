@@ -6,6 +6,8 @@ using System.Security.Claims;
 using System.Text;
 using EvoS.Framework;
 using EvoS.Framework.Auth;
+using EvoS.Framework.DataAccess;
+using EvoS.Framework.Network.Static;
 using Microsoft.IdentityModel.Tokens;
 
 namespace EvoS.DirectoryServer;
@@ -102,14 +104,16 @@ public class EvosAuth
 
     private static SecurityKey GetSigningKey(Context context, long accountId)
     {
-        string key = context switch
+        string staticKey = context switch
         {
             Context.ADMIN_API => EvosConfiguration.GetTicketAuthKey(),
             Context.USER_API => EvosConfiguration.GetUserApiKey(),
             Context.TICKET_AUTH => EvosConfiguration.GetTicketAuthKey(),
             _ => throw new EvosException("Unknown security context")
         };
-        return Key(key);
+        PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
+        string dynamicKey = account?.ApiKey ?? string.Empty;
+        return Key(staticKey + dynamicKey);
     }
 
     private static DateTime GetExpires(Context context)

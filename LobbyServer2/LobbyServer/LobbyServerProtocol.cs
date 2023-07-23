@@ -475,10 +475,7 @@ namespace CentralServer.LobbyServer
             // without this client instantly resets character type back to what it was
             if (update.CharacterType != null && update.CharacterType.HasValue)
             {
-                PlayerAccountDataUpdateNotification updateNotification = new PlayerAccountDataUpdateNotification
-                {
-                    AccountData = account.CloneForClient()
-                };
+                PlayerAccountDataUpdateNotification updateNotification =new PlayerAccountDataUpdateNotification(account);
                 Send(updateNotification);
             }
             
@@ -997,10 +994,7 @@ namespace CentralServer.LobbyServer
             Send(response);
 
             //Update account curency
-            Send(new PlayerAccountDataUpdateNotification()
-            {
-                AccountData = account,
-            });
+            Send(new PlayerAccountDataUpdateNotification(account));
 
         }
 
@@ -1046,10 +1040,7 @@ namespace CentralServer.LobbyServer
             Send(response);
 
             //Update account curency
-            Send(new PlayerAccountDataUpdateNotification()
-            {
-                AccountData = account,
-            });
+            Send(new PlayerAccountDataUpdateNotification(account));
         }
 
         private void HandlePurchasAbilityVfx(PurchaseAbilityVfxRequest request)
@@ -1110,10 +1101,7 @@ namespace CentralServer.LobbyServer
             });
 
             //Update account curency
-            Send(new PlayerAccountDataUpdateNotification()
-            {
-                AccountData = account,
-            });
+            Send(new PlayerAccountDataUpdateNotification(account));
         }
 
         private void HandlePurchaseInventoryItemRequest(PurchaseInventoryItemRequest request)
@@ -1198,10 +1186,7 @@ namespace CentralServer.LobbyServer
             {
                 CharacterData = account.CharacterData[request.Character],
             });
-            Send(new PlayerAccountDataUpdateNotification
-            {
-                AccountData = account.CloneForClient()
-            });
+            Send(new PlayerAccountDataUpdateNotification(account));
         }
 
         private void HandlePaymentMethodsRequest(PaymentMethodsRequest request)

@@ -42,7 +42,8 @@ namespace EvoS.DirectoryServer.Account
                 SchemaVersion = new SchemaVersion<AccountSchemaChange>(0x1FFFF),
                 UserName = username,
                 CreateDate = DateTime.UtcNow,
-                UpdateDate = DateTime.UtcNow
+                UpdateDate = DateTime.UtcNow,
+                ApiKey = LoginManager.GenerateApiKey(),
             };
 
             return accountData;

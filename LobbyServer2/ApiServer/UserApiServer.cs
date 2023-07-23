@@ -1,5 +1,6 @@
 using System;
 using System.Security.Claims;
+using CentralServer.LobbyServer.Session;
 using EvoS.DirectoryServer;
 using EvoS.DirectoryServer.Account;
 using EvoS.Framework;
@@ -30,6 +31,7 @@ public class UserApiServer : ApiServer
         app.MapPost("/api/register", Register).AllowAnonymous();
         app.MapGet("/api/lobby/status", StatusController.GetSimpleStatus).AllowAnonymous();
         app.MapGet("/api/ticket", GetTicket).RequireAuthorization();
+        app.MapGet("/api/logout", LogOutEverywhere).RequireAuthorization();
         app.UseAuthorization();
     }
     
@@ -54,7 +56,7 @@ public class UserApiServer : ApiServer
         return Login(httpContext, authInfo);
     }
 
-    public static IResult GetTicket(ClaimsPrincipal user)
+    public IResult GetTicket(ClaimsPrincipal user)
     {
         if (!EvosConfiguration.GetAllowTicketAuth())
         {
@@ -62,6 +64,8 @@ public class UserApiServer : ApiServer
         }
         
         EvosAuth.TokenData tokenData = EvosAuth.GetTokenData(user);
+        log.Debug($"Generating auth ticket for {tokenData.Handle} {tokenData.AccountId}");
+        
         PersistedAccountData account = DB.Get().AccountDao.GetAccount(tokenData.AccountId);
         if (account is null)
         {
@@ -71,5 +75,16 @@ public class UserApiServer : ApiServer
         AuthTicket authTicket = new AuthTicket(EvosAuth.GenerateToken(EvosAuth.Context.TICKET_AUTH, tokenData), account);
         return new XmlResult(authTicket.AsXML());
     }
+    
+    protected IResult LogOutEverywhere(HttpContext httpContext, ClaimsPrincipal user)
+    {
+        EvosAuth.TokenData tokenData = EvosAuth.GetTokenData(user);
+        log.Info($"Log out everywhere: {tokenData.Handle} {tokenData.AccountId} {httpContext.Connection.RemoteIpAddress}");
+        
+        LoginManager.RevokeActiveTickets(tokenData.AccountId);
+        
+        SessionManager.GetClientConnection(tokenData.AccountId)?.CloseConnection();
 
+        return Results.Ok();
+    }
 }

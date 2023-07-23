@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using EvoS.Framework;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.DataAccess.Daos;
+using EvoS.Framework.Misc;
 using EvoS.Framework.Network.Static;
 using log4net;
 
@@ -22,12 +23,16 @@ namespace EvoS.DirectoryServer.Account
         {
             LoginDao loginDao = DB.Get().LoginDao;
             LoginDao.LoginEntry entry = loginDao.Find(authInfo.UserName.ToLower());
-            string hash = Hash(authInfo._Password);
             if (entry != null)
             {
+                string hash = Hash(entry.Salt, authInfo._Password);
                 if (entry.Hash.Equals(hash))
                 {
                     log.Info($"User {entry.AccountId}/{entry.Username} successfully logged in");
+                    if (entry.Salt.IsNullOrEmpty())
+                    {
+                        SaveLogin(entry.AccountId, entry.Username, authInfo._Password);
+                    }
                     return entry.AccountId;
                 }
                 else
@@ -52,7 +57,6 @@ namespace EvoS.DirectoryServer.Account
         public static long Register(AuthInfo authInfo)
         {
             LoginDao loginDao = DB.Get().LoginDao;
-            string hash = Hash(authInfo._Password);
             LoginDao.LoginEntry entry = loginDao.Find(authInfo.UserName.ToLower());
 
             if (entry is not null)
@@ -98,12 +102,7 @@ namespace EvoS.DirectoryServer.Account
                 throw new ApplicationException("Failed to create an account");
             }
             
-            loginDao.Save(new LoginDao.LoginEntry
-            {
-                AccountId = accountId,
-                Hash = hash,
-                Username = authInfo.UserName.ToLower()
-            });
+            SaveLogin(accountId, authInfo.UserName, authInfo._Password);
             log.Info($"Successfully registered new user {accountId}/{authInfo.UserName}");
             return accountId;
         }
@@ -120,12 +119,27 @@ namespace EvoS.DirectoryServer.Account
             return account;
         }
 
+        private static void SaveLogin(long accountId, string username, string password)
+        {
+            LoginDao loginDao = DB.Get().LoginDao;
+            string salt = GenerateSalt();
+            string hash = Hash(salt, password);
+            loginDao.Save(new LoginDao.LoginEntry
+            {
+                AccountId = accountId,
+                Salt = salt,
+                Hash = hash,
+                Username = username.ToLower()
+            });
+            log.Info($"Successfully generated new password hash for {accountId}/{username}");
+        }
+
         public static long Login(AuthInfo authInfo)
         {
             LoginDao.LoginEntry entry = DB.Get().LoginDao.Find(authInfo.UserName);
-            string hash = Hash(authInfo._Password);
             if (entry != null)
             {
+                string hash = Hash(entry.Salt, authInfo._Password);
                 if (entry.Hash.Equals(hash))
                 {
                     log.Info($"User {entry.AccountId}/{entry.Username} successfully logged in");
@@ -151,11 +165,12 @@ namespace EvoS.DirectoryServer.Account
             return num + 1000000000000000L;
         }
 
-        private static string Hash(string password)
+        private static string Hash(string customSaltPart, string password)
         {
             lock (algorithm)
             {
-                byte[] bytes = Encoding.UTF8.GetBytes(EvosConfiguration.GetDBConfig().Salt + password);
+                if (customSaltPart.IsNullOrEmpty()) customSaltPart = string.Empty;
+                byte[] bytes = Encoding.UTF8.GetBytes(EvosConfiguration.GetDBConfig().Salt + customSaltPart + password);
                 byte[] hashBytes = algorithm.ComputeHash(bytes);
                 StringBuilder sb = new StringBuilder();
                 foreach (byte b in hashBytes)
@@ -165,7 +180,27 @@ namespace EvoS.DirectoryServer.Account
                 return sb.ToString();
             }
         }
-        
-        
+
+        private static string GenerateSalt()
+        {
+            return Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+        }
+
+        public static string GenerateApiKey()
+        {
+            return GenerateSalt();
+        }
+
+        public static void RevokeActiveTickets(long accountId)
+        {
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
+            if (account is null)
+            {
+                throw new EvosException("Account not found");
+            }
+
+            account.ApiKey = GenerateApiKey();
+            DB.Get().AccountDao.UpdateAccount(account);
+        }
     }
 }

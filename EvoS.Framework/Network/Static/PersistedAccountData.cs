@@ -40,7 +40,9 @@ namespace EvoS.Framework.Network.Static
         [JsonIgnore] public PersistedAccountDataSnapshotReason SnapshotReason { get; set; }
 
         [JsonIgnore] public string SnapshotNote { get; set; }
-
+        
+        [NonSerialized] public string ApiKey;
+        
         public PersistedAccountData()
         {
             SchemaVersion = new SchemaVersion<AccountSchemaChange>();
