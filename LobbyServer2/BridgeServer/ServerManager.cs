@@ -16,9 +16,9 @@ namespace CentralServer.BridgeServer
         {
             lock (ServerPool)
             {
-                ServerPool.Add(gameServer.ProcessCode, gameServer);
+                bool newServer = ServerPool.TryAdd(gameServer.ProcessCode, gameServer);
 
-                log.Info($"New game server connected with address {gameServer.Address}:{gameServer.Port}");
+                log.Info($"{(newServer ? "New game server connected" : "A server reconnected")} with address {gameServer.Address}:{gameServer.Port}");
                 MatchmakingManager.Update();
             }
         }

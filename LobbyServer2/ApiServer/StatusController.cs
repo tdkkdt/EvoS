@@ -162,7 +162,7 @@ namespace CentralServer.ApiServer
             {
                 return new Server
                 {
-                    id = s.ID,
+                    id = s.ProcessCode,
                     name = s.Name
                 };
             }
@@ -194,7 +194,7 @@ namespace CentralServer.ApiServer
                     id = s.GetGameInfo?.GameServerProcessCode,
                     ts = s.GameInfo != null ? $"{new DateTime(s.GameInfo.CreateTimestamp):yyyy_MM_dd__HH_mm_ss}" : null,
                     map = hide ? MAP_UNKNOWN : s.GetGameInfo?.GameConfig.Map ?? MAP_UNKNOWN,
-                    server = s.ID,
+                    server = s.ProcessCode,
                     teamA = s.GetTeamInfo.TeamAPlayerInfo.Select(p => GamePlayer.Of(p, hide)).ToList(),
                     teamB = s.GetTeamInfo.TeamBPlayerInfo.Select(p => GamePlayer.Of(p, hide)).ToList(),
                     status = s.ServerGameStatus.ToString(),
