@@ -10,10 +10,6 @@ namespace EvoS.Framework.DataAccess.Mock
             return null;
         }
 
-        public void UpdateHash(LoginDao.LoginEntry entry, string hash)
-        {
-        }
-
         public void UpdateSteamId(LoginDao.LoginEntry entry, ulong newSteamId)
         {   
         }

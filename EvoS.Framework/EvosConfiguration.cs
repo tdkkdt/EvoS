@@ -56,40 +56,19 @@ namespace EvoS.Framework
 
         public static bool GetPingOnGroupRequest() => Instance.PingOnGroupRequest;
 
-        public static string GetAdminApiKey()
-        {
-            return GetInstance().AdminApiKey;
-        }
+        public static string GetAdminApiKey() => Instance.AdminApiKey;
 
-        public static string GetUserApiKey()
-        {
-            return GetInstance().UserApiKey;
-        }
+        public static string GetUserApiKey() => Instance.UserApiKey;
 
-        public static int GetAdminApiPort()
-        {
-            return GetInstance().AdminApiPort;
-        }
+        public static int GetAdminApiPort() => Instance.AdminApiPort;
 
-        public static int GetUserApiPort()
-        {
-            return GetInstance().UserApiPort;
-        }
+        public static int GetUserApiPort() => Instance.UserApiPort;
 
-        public static string GetTicketAuthKey()
-        {
-            return GetInstance().TicketAuthKey;
-        }
+        public static string GetTicketAuthKey() => Instance.TicketAuthKey;
 
-        public static bool GetAllowUsernamePasswordAuth()
-        {
-            return GetInstance().AllowUsernamePasswordAuth;
-        }
+        public static bool GetAllowUsernamePasswordAuth() => Instance.AllowUsernamePasswordAuth;
 
-        public static bool GetAllowTicketAuth()
-        {
-            return !GetUserApiKey().IsNullOrEmpty() && !GetTicketAuthKey().IsNullOrEmpty();
-        }
+        public static bool GetAllowTicketAuth() => !GetUserApiKey().IsNullOrEmpty() && !GetTicketAuthKey().IsNullOrEmpty();
 
         public enum DBType
         {

@@ -110,7 +110,7 @@ public abstract class ApiServer
         long accountId;
         try
         {
-            accountId = LoginManager.Login(authInfo);
+            accountId = LoginManager.Login(authInfo.UserName, authInfo._Password, ignoreSteam: true);
         }
         catch (Exception _)
         {

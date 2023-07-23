@@ -41,16 +41,10 @@ namespace EvoS.Framework.DataAccess.Mongo
             insert(entry.AccountId, entry);
         }
 
-        public void UpdateHash(LoginDao.LoginEntry entry, string hash)
-        {
-            entry.Hash = hash;
-            insert(entry.AccountId, entry);
-        }
-
         public void UpdateSteamId(LoginDao.LoginEntry entry, ulong newSteamId)
         {
             entry.SteamId = newSteamId;
             insert(entry.AccountId, entry);
         }
     }
-} 
+}

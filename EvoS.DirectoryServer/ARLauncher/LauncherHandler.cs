@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using EvoS.DirectoryServer.Account;
 using EvoS.DirectoryServer.ARLauncher.Messages;
+using EvoS.Framework.Network.Static;
 using log4net.Core;
 using MongoDB.Driver.Core.Authentication;
 using static EvoS.DirectoryServer.ARLauncher.Messages.LauncherRequest;
@@ -41,7 +42,7 @@ namespace EvoS.DirectoryServer.ARLauncher
                 return response;
             try
             {
-                LoginManager.CreateAccount(request.Username, request.Password, resp.SteamId);
+                LoginManager.Register(new AuthInfo { UserName = request.Username, Password = request.Password}, resp.SteamId);
                 return new CreateAccountResponse(CreateAccountResponse.CreateAccountResponseType.Success);
             }
             catch (Exception ex)

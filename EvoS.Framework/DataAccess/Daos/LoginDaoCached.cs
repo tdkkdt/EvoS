@@ -91,12 +91,6 @@ namespace EvoS.Framework.DataAccess.Daos
             return nonCachedAccount;
         }
 
-        public void UpdateHash(LoginDao.LoginEntry entry, string hash)
-        {
-            dao.UpdateHash(entry, hash);
-            entry.Hash = hash;
-        }
-
         public void UpdateSteamId(LoginDao.LoginEntry entry, ulong steamId)
         {
             var oldSteamId = entry.SteamId;
