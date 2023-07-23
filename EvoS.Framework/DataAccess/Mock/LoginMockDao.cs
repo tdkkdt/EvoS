@@ -1,5 +1,5 @@
+using System.Collections.Generic;
 using EvoS.Framework.DataAccess.Daos;
-using EvoS.Framework.Network.Static;
 
 namespace EvoS.Framework.DataAccess.Mock
 {
@@ -26,6 +26,11 @@ namespace EvoS.Framework.DataAccess.Mock
         LoginDao.LoginEntry LoginDao.Find(long accountId)
         {
             return null;
+        }
+
+        List<LoginDao.LoginEntry> LoginDao.FindRegex(string username)
+        {
+            return new List<LoginDao.LoginEntry>();
         }
 
         void LoginDao.Save(LoginDao.LoginEntry entry)

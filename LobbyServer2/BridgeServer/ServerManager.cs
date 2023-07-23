@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
+using System.Linq;
 using CentralServer.LobbyServer.Matchmaking;
-using EvoS.Framework.Misc;
-using EvoS.Framework.Network.Static;
+using EvoS.Framework.Constants.Enums;
 using log4net;
 
 namespace CentralServer.BridgeServer
@@ -10,23 +10,33 @@ namespace CentralServer.BridgeServer
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(ServerManager));
         
-        private static Dictionary<string, BridgeServerProtocol> ServerPool = new Dictionary<string, BridgeServerProtocol>();
+        private static readonly Dictionary<string, BridgeServerProtocol> ServerPool = new Dictionary<string, BridgeServerProtocol>();
 
         public static void AddServer(BridgeServerProtocol gameServer)
         {
-            ServerPool.Add(gameServer.ID, gameServer);
+            lock (ServerPool)
+            {
+                bool newServer = ServerPool.TryAdd(gameServer.ProcessCode, gameServer);
 
-            log.Info($"New game server connected with address {gameServer.Address}:{gameServer.Port}");
-            MatchmakingManager.Update();
+                log.Info($"{(newServer ? "New game server connected" : "A server reconnected")} with address {gameServer.Address}:{gameServer.Port}");
+                MatchmakingManager.Update();
+            }
         }
 
-        public static void RemoveServer(string connectionID)
+        public static void RemoveServer(string processCode)
         {
-            ServerPool.Remove(connectionID);
-            log.Info($"Game server disconnected");
+            if (processCode == null)
+            {
+                return;
+            }
+            lock (ServerPool)
+            {
+                ServerPool.Remove(processCode);
+                log.Info($"Game server disconnected");
+            }
         }
 
-        public static BridgeServerProtocol GetServer(LobbyGameInfo gameInfo, LobbyServerTeamInfo teamInfo)
+        public static BridgeServerProtocol GetServer()
         {
             lock (ServerPool)
             {
@@ -34,8 +44,7 @@ namespace CentralServer.BridgeServer
                 {
                     if (server.IsAvailable())
                     {
-                        server.StartGame(gameInfo, teamInfo);
-
+                        server.ReserveForGame();
                         return server;
                     }
                 }
@@ -44,13 +53,44 @@ namespace CentralServer.BridgeServer
             return null;
         }
 
+        public static BridgeServerProtocol GetServerWithPlayer(long accountId)
+        {
+            lock (ServerPool)
+            {
+                foreach (BridgeServerProtocol server in ServerPool.Values)
+                {
+                    if (server.ServerGameStatus == GameStatus.Started) // TODO why started only?
+                    {
+                        foreach (long player in server.GetPlayers())
+                        {
+                            if (player.Equals(accountId))
+                            {
+                                return server;
+                            }
+                        }
+                    }
+                }
+
+                return null;
+            }
+        }
+
         public static bool IsAnyServerAvailable()
         {
-            foreach (BridgeServerProtocol server in ServerPool.Values)
+            lock (ServerPool)
             {
-                if (server.IsAvailable()) return true;
+                foreach (BridgeServerProtocol server in ServerPool.Values)
+                {
+                    if (server.IsAvailable()) return true;
+                }
+
+                return false;
             }
-            return false;
+        }
+
+        public static List<BridgeServerProtocol> GetServers()
+        {
+            return ServerPool.Values.ToList();
         }
     }
 }

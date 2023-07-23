@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <ApplicationIcon />
     <StartupObject />
   </PropertyGroup>
@@ -13,10 +13,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EvoS.Framework\EvoS.Framework.csproj" />
+    <ProjectReference Include="..\LobbyServer2\CentralServer.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Inventory" />
-  </ItemGroup>
 
 </Project>

@@ -14,14 +14,23 @@ using WebSocketSharp;
 
 namespace CentralServer.LobbyServer.Matchmaking
 {
-    class MatchmakingQueue
+    public class MatchmakingQueue
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(MatchmakingQueue));
         
         Dictionary<string, LobbyGameInfo> Games = new Dictionary<string, LobbyGameInfo>();
-        ConcurrentDictionary<long, byte> QueuedGroups = new ConcurrentDictionary<long, byte>();
+        private readonly ConcurrentDictionary<long, DateTime> QueuedGroups = new ConcurrentDictionary<long, DateTime>();
         public LobbyMatchmakingQueueInfo MatchmakingQueueInfo;
-        GameType GameType => MatchmakingQueueInfo.GameType;
+        public GameType GameType => MatchmakingQueueInfo.GameType;
+
+        public List<long> GetQueuedGroups()
+        {
+            return QueuedGroups.OrderBy(kv => kv.Value).Select(kv => kv.Key).ToList();
+        }
+        public List<long> GetQueuedPlayers()
+        {
+            return QueuedGroups.Keys.SelectMany(g => GroupManager.GetGroup(g).Members).ToList();
+        }
         
         private static int GameID = 0;
 
@@ -55,8 +64,10 @@ namespace CentralServer.LobbyServer.Matchmaking
 
         public LobbyMatchmakingQueueInfo AddGroup(long groupId, out bool added)
         {
-            added = QueuedGroups.TryAdd(groupId, 0);
+            added = QueuedGroups.TryAdd(groupId, DateTime.UtcNow);
             MatchmakingQueueInfo.QueuedPlayers = GetPlayerCount();
+            MatchmakingQueueInfo.AverageWaitTime = TimeSpan.FromSeconds(0);
+            MatchmakingQueueInfo.QueueStatus = ServerManager.IsAnyServerAvailable() ? QueueStatus.WaitingForHumans : QueueStatus.AllServersBusy;
             log.Info($"Added group {groupId} to {GameType} queue");
             log.Info($"{GetPlayerCount()} players in {GameType} queue ({QueuedGroups.Count} groups)");
 
@@ -89,10 +100,18 @@ namespace CentralServer.LobbyServer.Matchmaking
         public void Update()
         {
             log.Info($"{GetPlayerCount()} players in {GameType} queue ({QueuedGroups.Count} groups)");
-            
+
             // TODO UpdateSettings when file changes (and only then)
             ReloadConfig();
 
+            if (MatchmakingManager.Enabled)
+            {
+                TryMatch();
+            }
+        }
+        
+        private void TryMatch()
+        {
             foreach (GameSubType subType in MatchmakingQueueInfo.GameConfig.SubTypes)
             {
                 List<MatchmakingGroupInfo> groups = new List<MatchmakingGroupInfo>();
@@ -100,9 +119,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 lock (GroupManager.Lock)
                 {
                     bool success = false;
-                    // TODO: this add teams one by one until it has enough to form a game, QueuedGroups is a Dictionary
-                    // so Keys might be unsorted (no guarantee of oldest player in queue will find a game first)
-                    foreach (int groupId in QueuedGroups.Keys)
+                    foreach (long groupId in GetQueuedGroups())
                     {
                         // Add new groups secuentially
                         MatchmakingGroupInfo currentGroup = new MatchmakingGroupInfo(groupId);
@@ -141,7 +158,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                         {
                             RemoveGroup(group.GroupId);
                         }
-                        MatchmakingManager.StartGame(
+                        _ = MatchmakingManager.StartGameAsync(
                             teamA.SelectMany(group => group.Members).ToList(), 
                             teamB.SelectMany(group => group.Members).ToList(), 
                             GameType,
@@ -249,7 +266,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 ActiveHumanPlayers = 0,
                 ActivePlayers = 0,
                 ActiveSpectators = 0,
-                CreateTimestamp = DateTime.Now.Ticks,
+                CreateTimestamp = DateTime.UtcNow.Ticks,
                 GameConfig = new LobbyGameConfig
                 {
                     GameOptionFlags = GameOptionFlag.AllowDuplicateCharacters & GameOptionFlag.EnableTeamAIOutput & GameOptionFlag.NoInputIdleDisconnect,

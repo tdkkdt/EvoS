@@ -66,7 +66,7 @@ namespace EvoS.Framework.Network.Static
         public int AcceptedPlayers;
         public BotDifficulty SelectedBotSkillTeamA;
         public BotDifficulty SelectedBotSkillTeamB;
-        [EvosMessage(477)] public Dictionary<long, int> ggPackUsedAccountIDs;
+        [JsonIgnore] [EvosMessage(477)] public Dictionary<long, int> ggPackUsedAccountIDs;
         [EvosMessage(483)] public Dictionary<long, Dictionary<int, int>> AccountIdToOverconIdToCount;
         public LobbyGameConfig GameConfig;
     }

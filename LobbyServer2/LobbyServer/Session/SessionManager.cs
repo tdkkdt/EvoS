@@ -1,132 +1,241 @@
-﻿using System.Collections.Concurrent;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using EvoS.DirectoryServer.Account;
+using System.Net;
+using CentralServer.BridgeServer;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
+using EvoS.Framework.Exceptions;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
+using EvoS.Framework.Network.WebSocket;
+using log4net;
 
 namespace CentralServer.LobbyServer.Session
 {
     public static class SessionManager
     {
-        private static ConcurrentDictionary<long, LobbyServerPlayerInfo> ActivePlayers = new ConcurrentDictionary<long, LobbyServerPlayerInfo>();// key: AccountID
-        private static ConcurrentDictionary<long, long> SessionTokenAccountIDCache = new ConcurrentDictionary<long, long>(); // key: SessionToken, value: AccountID
-        private static ConcurrentDictionary<long, LobbyServerProtocol> ActiveConnections = new ConcurrentDictionary<long, LobbyServerProtocol>();
-        private static ConcurrentDictionary<long, LobbySessionInfo> ActiveSessions = new ConcurrentDictionary<long, LobbySessionInfo>();
-
-        public static LobbyServerPlayerInfo OnPlayerConnect(LobbyServerProtocol client, RegisterGameClientRequest clientRequest)
+        private static readonly ILog log = LogManager.GetLogger(typeof(SessionManager));
+        
+        private class SessionInfo
         {
-            lock (ActiveSessions)
+            public LobbyServerProtocol conn;
+            public LobbySessionInfo session;
+        }
+
+        private class DisconnectedSessionInfo
+        {
+            public readonly LobbySessionInfo sessionInfo;
+            public readonly DateTime disconnectedAt;
+
+            public DisconnectedSessionInfo(LobbySessionInfo sessionInfo, DateTime disconnectedAt)
             {
-                long accountId = LoginManager.Login(clientRequest.AuthInfo);
-                if (ActiveConnections.ContainsKey(accountId))
-                {
-                    return null;
-                }
-            
-                PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
-
-                client.AccountId = account.AccountId;
-                LobbySessionInfo sessionInfo = clientRequest.SessionInfo;
-                client.SessionToken = sessionInfo.SessionToken;  // we are kinda supposed to validate it
-                client.UserName = account.UserName;
-                client.SelectedGameType = GameType.PvP;
-                client.SelectedSubTypeMask = 0;
-
-                sessionInfo.AccountId = account.AccountId;
-                sessionInfo.UserName = account.UserName;
-                sessionInfo.Handle = account.Handle;
-
-                LobbyServerPlayerInfo playerInfo = UpdateLobbyServerPlayerInfo(account.AccountId);
-                SessionTokenAccountIDCache.TryAdd(client.SessionToken, playerInfo.AccountId);
-                ActiveConnections.TryAdd(client.AccountId, client);
-                ActiveSessions.TryAdd(client.AccountId, sessionInfo);
-
-                return playerInfo;
+                this.sessionInfo = sessionInfo;
+                this.disconnectedAt = disconnectedAt;
             }
         }
 
-        public static LobbyServerPlayerInfo UpdateLobbyServerPlayerInfo(long accountId)
+        private static readonly TimeSpan SessionExpiry = new TimeSpan(0, 10, 0);
+        private static readonly ConcurrentDictionary<long, SessionInfo> SessionInfos =
+            new ConcurrentDictionary<long, SessionInfo>();
+        private static readonly ConcurrentDictionary<long, LobbySessionInfo> ConnectingSessions =
+            new ConcurrentDictionary<long, LobbySessionInfo>();
+        private static readonly ConcurrentDictionary<long, DisconnectedSessionInfo> DisconnectedSessionInfos =
+            new ConcurrentDictionary<long, DisconnectedSessionInfo>();
+        
+        public static event Action<LobbyServerProtocol> OnPlayerConnected = delegate {};
+        public static event Action<LobbyServerProtocol> OnPlayerDisconnected = delegate {};
+
+        public static void OnPlayerConnect(LobbyServerProtocol client, RegisterGameClientRequest registerRequest)
         {
-            PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
-            LobbyServerPlayerInfo playerInfo = new LobbyServerPlayerInfo
+            lock (SessionInfos)
             {
-                AccountId = account.AccountId,
-                BannerID = account.AccountComponent.SelectedBackgroundBannerID,
-                BotCanTaunt = false,
-                CharacterInfo = LobbyCharacterInfo.Of(account.CharacterData[account.AccountComponent.LastCharacter]),
-                ControllingPlayerId = 0,
-                EffectiveClientAccessLevel = ClientAccessLevel.Full,
-                EmblemID = account.AccountComponent.SelectedForegroundBannerID,
-                Handle = account.Handle,
-                IsGameOwner = true,
-                IsLoadTestBot = false,
-                IsNPCBot = false,
-                PlayerId = 0,
-                ReadyState = ReadyState.Unknown,
-                ReplacedWithBots = false,
-                RibbonID = account.AccountComponent.SelectedRibbonID,
-                TitleID = account.AccountComponent.SelectedTitleID,
-                TitleLevel = 1
-            };
-            ActivePlayers.AddOrUpdate(playerInfo.AccountId, playerInfo, (k, v) => playerInfo);
-            return playerInfo;
+                
+                if (registerRequest.SessionInfo == null) 
+                    throw new RegisterGameException("Session Info not received");
+                if (registerRequest.SessionInfo.SessionToken == 0)
+                    throw new RegisterGameException("Session Info not received"); ;
+                
+                LobbySessionInfo sessionInfo = ConnectingSessions.GetValueOrDefault(registerRequest.SessionInfo.AccountId);
+
+                if (sessionInfo == null)
+                    throw new RegisterGameException("Session not found. User not logged"); ; // Session not found
+                if (sessionInfo.SessionToken != registerRequest.SessionInfo.SessionToken)
+                    throw new RegisterGameException("This session is not valid anymore"); ; // Session token do not match
+
+                long accountId = sessionInfo.AccountId;
+            
+                PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
+                
+                AdminManager.Get().UpdatePenalties(accountId);
+                if (account.AdminComponent.Locked)
+                {
+                    throw new RegisterGameException("This account is temporarily banned. Please, try again later.");
+                }
+
+                client.AccountId = account.AccountId;
+                client.UserName = account.UserName;
+                client.SelectedGameType = GameType.PvP;
+                client.SelectedSubTypeMask = 0;
+                client.SessionToken = sessionInfo.SessionToken;
+
+                SessionInfos.TryRemove(client.AccountId, out _);
+                SessionInfos.TryAdd(client.AccountId, new SessionInfo
+                {
+                    conn = client,
+                    session = sessionInfo
+                });
+                ConnectingSessions.TryRemove(client.AccountId, out _);
+                
+                OnPlayerConnected(client);
+            }
         }
 
         public static void OnPlayerDisconnect(LobbyServerProtocol client)
         {
-            lock (ActiveSessions)
+            lock (SessionInfos)
             {
-                ActivePlayers.TryRemove(client.AccountId, out _);
-                SessionTokenAccountIDCache.TryRemove(client.SessionToken, out _);
-                ActiveConnections.TryRemove(client.AccountId, out _);
-                ActiveSessions.TryRemove(client.AccountId, out _);
+                SessionInfos.TryGetValue(client.AccountId, out SessionInfo sessionInfo);
+                // Sometimes on reconnections we first have the new connection and then we receive the previous disconnection
+                // To avoid deleting the new connection, we check if the session token is the same
+                if (sessionInfo != null && sessionInfo.session.SessionToken == client.SessionToken)
+                {
+                    if (SessionInfos.TryRemove(client.AccountId, out SessionInfo disconnectedSession))
+                    {
+                        DisconnectedSessionInfos.TryAdd(client.AccountId, new DisconnectedSessionInfo(disconnectedSession.session, DateTime.Now));
+                        // TODO: this sends to every player even if its in game and the disconnected player is not
+                        //client.Broadcast(new ChatNotification() { Text = $"{client.UserName} disconnected", ConsoleMessageType = ConsoleMessageType.SystemMessage });
+                    }
+
+                    PersistedAccountData account = DB.Get().AccountDao.GetAccount(client.AccountId);
+                    account.AdminComponent.LastLogout = DateTime.UtcNow;
+                    account.AdminComponent.LastLogoutSessionToken = $"{sessionInfo.session.SessionToken}";
+                    DB.Get().AccountDao.UpdateAccount(account);
+                }
+
+                OnPlayerDisconnected(client);
             }
-        }
-
-        public static LobbyServerPlayerInfo GetPlayerInfo(long accountId)
-        {
-            LobbyServerPlayerInfo playerInfo = null;
-            ActivePlayers.TryGetValue(accountId, out playerInfo);
-
-            return playerInfo;
-        }
-
-        public static long GetAccountIdOf(long sessionToken)
-        {
-            if (SessionTokenAccountIDCache.TryGetValue(sessionToken, out long accountId))
-            {
-                return accountId;
-            }
-
-            return 0;
         }
 
         public static LobbyServerProtocol GetClientConnection(long accountId)
         {
-            LobbyServerProtocol clientConnection = null;
-            ActiveConnections.TryGetValue(accountId, out clientConnection);
-            return clientConnection;
+            SessionInfos.TryGetValue(accountId, out SessionInfo sessionInfo);
+            return sessionInfo?.conn;
         }
 
         public static LobbySessionInfo GetSessionInfo(long accountId)
         {
-            LobbySessionInfo sessionInfo = null;
-            ActiveSessions.TryGetValue(accountId, out sessionInfo);
-            return sessionInfo;
+            SessionInfos.TryGetValue(accountId, out SessionInfo sessionInfo);
+            return sessionInfo?.session;
         }
 
         public static long? GetOnlinePlayerByHandle(string handle)
         {
-            return ActivePlayers.Values.FirstOrDefault(lspi => lspi.Handle == handle)?.AccountId;
+            return SessionInfos.Values.FirstOrDefault(si => si.session?.Handle == handle)?.session?.AccountId;
         }
 
         public static HashSet<long> GetOnlinePlayers()
         {
-            return new HashSet<long>(ActivePlayers.Keys);
+            return new HashSet<long>(SessionInfos.Keys);
         }
-        
+
+        public static LobbySessionInfo CreateSession(long accountId, LobbySessionInfo connectingSessionInfo, IPAddress ipAddress)
+        {
+            lock (SessionInfos) {
+                // If we have a game with this accountId do not remove the session we need the info to be able to reconnect
+                // Else remove it and create a new Session
+                BridgeServerProtocol server = ServerManager.GetServerWithPlayer(accountId);
+                LobbySessionInfo oldSession = null;
+                if (server != null)
+                {
+                    oldSession = GetDisconnectedSessionInfo(accountId);
+                    if (oldSession == null)
+                    {
+                        oldSession = KillSession(accountId);
+                        if (oldSession != null)
+                        {
+                            log.Warn($"Account {accountId} reconnected before disconnecting previous session");
+                        }
+                    }
+                }
+                DisconnectedSessionInfos.TryRemove(accountId, out _);
+
+                PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
+                LobbySessionInfo sessionInfo = new LobbySessionInfo
+                {
+                    AccountId = accountId,
+                    Handle = account.Handle,
+                    UserName = account.UserName,
+                    ConnectionAddress = ipAddress.ToString(),
+                    BuildVersion = connectingSessionInfo?.BuildVersion ?? "unknown",
+                    LanguageCode = connectingSessionInfo?.LanguageCode ??"",
+                    FakeEntitlements = "",
+                    ProcessCode = connectingSessionInfo?.ProcessCode ?? "",
+                    ProcessType = connectingSessionInfo?.ProcessType ?? ProcessType.AtlasReactor,
+                    SessionToken = oldSession?.SessionToken ?? GenerateToken(account.Handle),
+                    ReconnectSessionToken = GenerateToken(account.Handle), // This can be regenerated even on reconnection since we send ReconnectPlayerRequest that sends the new ReconnectSessionToken
+                    Region = connectingSessionInfo?.Region ?? Region.EU,
+                };
+                
+                KillSession(accountId);
+                ConnectingSessions[accountId] = sessionInfo;
+
+                account.AdminComponent.RecordLogin(ipAddress);
+                DB.Get().AccountDao.UpdateAccount(account);
+                
+                return sessionInfo;
+            }
+        }
+
+        public static LobbySessionInfo GetDisconnectedSessionInfo(long accountId)
+        {
+            if (!DisconnectedSessionInfos.TryGetValue(accountId, out DisconnectedSessionInfo session))
+            {
+                return null;
+            }
+            if (DateTime.Now - session.disconnectedAt > SessionExpiry)
+            {
+                log.Warn($"Attempted to access an expired session for {accountId}");
+                DisconnectedSessionInfos.TryRemove(accountId, out _);
+                return null;
+            }
+            return session.sessionInfo;
+        }
+
+        private static LobbySessionInfo KillSession(long accountId)
+        {
+            if (SessionInfos.TryRemove(accountId, out SessionInfo sessionInfo))
+            {
+                sessionInfo.conn?.CloseConnection();
+                return sessionInfo.session;
+            }
+
+            return null;
+        }
+
+        private static long GenerateToken(string a)
+        {
+            int num = (Guid.NewGuid() + a).GetHashCode();
+            if (num < 0)
+            {
+                num = -num;
+            }
+            return num;
+        }
+
+        public static void Broadcast(WebSocketMessage message)
+        {
+            SessionInfos.Values.FirstOrDefault()?.conn.Broadcast(message);
+        }
+
+        public static void Broadcast(string msg)
+        {
+            Broadcast(new ChatNotification
+            {
+                ConsoleMessageType = ConsoleMessageType.BroadcastMessage,
+                Text = msg,
+            });
+        }
     }
 }

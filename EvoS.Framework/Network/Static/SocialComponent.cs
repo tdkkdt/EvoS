@@ -14,6 +14,7 @@ namespace EvoS.Framework.Network.Static
             ReportedTemporaryPoints = 0;
             TimeOfDecay = DateTime.MinValue;
             GrantedRAFRewards = new Dictionary<int, int>();
+            BlockedAccounts = new HashSet<long>();
         }
 
         public int ReportedPermanentPoints { get; set; }
@@ -21,6 +22,8 @@ namespace EvoS.Framework.Network.Static
         public int ReportedTemporaryPoints { get; set; }
 
         public Dictionary<int, int> GrantedRAFRewards { get; set; }
+
+        [NonSerialized] public HashSet<long> BlockedAccounts;
 
         public object Clone()
         {
@@ -95,6 +98,22 @@ namespace EvoS.Framework.Network.Static
             {
                 TimeOfDecay = dateTime;
             }
+        }
+
+        public bool IsBlocked(long accountId)
+        {
+            return BlockedAccounts != null && BlockedAccounts.Contains(accountId);
+        }
+
+        public bool Block(long accountId)
+        {
+            BlockedAccounts ??= new HashSet<long>();
+            return BlockedAccounts.Add(accountId);
+        }
+
+        public bool Unblock(long accountId)
+        {
+            return BlockedAccounts != null && BlockedAccounts.Remove(accountId);
         }
 
         [EvosMessage(556)]

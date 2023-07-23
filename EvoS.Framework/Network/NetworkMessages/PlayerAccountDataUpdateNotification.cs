@@ -9,5 +9,10 @@ namespace EvoS.Framework.Network.NetworkMessages
     public class PlayerAccountDataUpdateNotification : WebSocketResponseMessage
     {
         public PersistedAccountData AccountData;
+
+        public PlayerAccountDataUpdateNotification(PersistedAccountData accountData)
+        {
+            AccountData = accountData.CloneForClient();
+        }
     }
 }

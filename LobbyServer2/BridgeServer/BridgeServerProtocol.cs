@@ -1,39 +1,58 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using System.Threading.Tasks;
 using CentralServer.LobbyServer;
+using CentralServer.LobbyServer.Gamemode;
+using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
+using CentralServer.LobbyServer.Utils;
 using EvoS.Framework.Constants.Enums;
+using EvoS.Framework.DataAccess;
+using EvoS.Framework.DataAccess.Daos;
 using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
-using EvoS.Framework.Network.Unity;
 using log4net;
 using WebSocketSharp;
-using WebSocketSharp.Server;
 
 namespace CentralServer.BridgeServer
 {
-    public class BridgeServerProtocol : WebSocketBehaviorBase
+    public class BridgeServerProtocol : WebSocketBehaviorBase<AllianceMessageBase>
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(BridgeServerProtocol));
         
         public string Address;
         public int Port;
         private LobbySessionInfo SessionInfo;
+        private MatchOrchestrator Orchestrator;
         public LobbyGameInfo GameInfo { private set; get; }
-        private LobbyServerTeamInfo TeamInfo;
-        public List<LobbyServerProtocol> clients = new List<LobbyServerProtocol>();
+        public LobbyServerTeamInfo TeamInfo { private set; get; } = new LobbyServerTeamInfo() { TeamPlayerInfo = new List<LobbyServerPlayerInfo>() };
+
         public string URI => "ws://" + Address + ":" + Port;
-        public GameStatus GameStatus { get; private set; } = GameStatus.Stopped;
-        public string ProcessCode { get; } = "Artemis" + DateTime.Now.Ticks;
+        
+        // TODO sync with GameInfo.GameStatus or get rid of it (GameInfo can be null)
+        public GameStatus ServerGameStatus { get; private set; } = GameStatus.None;
+        public string ProcessCode => SessionInfo?.ProcessCode;
         public string Name => SessionInfo?.UserName ?? "ATLAS";
         public string BuildVersion => SessionInfo?.BuildVersion ?? "";
+        public bool IsPrivate { get; private set; }
 
-        public LobbyServerPlayerInfo GetServerPlayerInfo(long accountId)
+        public ServerGameMetrics GameMetrics { get; private set; } = new ServerGameMetrics();
+        public LobbyGameSummary GameSummary { get; private set; }
+
+        public LobbyGameInfo GetGameInfo => GameInfo;
+
+        public LobbyServerTeamInfo GetTeamInfo => TeamInfo;
+
+        public LobbyServerPlayerInfo GetPlayerInfo(long accountId)
         {
             return TeamInfo.TeamPlayerInfo.Find(p => p.AccountId == accountId);
+        }
+
+        public void ForceReady()
+        {
+            TeamInfo.TeamPlayerInfo.ForEach(p => p.ReadyState = ReadyState.Ready);
         }
 
         public IEnumerable<long> GetPlayers(Team team)
@@ -46,160 +65,229 @@ namespace CentralServer.BridgeServer
             return from p in TeamInfo.TeamPlayerInfo select p.AccountId;
         }
 
-        public static readonly List<Type> BridgeMessageTypes = new List<Type>
+        public List<LobbyServerProtocol> GetClients()
         {
-            typeof(RegisterGameServerRequest),
-            typeof(RegisterGameServerResponse),
-            typeof(LaunchGameRequest),
-            typeof(JoinGameServerRequest),
-            null, // typeof(JoinGameAsObserverRequest),
-            typeof(ShutdownGameRequest),
-            null, // typeof(DisconnectPlayerRequest),
-            null, // typeof(ReconnectPlayerRequest),
-            null, // typeof(MonitorHeartbeatResponse),
-            typeof(ServerGameSummaryNotification),
-            typeof(PlayerDisconnectedNotification),
-            null, // typeof(ServerGameMetricsNotification),
-            typeof(ServerGameStatusNotification),
-            null, // typeof(MonitorHeartbeatNotification),
-            null, // typeof(LaunchGameResponse),
-            null, // typeof(JoinGameServerResponse),
-            null, // typeof(JoinGameAsObserverResponse)
-        };
-        
-        protected List<Type> GetMessageTypes()
+            List<LobbyServerProtocol> clients = new List<LobbyServerProtocol>();
+
+            // If we don't have any player in teams, return an empty list
+            if (TeamInfo == null || TeamInfo.TeamPlayerInfo == null) return clients;
+
+            foreach (LobbyServerPlayerInfo player in TeamInfo.TeamPlayerInfo)
+            {
+                if (player.IsSpectator || player.IsNPCBot || player.ReplacedWithBots) continue;
+                LobbyServerProtocol client = SessionManager.GetClientConnection(player.AccountId);
+                if (client != null) clients.Add(client);
+            }
+
+            return clients;
+        }
+
+        protected override AllianceMessageBase DeserializeMessage(byte[] data, out int callbackId)
         {
-            return BridgeMessageTypes;
+            return BridgeMessageSerializer.DeserializeMessage(data, out callbackId);
         }
 
         protected override string GetConnContext()
         {
             return $"S {Address}:{Port}";
         }
-
-        protected override void HandleMessage(MessageEventArgs e)
+        
+        public BridgeServerProtocol()
         {
-            NetworkReader networkReader = new NetworkReader(e.RawData);
-            short messageType = networkReader.ReadInt16();
-            int callbackId = networkReader.ReadInt32();
-            List<Type> messageTypes = GetMessageTypes();
-            if (messageType >= messageTypes.Count)
-            {
-                log.Error($"Unknown bridge message type {messageType}");
-                return;
-            }
+            Orchestrator = new MatchOrchestrator(this);
+            
+            RegisterHandler<RegisterGameServerRequest>(HandleRegisterGameServerRequest);
+            RegisterHandler<ServerGameSummaryNotification>(HandleServerGameSummaryNotification);
+            RegisterHandler<PlayerDisconnectedNotification>(HandlePlayerDisconnectedNotification);
+            RegisterHandler<ServerGameMetricsNotification>(HandleServerGameMetricsNotification);
+            RegisterHandler<ServerGameStatusNotification>(HandleServerGameStatusNotification);
+            RegisterHandler<MonitorHeartbeatNotification>(HandleMonitorHeartbeatNotification);
+            RegisterHandler<LaunchGameResponse>(HandleLaunchGameResponse);
+            RegisterHandler<JoinGameServerResponse>(HandleJoinGameServerResponse);
+            RegisterHandler<ReconnectPlayerResponse>(HandleReconnectPlayerResponse);
+        }
 
-            Type type = messageTypes[messageType];
+        private void HandleRegisterGameServerRequest(RegisterGameServerRequest request, int callbackId)
+        {
+            string data = request.SessionInfo.ConnectionAddress;
+            Address = data.Split(":")[0];
+            Port = Convert.ToInt32(data.Split(":")[1]);
+            SessionInfo = request.SessionInfo;
+            IsPrivate = request.isPrivate;
+            ServerManager.AddServer(this);
 
-            if (type == typeof(RegisterGameServerRequest))
-            {
-                RegisterGameServerRequest request = Deserialize<RegisterGameServerRequest>(networkReader);
-                log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
-                string data = request.SessionInfo.ConnectionAddress;
-                Address = data.Split(":")[0];
-                Port = Convert.ToInt32(data.Split(":")[1]);
-                SessionInfo = request.SessionInfo;
-                ServerManager.AddServer(this);
-
-                Send(new RegisterGameServerResponse
-                    {
-                        Success = true
-                    },
-                    callbackId);
-            }
-            else if (type == typeof(ServerGameSummaryNotification))
-            {
-                try 
+            Send(new RegisterGameServerResponse
                 {
-                    ServerGameSummaryNotification request = Deserialize<ServerGameSummaryNotification>(networkReader);
+                    Success = true
+                },
+                callbackId);
+        }
 
-                    if (request.GameSummary == null) request.GameSummary = new LobbyGameSummary();
-                    if (request.GameSummary.BadgeAndParticipantsInfo == null) request.GameSummary.BadgeAndParticipantsInfo = new List<BadgeAndParticipantInfo>();
-                    log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
-                    log.Info($"Game {GameInfo.Name} at {request.GameSummary.GameServerAddress} finished " +
-                                            $"({request.GameSummary.NumOfTurns} turns), " +
-                                            $"{request.GameSummary.GameResult} {request.GameSummary.TeamAPoints}-{request.GameSummary.TeamBPoints}");
-                    foreach (LobbyServerProtocolBase client in clients)
-                    {
-                        MatchResultsNotification response = new MatchResultsNotification
-                        {
-                            // TODO
-                            BadgeAndParticipantsInfo = request.GameSummary.BadgeAndParticipantsInfo
-                        };
-                        client.Send(response);
-                    }
-                } catch(NullReferenceException ex)
-                {
-                    log.Error(ex);
-                }
-                
-
-                Send(new ShutdownGameRequest());
-            }
-            else if (type == typeof(PlayerDisconnectedNotification))
+        private void HandleServerGameSummaryNotification(ServerGameSummaryNotification notify)
+        {
+            LobbyGameSummary gameSummary = notify.GameSummary;
+            if (gameSummary == null)
             {
-                PlayerDisconnectedNotification request = Deserialize<PlayerDisconnectedNotification>(networkReader);
-                log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
-                log.Info($"Player {request.PlayerInfo.AccountId} left game {GameInfo.GameServerProcessCode}");
-                
-                foreach (LobbyServerProtocol client in clients)
-                {
-                    if (client.AccountId == request.PlayerInfo.AccountId)
-                    {
-                        client.CurrentServer = null;
-                        break;
-                    }
-                }
-            }
-            else if (type == typeof(ServerGameStatusNotification))
-            {
-                ServerGameStatusNotification request = Deserialize<ServerGameStatusNotification>(networkReader);
-                log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
-                log.Info($"Game {GameInfo.Name} {request.GameStatus}");
-                GameStatus = request.GameStatus;
-                if (GameStatus == GameStatus.Stopped)
-                {
-                    foreach (LobbyServerProtocol client in clients)
-                    {
-                        client.CurrentServer = null;
-                    }
-                }
+                GameInfo.GameResult = GameResult.TieGame;
+                gameSummary = new LobbyGameSummary();
             }
             else
             {
-                log.Warn($"Received unhandled bridge message type {(type != null ? type.Name : "id_" + messageType)}");
+                GameInfo.GameResult = gameSummary.GameResult;
+            }
+
+            GameSummary = gameSummary;
+            log.Info($"Game {GameInfo?.Name} at {GameSummary.GameServerAddress} finished " +
+                     $"({GameSummary.NumOfTurns} turns), " +
+                     $"{GameSummary.GameResult} {GameSummary.TeamAPoints}-{GameSummary.TeamBPoints}");
+
+            try
+            {
+                GameSummary.BadgeAndParticipantsInfo = AccoladeUtils.ProcessGameSummary(GameSummary);
+            }
+            catch (Exception ex)
+            {
+                log.Error("Failed to process game summary", ex);
+            }
+            
+            DB.Get().MatchHistoryDao.Save(MatchHistoryDao.MatchEntry.Cons(GameInfo, GameSummary));
+            
+            ServerGameStatus = GameStatus.Stopped;
+
+            _ = Orchestrator.FinalizeGame(GameSummary);
+        }
+
+        private void HandlePlayerDisconnectedNotification(PlayerDisconnectedNotification request)
+        {
+            log.Info($"Player {request.PlayerInfo.AccountId} left game {GameInfo?.GameServerProcessCode}");
+
+            foreach (LobbyServerProtocol client in GetClients())
+            {
+                if (client.AccountId == request.PlayerInfo.AccountId)
+                {
+                    client.LeaveServer(this);
+                    break;
+                }
+            }
+
+            LobbyServerPlayerInfo playerInfo = GetPlayerInfo(request.PlayerInfo.AccountId);
+            if (playerInfo != null)
+            {
+                playerInfo.ReplacedWithBots = true;
             }
         }
 
-        private T Deserialize<T>(NetworkReader reader) where T : AllianceMessageBase
+        private void HandleServerGameMetricsNotification(ServerGameMetricsNotification request)
         {
-            ConstructorInfo constructor = typeof(T).GetConstructor(Type.EmptyTypes);
-            T o = (T)(AllianceMessageBase)constructor.Invoke(Array.Empty<object>());
-            o.Deserialize(reader);
-            return o;
+            GameMetrics = request.GameMetrics;
+            log.Info($"Game {GameInfo?.Name} Turn {request.GameMetrics?.CurrentTurn}, " +
+                     $"{request.GameMetrics?.TeamAPoints}-{request.GameMetrics?.TeamBPoints}, " +
+                     $"frame time: {request.GameMetrics?.AverageFrameTime}");
+        }
+
+        private void HandleServerGameStatusNotification(ServerGameStatusNotification request)
+        {
+            log.Info($"Game {GameInfo?.Name} {request.GameStatus}");
+
+            ServerGameStatus = request.GameStatus;
+
+            if (ServerGameStatus == GameStatus.Stopped)
+            {
+                foreach (LobbyServerProtocol client in GetClients())
+                {
+                    if (!client.LeaveServer(this))
+                    {
+                        continue;
+                    }
+
+                    if (GameInfo != null)
+                    {
+                        //Unready people when game is finisht
+                        ForceMatchmakingQueueNotification forceMatchmakingQueueNotification =
+                            new ForceMatchmakingQueueNotification()
+                            {
+                                Action = ForceMatchmakingQueueNotification.ActionType.Leave,
+                                GameType = GameInfo.GameConfig.GameType
+                            };
+                        client.Send(forceMatchmakingQueueNotification);
+                    }
+                }
+            }
+        }
+
+        private void HandleMonitorHeartbeatNotification(MonitorHeartbeatNotification notify)
+        {
+            
+        }
+
+        private void HandleLaunchGameResponse(LaunchGameResponse response)
+        {
+            log.Info(
+                $"Game {GameInfo?.Name} launched ({response.GameServerAddress}, {response.GameInfo?.GameStatus}) with {response.GameInfo?.ActiveHumanPlayers} players");
+        }
+
+        private void HandleJoinGameServerResponse(JoinGameServerResponse response)
+        {
+            log.Info(
+                $"Player {response.PlayerInfo?.Handle} {response.PlayerInfo?.AccountId} {response.PlayerInfo?.CharacterType} " +
+                $"joined {GameInfo?.Name}  ({response.GameServerProcessCode})");
+        }
+
+        private void HandleReconnectPlayerResponse(ReconnectPlayerResponse response)
+        {
+            if (!response.Success)
+            {
+                log.Error("Reconnecting player is not found on the server");
+            }
         }
 
         protected override void HandleClose(CloseEventArgs e)
         {
-            ServerManager.RemoveServer(this.ID);
+            UnregisterAllHandlers();
+            ServerManager.RemoveServer(ProcessCode);
+        }
+
+        public void OnPlayerUsedGGPack(long accountId)
+        {
+            GameInfo.ggPackUsedAccountIDs.TryGetValue(accountId, out int ggPackUsedAccountIDs);
+            GameInfo.ggPackUsedAccountIDs[accountId] = ggPackUsedAccountIDs + 1;
         }
 
         public bool IsAvailable()
         {
-            return GameStatus == GameStatus.Stopped;
+            return ServerGameStatus == GameStatus.None && !IsPrivate && IsConnected;
         }
 
-        public void StartGame(LobbyGameInfo gameInfo, LobbyServerTeamInfo teamInfo)
+        public void ReserveForGame()
         {
-            GameInfo = gameInfo;
-            TeamInfo = teamInfo;
-            GameStatus = GameStatus.Assembling;
-            Dictionary<int, LobbySessionInfo> sessionInfos = teamInfo.TeamPlayerInfo
+            ServerGameStatus = GameStatus.Assembling;
+            // TODO release if game did not start?
+        }
+
+        public async Task StartGameAsync(List<long> teamA, List<long> teamB, GameType gameType, GameSubType gameSubType)
+        {
+            await Orchestrator.StartGameAsync(teamA, teamB, gameType, gameSubType);
+        }
+
+        public void StartGameForReconnection(long accountId)
+        {
+            LobbySessionInfo sessionInfo = SessionManager.GetSessionInfo(accountId);
+            Send(new ReconnectPlayerRequest
+            {
+                AccountId = accountId,
+                NewSessionId = sessionInfo.ReconnectSessionToken
+            });
+        }
+
+        public void StartGame()
+        {
+            ServerGameStatus = GameStatus.Assembling;
+            Dictionary<int, LobbySessionInfo> sessionInfos = TeamInfo.TeamPlayerInfo
                 .ToDictionary(
                     playerInfo => playerInfo.PlayerId,
                     playerInfo => SessionManager.GetSessionInfo(playerInfo.AccountId) ?? new LobbySessionInfo());  // fallback for bots TODO something smarter
 
-            foreach (LobbyServerPlayerInfo playerInfo in teamInfo.TeamPlayerInfo)
+            foreach (LobbyServerPlayerInfo playerInfo in TeamInfo.TeamPlayerInfo)
             {
                 LobbySessionInfo sessionInfo = sessionInfos[playerInfo.PlayerId];
                 JoinGameServerRequest request = new JoinGameServerRequest
@@ -211,11 +299,11 @@ namespace CentralServer.BridgeServer
                 };
                 Send(request);
             }
-            
+
             Send(new LaunchGameRequest()
             {
-                GameInfo = gameInfo,
-                TeamInfo = teamInfo,
+                GameInfo = GameInfo,
+                TeamInfo = TeamInfo,
                 SessionInfo = sessionInfos,
                 GameplayOverrides = new LobbyGameplayOverrides()
             });
@@ -223,38 +311,139 @@ namespace CentralServer.BridgeServer
 
         public bool Send(AllianceMessageBase msg, int originalCallbackId = 0)
         {
-            short messageType = GetMessageType(msg);
+            short messageType = BridgeMessageSerializer.GetMessageType(msg);
             if (messageType >= 0)
             {
                 Send(messageType, msg, originalCallbackId);
-                log.Debug($"> {msg.GetType().Name} {DefaultJsonSerializer.Serialize(msg)}");
+                LogMessage(">", msg);
                 return true;
             }
             log.Error($"No sender for {msg.GetType().Name}");
-            log.Debug($">X {msg.GetType().Name} {DefaultJsonSerializer.Serialize(msg)}");
+            LogMessage(">X", msg);
 
             return false;
         }
 
-        private bool Send(short msgType, AllianceMessageBase msg, int originalCallbackId = 0)
+        private void Send(short msgType, AllianceMessageBase msg, int originalCallbackId = 0)
         {
-            NetworkWriter networkWriter = new NetworkWriter();
-            networkWriter.Write(msgType);
-            networkWriter.Write(originalCallbackId);
-            msg.Serialize(networkWriter);
-            Send(networkWriter.ToArray());
-            return true;
+            Send(BridgeMessageSerializer.SerializeMessage(msgType, msg, originalCallbackId));
         }
 
-        public short GetMessageType(AllianceMessageBase msg)
+        public void BuildGameInfo(GameType gameType, GameSubType gameMode)
         {
-            short num = (short)GetMessageTypes().IndexOf(msg.GetType());
-            if (num < 0)
+            int playerCount = GetClients().Count;
+            GameInfo = new LobbyGameInfo
             {
-                log.Error($"Message type {msg.GetType().Name} is not in the MonitorGameServerInsightMessages MessageTypes list and doesnt have a type");
+                AcceptedPlayers = playerCount,
+                AcceptTimeout = new TimeSpan(0, 0, 0),
+                SelectTimeout = TimeSpan.FromSeconds(30),
+                LoadoutSelectTimeout = TimeSpan.FromSeconds(30),
+                ActiveHumanPlayers = playerCount,
+                ActivePlayers = playerCount,
+                CreateTimestamp = DateTime.UtcNow.Ticks,
+                GameConfig = new LobbyGameConfig
+                {
+                    GameOptionFlags = GameOptionFlag.NoInputIdleDisconnect & GameOptionFlag.NoInputIdleDisconnect,
+                    GameServerShutdownTime = -1,
+                    GameType = gameType,
+                    InstanceSubTypeBit = 1,
+                    IsActive = true,
+                    Map = MatchmakingQueue.SelectMap(gameMode),
+                    ResolveTimeoutLimit = 1600, // TODO ?
+                    RoomName = "",
+                    Spectators = 0,
+                    SubTypes = GameModeManager.GetGameTypeAvailabilities()[gameType].SubTypes,
+                    TeamABots = 0,
+                    TeamAPlayers = TeamInfo.TeamAPlayerInfo.Count(),
+                    TeamBBots = 0,
+                    TeamBPlayers = TeamInfo.TeamBPlayerInfo.Count(),
+                },
+                GameResult = GameResult.NoResult,
+                GameServerAddress = this.URI,
+                GameServerProcessCode = this.ProcessCode
+            };
+        }
+
+        public void SetGameStatus(GameStatus status)
+        {
+            GameInfo.GameStatus = status;
+        }
+
+        public void SendGameInfoNotifications()
+        {
+            foreach (long player in GetPlayers())
+            {
+                LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(player);
+                if (playerConnection != null)
+                {
+                    SendGameInfo(playerConnection);
+                }
+            }
+        }
+
+        public void SendGameInfo(LobbyServerProtocol playerConnection, GameStatus gamestatus = GameStatus.None)
+        {
+            // TODO do not mutate on send
+            if (gamestatus != GameStatus.None)
+            {
+                GameInfo.GameStatus = gamestatus;
             }
 
-            return num;
+            LobbyServerPlayerInfo playerInfo = GetPlayerInfo(playerConnection.AccountId);
+            GameInfoNotification notification = new GameInfoNotification
+            {
+                GameInfo = GameInfo,
+                TeamInfo = LobbyTeamInfo.FromServer(TeamInfo, 0, new MatchmakingQueueConfig()),
+                PlayerInfo = LobbyPlayerInfo.FromServer(playerInfo, 0, new MatchmakingQueueConfig())
+            };
+
+            playerConnection.Send(notification);
+        }
+
+        public void SendGameAssignmentNotification(LobbyServerProtocol client, bool reconnection = false)
+        {
+            LobbyServerPlayerInfo playerInfo = GetPlayerInfo(client.AccountId);
+            GameAssignmentNotification notification = new GameAssignmentNotification
+            {
+                GameInfo = GameInfo,
+                GameResult = GameInfo.GameResult,
+                Observer = false,
+                PlayerInfo = LobbyPlayerInfo.FromServer(playerInfo, 0, new MatchmakingQueueConfig()),
+                Reconnection = reconnection,
+                GameplayOverrides = client.GetGameplayOverrides()
+            };
+
+            client.Send(notification);
+        }
+
+        public bool UpdateCharacterInfo(long accountId, LobbyCharacterInfo characterInfo, LobbyPlayerInfoUpdate update)
+        {
+            return Orchestrator.UpdateCharacterInfo(accountId, characterInfo, update);
+        }
+
+        public void OnAccountVisualsUpdated(long accountId)
+        {
+            Orchestrator.UpdateAccountVisuals(accountId);
+        }
+
+        public void SetPlayerReady(long accountId)
+        {
+            GetPlayerInfo(accountId).ReadyState = ReadyState.Ready;
+        }
+
+        public void Shutdown()
+        {
+            Send(new ShutdownGameRequest());
+        }
+
+        public void DisconnectPlayer(long accountId)
+        {
+            Send(new DisconnectPlayerRequest
+            {
+                SessionInfo = SessionManager.GetSessionInfo(accountId),
+                PlayerInfo = GetPlayerInfo(accountId),
+                GameResult = GameResult.ClientLeft
+            });
         }
     }
 }

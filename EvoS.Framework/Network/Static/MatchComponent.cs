@@ -9,6 +9,39 @@ namespace EvoS.Framework.Network.Static
     [EvosMessage(612)]
     public class MatchComponent : ICloneable
     {
+        public MatchComponent()
+        {
+        }
+
+        public MatchComponent(LobbyGameInfo gameInfo, LobbyGameSummary gameSummary, long accountId)
+        {
+            List<PlayerGameSummary> playerSummaries = gameSummary.PlayerGameSummaryList
+                .Where(pgs => pgs.AccountId == accountId)
+                .ToList();
+
+            if (playerSummaries.Count == 0)
+            {
+                throw new EvosException("Attempt to create MatchComponent for account not participating in game");
+            }
+
+            Team team = (Team)playerSummaries[0].Team;
+
+            MatchTime = new DateTime(gameInfo.CreateTimestamp);
+            Result = gameSummary.GameResult.ToPlayerGameResult(team);
+            Kills = playerSummaries.Select(pgs => pgs.NumKills).Sum();
+            CharacterUsed = playerSummaries[0].CharacterPlayed;
+            GameType = gameInfo.GameConfig.GameType;
+            MapName = gameInfo.GameConfig.Map;
+            NumOfTurns = gameSummary.NumOfTurns;
+            SubTypeLocTag = null;
+            Actors = gameSummary.PlayerGameSummaryList.Select(pgs => new Actor
+            {
+                Character = pgs.CharacterPlayed,
+                Team = (Team)pgs.Team,
+                IsPlayer = pgs.AccountId == accountId
+            }).ToList();
+        }
+        
         public DateTime MatchTime { get; set; }
 
         public PlayerGameResult Result { get; set; }

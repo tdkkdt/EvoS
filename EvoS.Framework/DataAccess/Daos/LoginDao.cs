@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace EvoS.Framework.DataAccess.Daos
@@ -7,16 +8,17 @@ namespace EvoS.Framework.DataAccess.Daos
     {
         public LoginEntry? Find(string username);
         public LoginEntry? Find(long accountId);
+        public List<LoginEntry> FindRegex(string username);
         public LoginEntry? FindBySteamId(ulong steamId);
         public void Save(LoginEntry entry);
         public void UpdateSteamId(LoginEntry entry, ulong newSteamId);
-        public void UpdateHash(LoginEntry entry, string hash);
 
         public class LoginEntry
         {
             [BsonId]
             public long AccountId;
             public string Username;
+            public string Salt;
             public string Hash;
             public ulong SteamId;
         }

@@ -116,7 +116,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Assassin,
                     CharacterType = CharacterType.Exo,
                     Difficulty = 1,
@@ -142,7 +142,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Support,
                     CharacterType = CharacterType.FishMan,
                     Difficulty = 1,
@@ -246,7 +246,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Tank,
                     CharacterType = CharacterType.RageBeast,
                     Difficulty = 1,
@@ -285,7 +285,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Assassin,
                     CharacterType = CharacterType.Samurai,
                     Difficulty = 1,
@@ -324,7 +324,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Support,
                     CharacterType = CharacterType.Sensei,
                     Difficulty = 1,
@@ -402,7 +402,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Assassin,
                     CharacterType = CharacterType.Thief,
                     Difficulty = 1,
@@ -428,7 +428,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Assassin,
                     CharacterType = CharacterType.Trickster,
                     Difficulty = 1,
@@ -441,7 +441,7 @@ namespace CentralServer.LobbyServer.Character
                 new CharacterConfig()
                 {
                     AllowForBots = true,
-                    AllowForPlayers = false,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Tank,
                     CharacterType = CharacterType.Valkyrie,
                     Difficulty = 1,
@@ -462,6 +462,19 @@ namespace CentralServer.LobbyServer.Character
                     IsHidden = true
                 }
             },
+            {
+                CharacterType.PendingWillFill,
+                new CharacterConfig()
+                {
+                    AllowForBots = false,
+                    AllowForPlayers = true,
+                    CharacterRole = CharacterRole.None,
+                    CharacterType = CharacterType.PendingWillFill,
+                    Difficulty = 1,
+                    GameTypesProhibitedFrom = new List<GameType>(),
+                    IsHidden = false
+                }
+            }
         };
     }
 }

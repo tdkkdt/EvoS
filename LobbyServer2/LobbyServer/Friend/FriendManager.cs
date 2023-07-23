@@ -22,6 +22,7 @@ namespace CentralServer.LobbyServer.Friend
 
         public static FriendList GetFriendList(long accountId)
         {
+            SocialComponent socialComponent = DB.Get().AccountDao.GetAccount(accountId)?.SocialComponent;
             FriendList friendList = new FriendList
             {
                 // TODO We are all friends here for now
@@ -29,19 +30,23 @@ namespace CentralServer.LobbyServer.Friend
                     .Where(id => id != accountId)
                     .Select(id => DB.Get().AccountDao.GetAccount(id))
                     .ToDictionary(acc => acc.AccountId,
-                        acc => new FriendInfo()
+                        acc =>
                         {
-                            FriendAccountId = acc.AccountId,
-                            FriendHandle = acc.Handle,
-                            FriendStatus = FriendStatus.Friend,
-                            IsOnline = true,
-                            StatusString = GetStatusString(SessionManager.GetClientConnection(acc.AccountId)),
-                            // FriendNote = 
-                            BannerID = acc.AccountComponent.SelectedBackgroundBannerID,
-                            EmblemID = acc.AccountComponent.SelectedForegroundBannerID,
-                            TitleID = acc.AccountComponent.SelectedTitleID,
-                            TitleLevel = acc.AccountComponent.TitleLevels.GetValueOrDefault(acc.AccountComponent.SelectedTitleID, 0),
-                            RibbonID = acc.AccountComponent.SelectedRibbonID,
+                            LobbyServerProtocol conn = SessionManager.GetClientConnection(acc.AccountId);
+                            return new FriendInfo
+                            {
+                                FriendAccountId = acc.AccountId,
+                                FriendHandle = acc.Handle,
+                                FriendStatus = socialComponent?.IsBlocked(acc.AccountId) == true ? FriendStatus.Blocked : FriendStatus.Friend,
+                                IsOnline = conn != null,
+                                StatusString = GetStatusString(conn),
+                                // FriendNote = 
+                                BannerID = acc.AccountComponent.SelectedBackgroundBannerID,
+                                EmblemID = acc.AccountComponent.SelectedForegroundBannerID,
+                                TitleID = acc.AccountComponent.SelectedTitleID,
+                                TitleLevel = acc.AccountComponent.TitleLevels.GetValueOrDefault(acc.AccountComponent.SelectedTitleID, 0),
+                                RibbonID = acc.AccountComponent.SelectedRibbonID,
+                            };
                         }),
                 IsDelta = false
             };
@@ -49,7 +54,7 @@ namespace CentralServer.LobbyServer.Friend
             return friendList;
         }
 
-        private static string GetStatusString(LobbyServerProtocol client)
+        public static string GetStatusString(LobbyServerProtocol client)
         {
             if (client == null)
             {
@@ -82,6 +87,25 @@ namespace CentralServer.LobbyServer.Friend
             };
 
             return response;
+        }
+
+        public static string GetFailTerm(FriendOperation op)
+        {
+            switch (op)
+            {
+                case FriendOperation.Accept:
+                    return "FailedFriendAccept";
+                case FriendOperation.Add:
+                    return "FailedFriendAdd";
+                case FriendOperation.Reject:
+                    return "FailedFriendReject";
+                case FriendOperation.Remove:
+                    return "FailedFriendRemove";
+                case FriendOperation.Block:
+                    return "FailedFriendBlock";
+                default:
+                    return null;
+            }
         }
     }
 }

@@ -1,5 +1,3 @@
-using EvoS.Framework.Logging;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace EvoS.Framework.DataAccess.Mongo

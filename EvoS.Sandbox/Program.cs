@@ -13,20 +13,21 @@ namespace EvoS.Sandbox
         {
             XmlConfigurator.Configure(new FileInfo("log4net.xml"));
             CommandLineApplication.Execute<Program>(args);
-            Console.ReadLine();
             return 0;
         }
         
-        private void OnExecute()
+        private async void OnExecute()
         {
             Banner.PrintBanner();
             DB.Get();
 
-            // Start Directory Server
-            new Thread(() => StartDirServer()).Start();
-            
             // Start Central Server
-            CentralServer.CentralServer.Main(new string[] { });            
+            await CentralServer.CentralServer.Init(new string[] { });
+
+            // Start Directory Server
+            new Thread(StartDirServer).Start();
+
+            CentralServer.CentralServer.MainLoop();
         }
 
         /// <summary>

@@ -35,7 +35,9 @@ namespace EvoS.Framework.Network.Static
                 select p;
         }
 
-        public static LobbyTeamInfo FromServer(LobbyServerTeamInfo serverInfo, int maxPlayerLevel,
+        public static LobbyTeamInfo FromServer(
+            LobbyServerTeamInfo serverInfo, 
+            int maxPlayerLevel,
             MatchmakingQueueConfig queueConfig)
         {
             LobbyTeamInfo lobbyTeamInfo = null;
@@ -47,8 +49,11 @@ namespace EvoS.Framework.Network.Static
                     lobbyTeamInfo.TeamPlayerInfo = new List<LobbyPlayerInfo>();
                     foreach (LobbyServerPlayerInfo serverInfo2 in serverInfo.TeamPlayerInfo)
                     {
-                        lobbyTeamInfo.TeamPlayerInfo.Add(LobbyPlayerInfo.FromServer(serverInfo2, maxPlayerLevel,
-                            queueConfig));
+                        lobbyTeamInfo.TeamPlayerInfo.Add(
+                            LobbyPlayerInfo.FromServer(
+                                serverInfo2, 
+                                maxPlayerLevel,
+                                queueConfig));
                     }
                 }
             }

@@ -5,8 +5,8 @@ using EvoS.Framework.Network.Unity;
 [Serializable]
 public class PlayerDisconnectedNotification : AllianceMessageBase
 {
-    internal LobbySessionInfo SessionInfo;
-    internal LobbyServerPlayerInfo PlayerInfo;
+    public LobbySessionInfo SessionInfo;
+    public LobbyServerPlayerInfo PlayerInfo;
 
     public override void Serialize(NetworkWriter writer)
     {

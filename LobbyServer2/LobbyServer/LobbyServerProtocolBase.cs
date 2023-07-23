@@ -5,88 +5,44 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using CentralServer.LobbyServer.Character;
-using CentralServer.LobbyServer.Config;
 using CentralServer.LobbyServer.Friend;
 using CentralServer.LobbyServer.Gamemode;
 using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Quest;
+using CentralServer.LobbyServer.Session;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
-using EvoS.Framework.Misc;
 using EvoS.Framework.Network;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using EvoS.Framework.Network.WebSocket;
 using log4net;
 using Newtonsoft.Json.Linq;
-using WebSocketSharp;
 
 namespace CentralServer.LobbyServer
 {
-    public class LobbyServerProtocolBase : WebSocketBehaviorBase
+    public class LobbyServerProtocolBase : WebSocketBehaviorBase<WebSocketMessage>
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(LobbyServerProtocolBase));
-        private Dictionary<Type, EvosMessageDelegate<WebSocketMessage>> messageHandlers = new Dictionary<Type, EvosMessageDelegate<WebSocketMessage>>();
         public long AccountId;
-        public long SessionToken;
         public string UserName;
-        
+        public long SessionToken;
         public GameType SelectedGameType;
         public ushort SelectedSubTypeMask;
         public BotDifficulty AllyDifficulty;
         public BotDifficulty EnemyDifficulty;
+        public bool SessionCleaned = false; // tracks clean up methods execution for reconnection
 
         protected override string GetConnContext()
         {
             return "C " + AccountId;
         }
 
-        protected override void HandleMessage(MessageEventArgs e)
+        protected override WebSocketMessage DeserializeMessage(byte[] data, out int callbackId)
         {
-            MemoryStream stream = new MemoryStream(e.RawData);
-            WebSocketMessage deserialized = null;
-
-            try
-            {
-                deserialized = (WebSocketMessage)EvosSerializer.Instance.Deserialize(stream);
-            }
-            catch (NullReferenceException nullEx)
-            {
-                log.Error("No message handler registered for data: " + BitConverter.ToString(e.RawData));
-            }
-
-            if (deserialized != null)
-            {
-                EvosMessageDelegate<WebSocketMessage> handler = GetHandler(deserialized.GetType());
-                if (handler != null)
-                {
-                    log.Debug($"< {deserialized.GetType().Name} {DefaultJsonSerializer.Serialize(deserialized)}");
-                    handler.Invoke(deserialized);
-                }
-                else
-                {
-                    log.Error("No handler for " + deserialized.GetType().Name + "\n" + DefaultJsonSerializer.Serialize(deserialized));
-                }
-            }
-        }
-
-        public void RegisterHandler<T>(EvosMessageDelegate<T> handler) where T : WebSocketMessage
-        {
-            messageHandlers.Add(typeof(T), msg => { handler((T)msg); });
-        }
-
-        private EvosMessageDelegate<WebSocketMessage> GetHandler(Type type)
-        {
-            try
-            {
-                return messageHandlers[type];
-            }
-            catch (KeyNotFoundException e)
-            {
-                log.Error("No handler found for type " + type.Name);
-                return null;
-            }
+            callbackId = 0;
+            return (WebSocketMessage)EvosSerializer.Instance.Deserialize(new MemoryStream(data));
         }
 
         public void Send(WebSocketMessage message)
@@ -101,10 +57,15 @@ namespace CentralServer.LobbyServer
 
         private void SendImpl(WebSocketMessage message)
         {
+            if (!IsConnected)
+            {
+                log.Warn($"Attempted to send {message.GetType()} to a disconnected socket");
+                return;
+            }
             MemoryStream stream = new MemoryStream();
             EvosSerializer.Instance.Serialize(stream, message);
             Send(stream.ToArray());
-            log.Debug($"> {message.GetType().Name} {DefaultJsonSerializer.Serialize(message)}");
+            LogMessage(">", message);
         }
 
         private void BroadcastImpl(WebSocketMessage message)
@@ -112,26 +73,24 @@ namespace CentralServer.LobbyServer
             MemoryStream stream = new MemoryStream();
             EvosSerializer.Instance.Serialize(stream, message);
             Sessions.Broadcast(stream.ToArray());
-            log.Debug($">> {message.GetType().Name} {DefaultJsonSerializer.Serialize(message)}");
+            LogMessage(">>", message);
         }
-
-
+        
         public void SendErrorResponse(WebSocketResponseMessage response, int requestId, string message)
         {
             response.Success = false;
             response.ErrorMessage = message;
             response.ResponseId = requestId;
-            log.Error(message);
+            log.Info($"Sending error response: {message}");
             Send(response);
         }
 
-        public void SendErrorResponse(WebSocketResponseMessage response, int requestId, Exception error)
+        public void SendErrorResponse(WebSocketResponseMessage response, int requestId, Exception error = null)
         {
             response.Success = false;
-            response.ErrorMessage = error.Message;
+            response.ErrorMessage = error?.Message;
             response.ResponseId = requestId;
-            log.Error(error.Message);
-            Console.WriteLine(error);
+            log.Info("Sending error response", error);
             Send(response);
         }
 
@@ -150,7 +109,7 @@ namespace CentralServer.LobbyServer
                 GroupInfo = GroupManager.GetGroupInfo(AccountId),
                 SeasonChapterQuests = QuestManager.GetSeasonQuestDataNotification(),
                 ServerQueueConfiguration = GetServerQueueConfigurationUpdateNotification(),
-                Status = GetLobbyStatusNotification()
+                Status = GetLobbyStatusNotification(account)
             };
 
             Send(notification);
@@ -168,12 +127,12 @@ namespace CentralServer.LobbyServer
             };
         }
 
-        private LobbyStatusNotification GetLobbyStatusNotification()
+        private LobbyStatusNotification GetLobbyStatusNotification(PersistedAccountData account)
         {
             return new LobbyStatusNotification
             {
                 AllowRelogin = false,
-                ClientAccessLevel = ClientAccessLevel.Full,
+                ClientAccessLevel = account.AccountComponent.AppliedEntitlements.ContainsKey("DEVELOPER_ACCESS") ? ClientAccessLevel.Admin : ClientAccessLevel.Full, 
                 ErrorReportRate = new TimeSpan(0, 3, 0),
                 GameplayOverrides = GetGameplayOverrides(),
                 HasPurchasedGame = true,
@@ -237,7 +196,7 @@ namespace CentralServer.LobbyServer
                 AllowSpectators = false,
                 AllowSpectatorsOutsideCustom = false,
                 CharacterConfigs = CharacterConfigs.Characters,
-                CharacterAbilityConfigOverrides = CharacterManager.GetChacterAbilityConfigOverrides(),
+                CharacterAbilityConfigOverrides = LobbyCharacterInfo.GetChacterAbilityConfigOverrides(),
                 //CharacterSkinConfigOverrides = null TODO: maybe can be used to unlock all skins
                 EnableAllMods = true,
                 EnableAllAbilityVfxSwaps = true,
@@ -253,7 +212,14 @@ namespace CentralServer.LobbyServer
                 EnableShop = true,
                 EnableQuests = false,
                 EnableSteamAchievements = false,
-                EnableTaunts = true
+                EnableTaunts = true,
+                CardConfigOverrides =
+                {
+                    { CardType.Cleanse_Prep, new CardConfigOverride { CardType = CardType.Cleanse_Prep, Allowed = false } },
+                    { CardType.TurtleTech, new CardConfigOverride { CardType = CardType.TurtleTech, Allowed = false } },
+                    { CardType.SecondWind, new CardConfigOverride { CardType = CardType.SecondWind, Allowed = false } },
+                    { CardType.ReduceCooldown, new CardConfigOverride { CardType = CardType.ReduceCooldown, Allowed = false } },
+                }
             };
         }
 
@@ -271,10 +237,6 @@ namespace CentralServer.LobbyServer
         protected void SetEnemyDifficulty(BotDifficulty difficulty)
         {
             EnemyDifficulty = difficulty;
-        }
-        protected void SetLastSelectedLoadout(int lastSelectedLoadout)
-        {
-            log.Debug("last selected loadout changed to " + lastSelectedLoadout);
         }
 
     }

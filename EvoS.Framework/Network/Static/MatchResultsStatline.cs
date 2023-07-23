@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json;
 
 namespace EvoS.Framework.Network.Static
 {
@@ -11,7 +12,7 @@ namespace EvoS.Framework.Network.Static
             return MemberwiseClone();
         }
 
-        [NonSerialized] public object Actor;
+        [NonSerialized] [JsonIgnore] public object Actor;
 
         public int PlayerId;
         public long AccountID;

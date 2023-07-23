@@ -12,6 +12,7 @@ namespace EvoS.Framework.DataAccess
         private static DB Instance;
         public readonly AccountDao AccountDao;
         public readonly LoginDao LoginDao;
+        public readonly MatchHistoryDao MatchHistoryDao;
 
         private DB()
         {
@@ -21,11 +22,13 @@ namespace EvoS.Framework.DataAccess
                     log.Info("Using MongoDB");
                     AccountDao = new AccountDaoCached(new AccountMongoDao());
                     LoginDao = new LoginDaoCached(new LoginMongoDao());
+                    MatchHistoryDao = new MatchHistoryDaoCached(new MatchHistoryMongoDao());
                     break;
                 case EvosConfiguration.DBType.None:
                     log.Info("Not using any database, no data will be persisted");
                     AccountDao = new AccountDaoCached(new AccountMockDao());
                     LoginDao = new LoginDaoCached(new LoginMockDao());
+                    MatchHistoryDao = new MatchHistoryDaoCached(new MatchHistoryMockDao());
                     break;
             }
         }

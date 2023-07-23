@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
+using EvoS.Framework;
 using EvoS.Framework.DataAccess;
-using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using EvoS.Framework.Network.WebSocket;
 using log4net;
@@ -18,8 +19,8 @@ namespace CentralServer.LobbyServer.Group
         private static readonly Dictionary<long, GroupInfo> ActiveGroups = new Dictionary<long, GroupInfo>();
         private static readonly Dictionary<long, long> PlayerToGroup = new Dictionary<long, long>();
         private static readonly Dictionary<long, GroupRequestInfo> GroupRequests = new Dictionary<long, GroupRequestInfo>();
-        private static long _nextGroupId = 0;
-        private static long _nextGroupRequestId = 0;
+        private static long _lastGroupId = -1;
+        private static long _lastGroupRequestId = -1;
         private static readonly object _lock = new object();
 
         public static object Lock => _lock;
@@ -27,6 +28,11 @@ namespace CentralServer.LobbyServer.Group
         public static GroupInfo GetGroup(long groupId)
         {
             return ActiveGroups.GetValueOrDefault(groupId);
+        }
+        
+        public static List<GroupInfo> GetGroups()
+        {
+            return ActiveGroups.Values.ToList();
         }
         
         public static GroupInfo GetPlayerGroup(long accountId)
@@ -48,7 +54,7 @@ namespace CentralServer.LobbyServer.Group
                     throw new ArgumentException("Invalid group id");
                 }
 
-                long requestId = _nextGroupRequestId++;
+                long requestId = Interlocked.Increment(ref _lastGroupRequestId);
                 // TODO
                 // GroupRequests.Add(
                 //     requestId,
@@ -62,7 +68,7 @@ namespace CentralServer.LobbyServer.Group
             long groupId;
             lock (_lock)
             {
-                groupId = _nextGroupId++;
+                groupId = Interlocked.Increment(ref _lastGroupId);
                 ActiveGroups.Add(groupId, new GroupInfo(groupId));
             }
             JoinGroup(groupId, leader);
@@ -107,10 +113,17 @@ namespace CentralServer.LobbyServer.Group
             {
                 if (ActiveGroups.TryGetValue(groupId, out GroupInfo groupInfo))
                 {
-                    groupInfo.AddPlayer(accountId);
-                    PlayerToGroup.Add(accountId, groupId);
-                    log.Info($"Added {accountId} to group {groupId}");
-                    joinedGroup = groupInfo;
+                    if (groupInfo.Members.Count < LobbyConfiguration.GetMaxGroupSize())
+                    {
+                        groupInfo.AddPlayer(accountId);
+                        PlayerToGroup.Add(accountId, groupId);
+                        log.Info($"Added {accountId} to group {groupId}");
+                        joinedGroup = groupInfo;
+                    } 
+                    else
+                    {
+                        log.Error($"Player {accountId} attempted to join a full group {groupId}");
+                    }
                 }
                 else
                 {
@@ -137,7 +150,7 @@ namespace CentralServer.LobbyServer.Group
                 MemberHandle = account.Handle,
                 HasFullAccess = true,
                 IsLeader = groupInfo.IsLeader(account.AccountId),
-                IsReady = session.IsReady,
+                IsReady = session?.IsReady == true,
                 IsInGame = false, // TODO
                 // CreateGameTimestamp = session.CreateGameTimestamp,
                 AccountID = account.AccountId,
