@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using EvoS.Framework.Auth;
 using YamlDotNet.Serialization;
 using EvoS.Framework.Misc;
 
@@ -14,6 +16,9 @@ namespace EvoS.Framework
         public string GameServerExecutableArgs = "";
         public string SteamWebApiKey = "";
         public bool AutoRegisterNewUsers = true;
+        public List<List<LinkedAccount.Condition>> LinkedAccountRegistrationConditions = new List<List<LinkedAccount.Condition>>();
+        public List<List<LinkedAccount.Condition>> LinkedAccountLoginConditions = null;
+        public List<LinkedAccount.Type> LinkedAccountsForPasswordReset = new List<LinkedAccount.Type>();
         public DBConfig Database = new DBConfig();
         public string UserApiKey = "";
         public int UserApiPort = 3002;
@@ -51,6 +56,12 @@ namespace EvoS.Framework
         public static bool SteamApiEnabled => !string.IsNullOrWhiteSpace(GetSteamWebApiKey());
 
         public static bool GetAutoRegisterNewUsers() => Instance.AutoRegisterNewUsers;
+        
+        public static List<List<LinkedAccount.Condition>> GetLinkedAccountRegistrationConditions() => Instance.LinkedAccountRegistrationConditions;
+        
+        public static List<List<LinkedAccount.Condition>> GetLinkedAccountLoginConditions() => Instance.LinkedAccountLoginConditions ?? GetLinkedAccountRegistrationConditions();
+        
+        public static List<LinkedAccount.Type> GetLinkedAccountsForPasswordReset() => Instance.LinkedAccountsForPasswordReset;
         
         public static DBConfig GetDBConfig() => Instance.Database;
 

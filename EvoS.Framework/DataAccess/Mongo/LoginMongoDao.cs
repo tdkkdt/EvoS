@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using EvoS.Framework.Auth;
 using EvoS.Framework.DataAccess.Daos;
 using log4net;
 using MongoDB.Bson;
@@ -30,20 +31,20 @@ namespace EvoS.Framework.DataAccess.Mongo
             return findById(accountId);
         }
 
-        public LoginDao.LoginEntry FindBySteamId(ulong steamId)
+        // TODO index
+        public LoginDao.LoginEntry FindByLinkedAccount(LinkedAccount linkedAccount)
         {
-            return c.Find(f.Eq("SteamId", steamId)).FirstOrDefault();
+            return c.Find(f.ElemMatch(
+                "LinkedAccounts",
+                f.And(
+                    f.Eq("type", linkedAccount.type),
+                    f.Eq("id", linkedAccount.id))
+                )).FirstOrDefault();
         }
 
         public void Save(LoginDao.LoginEntry entry)
         {
             log.Info($"New player {entry.AccountId}: {entry.Username}");
-            insert(entry.AccountId, entry);
-        }
-
-        public void UpdateSteamId(LoginDao.LoginEntry entry, ulong newSteamId)
-        {
-            entry.SteamId = newSteamId;
             insert(entry.AccountId, entry);
         }
     }

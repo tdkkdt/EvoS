@@ -40,7 +40,7 @@ public class UserApiServer : ApiServer
         log.Info($"Registering via api: {authInfo.UserName}");
         try
         {
-            LoginManager.Register(authInfo, steamId: 0);
+            LoginManager.Register(authInfo);
         }
         catch (ArgumentException e)
         {

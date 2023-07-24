@@ -1,8 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using EvoS.DirectoryServer.ARLauncher;
 using EvoS.Framework;
+using EvoS.Framework.Auth;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.DataAccess.Daos;
 using EvoS.Framework.Misc;
@@ -32,7 +37,7 @@ namespace EvoS.DirectoryServer.Account
         public const string SteamIdZero = "No SteamId was provided. Please use ARLauncher to create an account or to link existing account to Steam.";
         public const string SteamIdAlreadyUsed = "Provided SteamId was already used for another account. Try logging into it instead. You can reset password if you forgot it.";
         public const string SteamWebApiKeyMissing = "Server is not configured to use SteamWebApi";
-        public const string AccountWithSuchSteamIdNotFound = "Account with such SteamId was not found";
+        public const string AccountWithSuchLinkedAccountNotFound = "Account linked to this third-party account was not found";
         public const string UsernameIsAlreadyUsed = "This username is already in use. Please choose another.";
 
         public static long RegisterOrLogin(AuthInfo authInfo)
@@ -52,10 +57,10 @@ namespace EvoS.DirectoryServer.Account
             }
 
             log.Info($"Registering user automatically: {authInfo.UserName}");
-            return Register(authInfo, steamId: 0);
+            return Register(authInfo);
         }
 
-        public static long Register(AuthInfo authInfo, ulong steamId)
+        public static long Register(AuthInfo authInfo, List<LinkedAccount.Ticket> linkedAccountTickets = null)
         {
             LoginDao loginDao = DB.Get().LoginDao;
             LoginDao.LoginEntry entry = loginDao.Find(authInfo.UserName.ToLower());
@@ -83,20 +88,9 @@ namespace EvoS.DirectoryServer.Account
                 log.Info($"Attempt to register with a bad password");
                 throw new ArgumentException(CannotUseThisPassword);
             }
-            
-            if (EvosConfiguration.SteamApiEnabled)  // TODO if steam required
-            {
-                if (steamId == 0)
-                {
-                    log.Info("Won't allow creating account without SteamId provided");
-                    throw new ArgumentException(SteamIdZero);
-                }
-                if (loginDao.FindBySteamId(steamId) != null)
-                {
-                    log.Info("Won't allow creating account with already used SteamIds");
-                    throw new ArgumentException(SteamIdAlreadyUsed);
-                }
-            }
+
+            List<LinkedAccount> linkedAccounts = ProcessLinkedAccountTickets(linkedAccountTickets);
+            ValidateLinkedAccountConditions(EvosConfiguration.GetLinkedAccountRegistrationConditions(), linkedAccounts);
 
             long accountId = GenerateAccountId(authInfo.UserName);
             for (int i = 0; loginDao.Find(accountId) != null; ++i)
@@ -115,9 +109,71 @@ namespace EvoS.DirectoryServer.Account
                 throw new ApplicationException("Failed to create an account");
             }
             
-            SaveLogin(accountId, authInfo.UserName, authInfo._Password, steamId);
+            SaveLogin(accountId, authInfo.UserName, authInfo._Password, linkedAccounts);
             log.Info($"Successfully registered new user {accountId}/{authInfo.UserName}");
             return accountId;
+        }
+
+        private static List<LinkedAccount> ProcessLinkedAccountTickets(List<LinkedAccount.Ticket> linkedAccountTickets)
+        {
+            if (linkedAccountTickets is null)
+            {
+                return new List<LinkedAccount>();
+            }
+            
+            List<LinkedAccount> linkedAccounts = linkedAccountTickets.Select(CheckLinkedAccountTicket).ToList();
+            foreach (LinkedAccount linkedAccount in linkedAccounts)
+            {
+                LoginDao.LoginEntry existingAccount = DB.Get().LoginDao.FindByLinkedAccount(linkedAccount);
+                if (existingAccount != null)
+                {
+                    log.Info(
+                        $"Won't allow creating account with {linkedAccount.type} already linked to {existingAccount.Username}/{existingAccount.AccountId}");
+                    throw new ArgumentException(
+                        $"This {linkedAccount.type} account is already linked to an existing Atlas Reactor account. Try logging into it instead.");
+                }
+            }
+            return linkedAccounts;
+        }
+
+        private static void ValidateLinkedAccountConditions(List<List<LinkedAccount.Condition>> conditions, List<LinkedAccount> linkedAccounts)
+        {
+            foreach (List<LinkedAccount.Condition> condition in conditions)
+            {
+                if (!condition.Any(c => c.Matches(linkedAccounts)))
+                {
+                    if (!condition.Any(c => c.Matches(linkedAccounts, true)))
+                    {
+                        throw new ArgumentException(
+                            $"You need to link one of the following third-party accounts: {string.Join(" or ", condition)}");
+                    }
+                    else
+                    {
+                        throw new ArgumentException(
+                            $"Unfortunately, provided third-party accounts do not match the required trust level. Please, try linking other accounts, or contact support.");
+                    }
+                }
+            }
+        }
+
+        private static LinkedAccount CheckLinkedAccountTicket(LinkedAccount.Ticket ticket)
+        {
+            switch (ticket.type)
+            {
+                case LinkedAccount.Type.STEAM:
+                    SteamWebApiConnector.Response steamResponse = Task.Run(() => SteamWebApiConnector.Instance.GetSteamIdAsync(ticket.token)).GetAwaiter().GetResult();
+                    if (steamResponse.ResultCode != SteamWebApiConnector.GetSteamIdResult.Success || steamResponse.SteamId == 0UL)
+                    {
+                        throw new EvosException("Failed to verify Steam account"); // TODO more specific errors
+                    }
+
+                    return new LinkedAccount(
+                        LinkedAccount.Type.STEAM,
+                        steamResponse.SteamId.ToString(),
+                        0);
+                default:
+                    throw new EvosException($"{ticket.type} account type is not supported");
+            }
         }
 
         public static PersistedAccountData CreateAccount(long accountId, string username)
@@ -132,7 +188,7 @@ namespace EvoS.DirectoryServer.Account
             return account;
         }
 
-        private static void SaveLogin(long accountId, string username, string password, ulong steamId)
+        private static void SaveLogin(long accountId, string username, string password, List<LinkedAccount> linkedAccounts)
         {
             LoginDao loginDao = DB.Get().LoginDao;
             string salt = GenerateSalt();
@@ -143,7 +199,7 @@ namespace EvoS.DirectoryServer.Account
                 Salt = salt,
                 Hash = hash,
                 Username = username.ToLower(),
-                SteamId = steamId,
+                LinkedAccounts = linkedAccounts,
             });
             log.Info($"Successfully generated new password hash for {accountId}/{username}");
         }
@@ -163,12 +219,9 @@ namespace EvoS.DirectoryServer.Account
                 log.Warn($"Failed attempt to log is as {entry.AccountId}/{entry.Username}");
                 throw new ArgumentException(PasswordIsIncorrect);
             }
-
-            if (entry.SteamId == 0 && EvosConfiguration.SteamApiEnabled && !ignoreSteam)
-            {
-                log.Warn("Won't allow logging in for account without SteamId");
-                throw new ArgumentException(SteamIdMissing);
-            }
+            
+            // TODO update linked account level
+            ValidateLinkedAccountConditions(EvosConfiguration.GetLinkedAccountLoginConditions(), entry.LinkedAccounts);
             
             log.Info($"User {entry.AccountId}/{entry.Username} successfully logged in");
             if (entry.Salt.IsNullOrEmpty())
@@ -178,68 +231,47 @@ namespace EvoS.DirectoryServer.Account
             return entry.AccountId;
         }
 
-        public static void LinkAccountToSteam(string username, string password, ulong steamId)
+        // TODO API
+        public static void LinkAccounts(long accountId, List<LinkedAccount.Ticket> tickets)
         {
-            if (!EvosConfiguration.SteamApiEnabled)
-            {
-                throw new ArgumentException(SteamWebApiKeyMissing);
-            }
+            List<LinkedAccount> linkedAccounts = ProcessLinkedAccountTickets(tickets);
+            
             var loginDao = DB.Get().LoginDao;
-            var entry = loginDao.Find(username);
+            var entry = loginDao.Find(accountId);
             if (entry is null)
             {
                 throw new ArgumentException(UserNotFound);
             }
-            Login(username, password, ignoreSteam: true); //check that credentials are right
-            if (loginDao.FindBySteamId(steamId) != null)
-            {
-                throw new ArgumentException(SteamIdAlreadyUsed);
-            }
-            if (steamId == 0)
-            {
-                throw new ArgumentException(SteamIdZero);
-            }
-            loginDao.UpdateSteamId(entry, steamId);
+            entry.LinkedAccounts.AddRange(linkedAccounts); // TODO multiple accounts of the same type?
+            loginDao.Save(entry);
         }
 
-        public static string RemindUsername(ulong steamId)
+        // TODO API?
+        public static string RemindUsername(LinkedAccount.Ticket ticket)
         {
-            if (!EvosConfiguration.SteamApiEnabled)
-            {
-                throw new ArgumentException(SteamWebApiKeyMissing);
-            }
-            if (steamId == 0)
-            {
-                throw new ArgumentException(SteamIdZero);
-            }
-            var entry = DB.Get().LoginDao.FindBySteamId(steamId);
+            LinkedAccount linkedAccount = CheckLinkedAccountTicket(ticket); // TODO which account types are allowed here? (from config)
+            var entry = DB.Get().LoginDao.FindByLinkedAccount(linkedAccount);
             if (entry == null)
             {
-                throw new ArgumentException(AccountWithSuchSteamIdNotFound);
+                throw new ArgumentException(AccountWithSuchLinkedAccountNotFound);
             }
             return entry.Username;
         }
 
-        public static void ResetPassword(ulong steamId, string newPassword)
+        // TODO API
+        public static void ResetPassword(LinkedAccount.Ticket ticket, string newPassword)
         {
-            if (!EvosConfiguration.SteamApiEnabled)
-            {
-                throw new ArgumentException(SteamWebApiKeyMissing);
-            }
-            if (steamId == 0)
-            {
-                throw new ArgumentException(SteamIdZero);
-            }
+            LinkedAccount linkedAccount = CheckLinkedAccountTicket(ticket); // TODO which account types are allowed here? (from config)
             if (bannedPasswordRegex.IsMatch(newPassword))
             {
                 log.Info($"Attempt to reset password with a bad newPassword");
                 throw new ArgumentException(CannotUseThisPassword);
             }
             var loginDao = DB.Get().LoginDao;
-            var entry = loginDao.FindBySteamId(steamId);
+            var entry = loginDao.FindByLinkedAccount(linkedAccount);
             if (entry == null)
             {
-                throw new ArgumentException(AccountWithSuchSteamIdNotFound);
+                throw new ArgumentException(AccountWithSuchLinkedAccountNotFound);
             }
 
             UpdatePassword(entry, newPassword);
@@ -247,7 +279,7 @@ namespace EvoS.DirectoryServer.Account
 
         private static void UpdatePassword(LoginDao.LoginEntry entry, string newPassword)
         {
-            SaveLogin(entry.AccountId, entry.Username, newPassword, entry.SteamId);
+            SaveLogin(entry.AccountId, entry.Username, newPassword, entry.LinkedAccounts);
         }
 
         private static long GenerateAccountId(string a)

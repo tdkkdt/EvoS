@@ -6,8 +6,6 @@ using System.Net;
 using System.Threading;
 using CentralServer.LobbyServer.Session;
 using EvoS.DirectoryServer.Account;
-using EvoS.DirectoryServer.ARLauncher;
-using EvoS.DirectoryServer.ARLauncher.Messages;
 using EvoS.DirectoryServer.Inventory;
 using EvoS.Framework;
 using EvoS.Framework.Auth;
@@ -73,25 +71,12 @@ namespace EvoS.DirectoryServer
                 ms.Position = 0;
                 string requestBody = new StreamReader(ms).ReadToEnd();
                 ms.Dispose();
-
-
-                var jObject = JsonConvert.DeserializeObject<JObject>(requestBody);
-                if (jObject.ContainsKey(LauncherRequest.NameofKeyField) && jObject[LauncherRequest.NameofKeyField].Value<bool>())
-                {
-                    var request = JsonConvert.DeserializeObject<LauncherRequest>(requestBody);
-                    log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
-                    var response = await LauncherHandler.ProcessRequestAsync(request);
-                    log.Debug($"> {response.GetType().Name} {DefaultJsonSerializer.Serialize(response)}");
-                    await context.Response.WriteAsync(JsonConvert.SerializeObject(response));
-                }
-                else
-                {
-                    AssignGameClientRequest request = JsonConvert.DeserializeObject<AssignGameClientRequest>(requestBody);
-                    log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
-                    AssignGameClientResponse response = ProcessRequest(request, context);
-                    log.Debug($"> {response.GetType().Name} {DefaultJsonSerializer.Serialize(response)}");
-                    await context.Response.WriteAsync(JsonConvert.SerializeObject(response));
-                }
+                
+                AssignGameClientRequest request = JsonConvert.DeserializeObject<AssignGameClientRequest>(requestBody);
+                log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
+                AssignGameClientResponse response = ProcessRequest(request, context);
+                log.Debug($"> {response.GetType().Name} {DefaultJsonSerializer.Serialize(response)}");
+                await context.Response.WriteAsync(JsonConvert.SerializeObject(response));
             });
         }
 
