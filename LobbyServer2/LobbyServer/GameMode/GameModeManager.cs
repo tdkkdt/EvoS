@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
-using System.IO;
-using EvoS.Framework;
+﻿using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.Misc;
 using EvoS.Framework.Network.Static;
 using Newtonsoft.Json;
+using System.Collections.Generic;
+using System.IO;
 
 namespace CentralServer.LobbyServer.Gamemode
 {
@@ -13,9 +13,10 @@ namespace CentralServer.LobbyServer.Gamemode
         private const string ConfigPath = @"Config/GameSubTypes/";
         private static readonly Dictionary<GameType, string> ConfigFiles = new Dictionary<GameType, string>()
         {
-            { GameType.PvP, "DeathMatch.json" }
+            { GameType.PvP, "DeathMatch.json" },
+            { GameType.Custom, "Custom.json" }
         };
-        
+
         public static Dictionary<GameType, GameTypeAvailability> GetGameTypeAvailabilities()
         {
             Dictionary<GameType, GameTypeAvailability> gameTypes = new Dictionary<GameType, GameTypeAvailability>();
@@ -143,8 +144,11 @@ namespace CentralServer.LobbyServer.Gamemode
         {
             GameTypeAvailability type = new GameTypeAvailability();
             type.IsActive = LobbyConfiguration.GetGameTypeCustomAvailable();
-            type.MaxWillFillPerTeam = 0;
-            type.SubTypes = new List<GameSubType>();
+            type.MaxWillFillPerTeam = 5;
+            type.SubTypes = new List<GameSubType>()
+            {
+                LoadGameSubType(ConfigFiles[GameType.Custom])
+            };
             return type;
         }
 

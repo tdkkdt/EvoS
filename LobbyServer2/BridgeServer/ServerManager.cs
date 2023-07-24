@@ -9,7 +9,7 @@ namespace CentralServer.BridgeServer
     public static class ServerManager
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(ServerManager));
-        
+
         private static readonly Dictionary<string, BridgeServerProtocol> ServerPool = new Dictionary<string, BridgeServerProtocol>();
 
         public static void AddServer(BridgeServerProtocol gameServer)
@@ -49,7 +49,7 @@ namespace CentralServer.BridgeServer
                     }
                 }
             }
-            
+
             return null;
         }
 
@@ -85,6 +85,38 @@ namespace CentralServer.BridgeServer
                 }
 
                 return false;
+            }
+        }
+
+        public static List<BridgeServerProtocol> ListCustomServers()
+        {
+            lock (ServerPool)
+            {
+                List<BridgeServerProtocol> bridgeServers = new List<BridgeServerProtocol>();
+                foreach (BridgeServerProtocol server in ServerPool.Values)
+                {
+                    if (server.IsPrivate) { 
+                        bridgeServers.Add(server);
+                    }
+                }
+
+                return bridgeServers;
+            }
+        }
+
+        public static BridgeServerProtocol GetServerByProcessCode(string processCode)
+        {
+            lock (ServerPool)
+            {
+                foreach (BridgeServerProtocol server in ServerPool.Values)
+                {
+                    if (server.ProcessCode == processCode)
+                    {
+                        return server;
+                    }
+                }
+
+                return null;
             }
         }
 

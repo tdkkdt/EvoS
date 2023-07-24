@@ -20,7 +20,7 @@ namespace EvoS.Framework
         public bool GameTypeCoopAvailable = false;
         public bool GameTypePvPAvailable = true;
         public bool GameTypeRankedAvailable = false;
-        public bool GameTypeCustomAvailable = false;
+        public bool GameTypeCustomAvailable = true;
         public int MaxGroupSize = 5;
         public bool MatchAbandoningPenalty = true;
         public DiscordConfiguration Discord = new DiscordConfiguration();

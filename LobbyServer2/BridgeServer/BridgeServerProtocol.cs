@@ -21,7 +21,7 @@ namespace CentralServer.BridgeServer
     public class BridgeServerProtocol : WebSocketBehaviorBase<AllianceMessageBase>
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(BridgeServerProtocol));
-        
+
         public string Address;
         public int Port;
         private LobbySessionInfo SessionInfo;
@@ -31,7 +31,7 @@ namespace CentralServer.BridgeServer
         public DateTime StopTime { private set; get; }
 
         public string URI => "ws://" + Address + ":" + Port;
-        
+
         // TODO sync with GameInfo.GameStatus or get rid of it (GameInfo can be null)
         public GameStatus ServerGameStatus { get; private set; } = GameStatus.None;
         public string ProcessCode => SessionInfo?.ProcessCode;
@@ -55,6 +55,16 @@ namespace CentralServer.BridgeServer
         public void ForceReady()
         {
             TeamInfo.TeamPlayerInfo.ForEach(p => p.ReadyState = ReadyState.Ready);
+        }
+
+        public void ForceUnReady()
+        {
+            TeamInfo.TeamPlayerInfo.ForEach(p => p.ReadyState = ReadyState.Unknown);
+        }
+
+        public void SetBotCharacter(int playerId, CharacterType characterType)
+        {
+            TeamInfo.TeamPlayerInfo.Find(p => p.PlayerId == playerId).CharacterInfo = new LobbyCharacterInfo() { CharacterType = characterType };
         }
 
         public IEnumerable<long> GetPlayers(Team team)
@@ -93,11 +103,11 @@ namespace CentralServer.BridgeServer
         {
             return $"S {Address}:{Port}";
         }
-        
+
         public BridgeServerProtocol()
         {
             Orchestrator = new MatchOrchestrator(this);
-            
+
             RegisterHandler<RegisterGameServerRequest>(HandleRegisterGameServerRequest);
             RegisterHandler<ServerGameSummaryNotification>(HandleServerGameSummaryNotification);
             RegisterHandler<PlayerDisconnectedNotification>(HandlePlayerDisconnectedNotification);
@@ -107,6 +117,17 @@ namespace CentralServer.BridgeServer
             RegisterHandler<LaunchGameResponse>(HandleLaunchGameResponse);
             RegisterHandler<JoinGameServerResponse>(HandleJoinGameServerResponse);
             RegisterHandler<ReconnectPlayerResponse>(HandleReconnectPlayerResponse);
+        }
+
+        public void SetNewCustomGame(string processCode)
+        {
+            Address = "";
+            Port = 0;
+            SessionInfo = new LobbySessionInfo {
+                ProcessCode = processCode
+            };
+            IsPrivate = true;
+            ServerManager.AddServer(this);
         }
 
         private void HandleRegisterGameServerRequest(RegisterGameServerRequest request, int callbackId)
@@ -119,9 +140,9 @@ namespace CentralServer.BridgeServer
             ServerManager.AddServer(this);
 
             Send(new RegisterGameServerResponse
-                {
-                    Success = true
-                },
+            {
+                Success = true
+            },
                 callbackId);
         }
 
@@ -151,9 +172,9 @@ namespace CentralServer.BridgeServer
             {
                 log.Error("Failed to process game summary", ex);
             }
-            
+
             DB.Get().MatchHistoryDao.Save(MatchHistoryDao.MatchEntry.Cons(GameInfo, GameSummary));
-            
+
             ServerGameStatus = GameStatus.Stopped;
             StopTime = DateTime.UtcNow.Add(TimeSpan.FromSeconds(8));
 
@@ -184,7 +205,6 @@ namespace CentralServer.BridgeServer
 
         private void HandleServerGameMetricsNotification(ServerGameMetricsNotification request)
         {
-            GameMetrics = request.GameMetrics;
             log.Info($"Game {GameInfo?.Name} Turn {request.GameMetrics?.CurrentTurn}, " +
                      $"{request.GameMetrics?.TeamAPoints}-{request.GameMetrics?.TeamBPoints}, " +
                      $"frame time: {request.GameMetrics?.AverageFrameTime}");
@@ -222,7 +242,7 @@ namespace CentralServer.BridgeServer
 
         private void HandleMonitorHeartbeatNotification(MonitorHeartbeatNotification notify)
         {
-            
+
         }
 
         private void HandleLaunchGameResponse(LaunchGameResponse response)
@@ -273,6 +293,11 @@ namespace CentralServer.BridgeServer
         public async Task StartGameAsync(List<long> teamA, List<long> teamB, GameType gameType, GameSubType gameSubType)
         {
             await Orchestrator.StartGameAsync(teamA, teamB, gameType, gameSubType);
+        }
+
+        public void StartCustomGame(BridgeServerProtocol game)
+        {
+            Orchestrator.StartCustomGame(game);
         }
 
         public void StartGameForReconnection(long accountId)
@@ -370,6 +395,19 @@ namespace CentralServer.BridgeServer
             };
         }
 
+        public void BuildGameInfoCustomGame(LobbyGameInfo gameinfo)
+        {
+            int playerCount = TeamInfo.TeamPlayerInfo.Count;
+            GameInfo = gameinfo.Clone();
+            GameInfo.ActivePlayers = playerCount;
+            GameInfo.AcceptedPlayers = playerCount;
+            GameInfo.ActiveHumanPlayers = playerCount;
+            GameInfo.GameConfig.TeamAPlayers = TeamInfo.TeamAPlayerInfo.Count();
+            GameInfo.GameConfig.TeamAPlayers = TeamInfo.TeamAPlayerInfo.Count();
+            GameInfo.GameServerAddress = this.URI;
+            GameInfo.GameServerProcessCode = this.ProcessCode;
+        }
+
         public void SetGameStatus(GameStatus status)
         {
             GameInfo.GameStatus = status;
@@ -437,6 +475,11 @@ namespace CentralServer.BridgeServer
             GetPlayerInfo(accountId).ReadyState = ReadyState.Ready;
         }
 
+        public void SetPlayerUnReady(long accountId)
+        {
+            GetPlayerInfo(accountId).ReadyState = ReadyState.Unknown;
+        }
+
         public void Shutdown()
         {
             Send(new ShutdownGameRequest());
@@ -450,6 +493,18 @@ namespace CentralServer.BridgeServer
                 PlayerInfo = GetPlayerInfo(accountId),
                 GameResult = GameResult.ClientLeft
             });
+        }
+
+        // these can change in custom games
+        public void SetTeamInfo(LobbyServerTeamInfo teamInfo)
+        {
+            TeamInfo = teamInfo;
+        }
+
+        // these can change in custom games
+        public void SetGameInfo(LobbyGameInfo gameInfo)
+        {
+            GameInfo = gameInfo;
         }
     }
 }

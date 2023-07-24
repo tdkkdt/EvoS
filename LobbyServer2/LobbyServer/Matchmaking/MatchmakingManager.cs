@@ -248,6 +248,24 @@ namespace CentralServer.LobbyServer.Matchmaking
             await server.StartGameAsync(teamA, teamB, gameType, gameSubType);
         }
 
+        public static void StartCustomGame(BridgeServerProtocol game)
+        {
+            log.Info($"Starting Custom game...");
+
+            // Get a server
+            BridgeServerProtocol server = ServerManager.GetServer();
+            if (server == null)
+            {
+                log.Info($"No available server for Custom gamemode");
+                return;
+            }
+
+            // Remove custom game server
+            ServerManager.RemoveServer(game.ProcessCode);
+
+            server.StartCustomGame(game);
+        }
+
         public static void SendUnassignQueueNotification(List<LobbyServerProtocol> clients)
         {
             foreach (LobbyServerProtocol client in clients)
