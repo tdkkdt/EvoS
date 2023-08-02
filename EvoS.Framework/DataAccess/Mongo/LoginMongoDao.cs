@@ -37,8 +37,8 @@ namespace EvoS.Framework.DataAccess.Mongo
             return c.Find(f.ElemMatch(
                 "LinkedAccounts",
                 f.And(
-                    f.Eq("type", linkedAccount.type),
-                    f.Eq("id", linkedAccount.id))
+                    f.Eq("type", linkedAccount.Type),
+                    f.Eq("id", linkedAccount.Id))
                 )).FirstOrDefault();
         }
 

@@ -39,7 +39,7 @@ public class AdminApiServer : ApiServer
         app.UseAuthorization();
     }
 
-    protected override bool LoginFilter(HttpContext httpContext, AuthInfo authInfo, PersistedAccountData account)
+    protected override bool LoginFilter(HttpContext httpContext, LoginModel authInfo, PersistedAccountData account)
     {
         return account.AccountComponent.AppliedEntitlements.ContainsKey("DEVELOPER_ACCESS");
     }

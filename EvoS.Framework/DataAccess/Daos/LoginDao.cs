@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
+using System.Linq;
 using EvoS.Framework.Auth;
 using MongoDB.Bson.Serialization.Attributes;
 
@@ -21,6 +22,11 @@ namespace EvoS.Framework.DataAccess.Daos
             public string Salt;
             public string Hash;
             public List<LinkedAccount> LinkedAccounts;
+
+            public LinkedAccount? GetLinkedAccount(LinkedAccount template)
+            {
+                return LinkedAccounts.FirstOrDefault(template.IsSame);
+            }
         }
     }
 }

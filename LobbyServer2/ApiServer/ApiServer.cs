@@ -1,18 +1,24 @@
 using System;
+using System.Collections.Generic;
 using System.Security.Claims;
+using System.Text;
 using EvoS.DirectoryServer;
 using EvoS.DirectoryServer.Account;
+using EvoS.Framework;
+using EvoS.Framework.Auth;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.Static;
 using log4net;
 using log4net.Core;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
 using WebSocketSharp;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
@@ -78,6 +84,28 @@ public abstract class ApiServer
         }); 
         app.UseCors();
         app.UseMiddleware<ApiAuthMiddleware>();
+        app.UseExceptionHandler(ehApp => ehApp.Run(async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = "application/json";
+            Exception ex = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+
+            switch (ex)
+            {
+                case ArgumentException:
+                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    await context.Response.WriteAsync(ex.Message, Encoding.UTF8);
+                    break;
+                case EvosException:
+                    context.Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+                    await context.Response.WriteAsync(ex.Message, Encoding.UTF8);
+                    break;
+                default:
+                    log.Warn("Unhandled exception in api request", ex);
+                    await context.Response.WriteAsync("Unexpected server error", Encoding.UTF8);
+                    break;
+            }
+        }));
         
         ConfigureApp(app);
         
@@ -95,12 +123,21 @@ public abstract class ApiServer
 
     protected abstract void ConfigureApp(WebApplication app);
 
-    protected virtual bool LoginFilter(HttpContext httpContext, AuthInfo authInfo, PersistedAccountData account)
+    protected virtual bool LoginFilter(HttpContext httpContext, LoginModel authInfo, PersistedAccountData account)
     {
         return true;
     }
+    
+    protected class LoginModel
+    {
+        public string Password { internal get; set; }  // internal so that it is not serialized
+        public string UserName { get; set; }
+        public List<LinkedAccount.Ticket> LinkedAccountTickets { get; set; }
+        public string Code { get; set; }
+        [JsonIgnore] public string _Password => Password;
+    }
 
-    protected IResult Login(HttpContext httpContext, [FromBody] AuthInfo authInfo)
+    protected IResult Login(HttpContext httpContext, [FromBody] LoginModel authInfo)
     {
         if (authInfo.UserName.IsNullOrEmpty() || authInfo._Password.IsNullOrEmpty())
         {

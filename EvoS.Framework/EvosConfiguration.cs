@@ -16,9 +16,11 @@ namespace EvoS.Framework
         public string GameServerExecutableArgs = "";
         public string SteamWebApiKey = "";
         public bool AutoRegisterNewUsers = true;
+        public HashSet<LinkedAccount.AccountType> LinkedAccountAllowedTypes = new HashSet<LinkedAccount.AccountType>();
         public List<List<LinkedAccount.Condition>> LinkedAccountRegistrationConditions = new List<List<LinkedAccount.Condition>>();
         public List<List<LinkedAccount.Condition>> LinkedAccountLoginConditions = null;
-        public List<LinkedAccount.Type> LinkedAccountsForPasswordReset = new List<LinkedAccount.Type>();
+        public HashSet<LinkedAccount.AccountType> LinkedAccountsForPasswordReset = new HashSet<LinkedAccount.AccountType>();
+        public int MaxLinkedAccounts = 6;
         public DBConfig Database = new DBConfig();
         public string UserApiKey = "";
         public int UserApiPort = 3002;
@@ -57,11 +59,15 @@ namespace EvoS.Framework
 
         public static bool GetAutoRegisterNewUsers() => Instance.AutoRegisterNewUsers;
         
+        public static HashSet<LinkedAccount.AccountType> GetLinkedAccountAllowedTypes() => Instance.LinkedAccountAllowedTypes;
+        
         public static List<List<LinkedAccount.Condition>> GetLinkedAccountRegistrationConditions() => Instance.LinkedAccountRegistrationConditions;
         
         public static List<List<LinkedAccount.Condition>> GetLinkedAccountLoginConditions() => Instance.LinkedAccountLoginConditions ?? GetLinkedAccountRegistrationConditions();
         
-        public static List<LinkedAccount.Type> GetLinkedAccountsForPasswordReset() => Instance.LinkedAccountsForPasswordReset;
+        public static HashSet<LinkedAccount.AccountType> GetLinkedAccountsForPasswordReset() => Instance.LinkedAccountsForPasswordReset;
+
+        public static int GetMaxLinkedAccounts() => Instance.MaxLinkedAccounts;
         
         public static DBConfig GetDBConfig() => Instance.Database;
 

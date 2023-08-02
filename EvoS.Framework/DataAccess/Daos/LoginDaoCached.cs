@@ -13,13 +13,13 @@ namespace EvoS.Framework.DataAccess.Daos
         private readonly LoginDao dao;
         private readonly ConcurrentDictionary<long, LoginDao.LoginEntry> cache = new ConcurrentDictionary<long, LoginDao.LoginEntry>();
         private readonly ConcurrentDictionary<string, LoginDao.LoginEntry> usernameCache = new ConcurrentDictionary<string, LoginDao.LoginEntry>();
-        private readonly ConcurrentDictionary<LinkedAccount.Type, ConcurrentDictionary<string, LoginDao.LoginEntry>> linkedAccountCache = 
-            new ConcurrentDictionary<LinkedAccount.Type, ConcurrentDictionary<string, LoginDao.LoginEntry>>();
+        private readonly ConcurrentDictionary<LinkedAccount.AccountType, ConcurrentDictionary<string, LoginDao.LoginEntry>> linkedAccountCache = 
+            new ConcurrentDictionary<LinkedAccount.AccountType, ConcurrentDictionary<string, LoginDao.LoginEntry>>();
 
         public LoginDaoCached(LoginDao dao)
         {
             this.dao = dao;
-            foreach (LinkedAccount.Type type in Enum.GetValues(typeof(LinkedAccount.Type)))
+            foreach (LinkedAccount.AccountType type in Enum.GetValues(typeof(LinkedAccount.AccountType)))
             {
                 linkedAccountCache.TryAdd(type, new ConcurrentDictionary<string, LoginDao.LoginEntry>());
             }
@@ -31,7 +31,7 @@ namespace EvoS.Framework.DataAccess.Daos
             usernameCache.AddOrUpdate(account.Username, account, (k, v) => account);
             foreach (LinkedAccount linkedAccount in account.LinkedAccounts)
             {
-                linkedAccountCache[linkedAccount.type].AddOrUpdate(linkedAccount.id, account, (k, v) => account);
+                linkedAccountCache[linkedAccount.Type].AddOrUpdate(linkedAccount.Id, account, (k, v) => account);
             }
         }
 
@@ -89,7 +89,7 @@ namespace EvoS.Framework.DataAccess.Daos
         
         public LoginDao.LoginEntry FindByLinkedAccount(LinkedAccount linkedAccount)
         {
-            if (linkedAccountCache[linkedAccount.type].TryGetValue(linkedAccount.id, out var account))
+            if (linkedAccountCache[linkedAccount.Type].TryGetValue(linkedAccount.Id, out var account))
                 return account;
             
             var nonCachedAccount = dao.FindByLinkedAccount(linkedAccount);

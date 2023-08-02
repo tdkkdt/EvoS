@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -5,18 +6,34 @@ namespace EvoS.Framework.Auth;
 
 public class LinkedAccount
 {
-    public readonly Type type;
-    public readonly string id;
-    public readonly uint level;
+    public AccountType Type { get; private set; }
+    public string Id { get; private set; }
+    public string DisplayName { get; private set; }
+    public uint Level { get; private set; }
+    public DateTime CheckTime { get; private set; }
+    public bool Active { get; set; }
 
-    public LinkedAccount(Type type, string id, uint level)
+    public LinkedAccount(AccountType type, string id, string displayName, uint level, DateTime checkTime, bool active)
     {
-        this.type = type;
-        this.id = id;
-        this.level = level;
+        this.Type = type;
+        this.Id = id;
+        this.DisplayName = displayName;
+        this.Level = level;
+        this.CheckTime = checkTime;
+        this.Active = active;
     }
 
-    public enum Type
+    public LinkedAccount WithLevel(string displayName, uint newLevel, DateTime newCheckTime)
+    {
+        return new LinkedAccount(Type, Id, displayName, newLevel, newCheckTime, Active);
+    }
+
+    public bool IsSame(LinkedAccount other)
+    {
+        return Type == other.Type && Id.Equals(other.Id);
+    }
+
+    public enum AccountType
     {
         UNKNOWN,
         STEAM,
@@ -25,35 +42,35 @@ public class LinkedAccount
 
     public class Ticket
     {
-        public readonly Type type;
-        public readonly string token;
+        public readonly AccountType Type;
+        public readonly string Token;
 
-        public Ticket(Type type, string token)
+        public Ticket(AccountType type, string token)
         {
-            this.type = type;
-            this.token = token;
+            this.Type = type;
+            this.Token = token;
         }
     }
 
     public class Condition
     {
-        public readonly Type type;
-        public readonly uint level;
+        public readonly AccountType Type;
+        public readonly uint Level;
 
-        public Condition(Type type, uint level)
+        public Condition(AccountType type, uint level)
         {
-            this.type = type;
-            this.level = level;
+            this.Type = type;
+            this.Level = level;
         }
 
         public bool Matches(List<LinkedAccount> linkedAccounts, bool ignoreLevel = false)
         {
-            return linkedAccounts.Any(acc => acc.type == type && (acc.level >= level || ignoreLevel));
+            return linkedAccounts.Any(acc => acc.Type == Type && (acc.Level >= Level || ignoreLevel));
         }
 
         public override string ToString()
         {
-            return $"{type}";
+            return $"{Type}";
         }
     }
 }
