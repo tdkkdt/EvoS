@@ -123,10 +123,12 @@ namespace CentralServer.BridgeServer
             log.Info($"Game {gameType} started");
         }
 
-        public void StartCustomGame(BridgeServerProtocol game)
+        public async Task StartCustomGameAsync(BridgeServerProtocol game)
         {
             // this all loads me into a custom game
             server.SetTeamInfo(game.TeamInfo);
+
+            server.TeamInfo.TeamPlayerInfo.ForEach(p => log.Info($"Player {p.AccountId} is on team {p.TeamId}"));
 
             server.BuildGameInfoCustomGame(game.GameInfo);
 
@@ -134,12 +136,22 @@ namespace CentralServer.BridgeServer
             server.GetClients().ForEach(c => c.JoinServer(server));
 
             // Assign players to game
-            server.SetGameStatus(GameStatus.Launching);
+            server.SetGameStatus(GameStatus.FreelancerSelecting);
             server.GetClients().ForEach(client => server.SendGameAssignmentNotification(client));
-            
 
-            //server.SetGameStatus(GameStatus.Launching);
-            //server.SendGameInfoNotifications();
+            server.SetGameStatus(GameStatus.LoadoutSelecting);
+
+            if (!CheckIfAllParticipantsAreConnected())
+            {
+                return;
+            }
+
+            server.SendGameInfoNotifications();
+
+            // Wait Loadout Selection time
+            log.Info($"Waiting for {server.GameInfo.LoadoutSelectTimeout} to let players update their loadouts");
+
+            await Task.Delay(server.GameInfo.LoadoutSelectTimeout);
 
             server.StartGame();
 

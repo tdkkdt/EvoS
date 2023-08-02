@@ -100,6 +100,7 @@ namespace CentralServer.LobbyServer
             RegisterHandler<ClientFeedbackReport>(HandleClientFeedbackReport);
             RegisterHandler<RejoinGameRequest>(HandleRejoinGameRequest);
             RegisterHandler<JoinGameRequest>(HandleJoinGameRequest);
+            RegisterHandler<BalancedTeamRequest>(HandleBalancedTeamRequest);
             RegisterHandler<SetDevTagRequest>(HandleSetDevTagRequest);
 
             RegisterHandler<PurchaseModRequest>(HandlePurchaseModRequest);
@@ -155,60 +156,50 @@ namespace CentralServer.LobbyServer
             }
         }
 
-        private LobbyServerTeamInfo CreateTeamInfo(LobbyServerTeamInfo originalTeamInfo)
+        private void HandleBalancedTeamRequest(BalancedTeamRequest request)
+        {
+            LobbyServerTeamInfo teamInfo = CreateBalancedTeamInfo(CurrentServer.TeamInfo);
+
+            CurrentServer.SetTeamInfo(teamInfo);
+            CurrentServer.SetGameInfo(CurrentServer.GameInfo);
+            CurrentServer.SendGameInfoNotifications();
+
+            Send(new BalancedTeamResponse()
+            {
+                Success = true,
+                ResponseId = request.RequestId,
+                Slots = request.Slots
+            });
+        }
+
+        private static LobbyServerTeamInfo CreateBalancedTeamInfo(LobbyServerTeamInfo originalTeamInfo)
         {
             LobbyServerTeamInfo teamInfo = new LobbyServerTeamInfo()
             {
                 TeamPlayerInfo = new List<LobbyServerPlayerInfo>()
             };
 
+            int counter = 0;
+
             foreach (LobbyServerPlayerInfo player in originalTeamInfo.TeamPlayerInfo)
             {
-                LobbyServerPlayerInfo playerInfo = new LobbyServerPlayerInfo();
-
                 if (player.AccountId != 0 && player.ControllingPlayerId == 0)
                 {
-                    // Regular Player
                     PersistedAccountData account = DB.Get().AccountDao.GetAccount(player.AccountId);
-                    playerInfo = LobbyServerPlayerInfo.Of(account);
-                    playerInfo.ReadyState = ReadyState.Unknown;
-                    playerInfo.TeamId = player.TeamId;
-                    playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
-                }
-                else if (player.AccountId != 0 && player.ControllingPlayerId != 0)
-                {
-                    // Bot is assigned to another player
-                    LobbyServerPlayerInfo controllingPlayer = teamInfo.TeamPlayerInfo.Find(p => p.PlayerId == player.ControllingPlayerId);
-                    PersistedAccountData account = DB.Get().AccountDao.GetAccount(player.AccountId);
+                    LobbyServerPlayerInfo playerInfo = LobbyServerPlayerInfo.Of(account);
 
-                    playerInfo = controllingPlayer.Clone();
-                    playerInfo.ReadyState = ReadyState.Ready;
-                    playerInfo.IsGameOwner = false;
-                    playerInfo.TeamId = player.TeamId;
-                    playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
+                    playerInfo.TeamId = player.TeamId == Team.Spectator ? player.TeamId : counter % 2 == 0 ? Team.TeamA : Team.TeamB;
+
                     playerInfo.IsNPCBot = false;
-                    playerInfo.CharacterInfo = LobbyCharacterInfo.Of(account.CharacterData[player.CharacterType]).Clone();
-                    playerInfo.ControllingPlayerId = player.ControllingPlayerId;
-                    playerInfo.ControllingPlayerInfo = controllingPlayer;
-                    //controllingPlayer.RemoteCharacterInfos.Add(LobbyCharacterInfo.Of(account.CharacterData[player.CharacterType]).Clone());
-                    log.Info($"Assigning PlayerId {playerInfo.PlayerId} ({playerInfo.CharacterInfo.CharacterType}) to PlayerId {controllingPlayer.PlayerId}");
-                    controllingPlayer.ProxyPlayerIds.Add(playerInfo.PlayerId);
-                }
-                else if (player.AccountId == 0 && player.ControllingPlayerId == 0)
-                {
-                    // Add bot and automatically assign bot to new player
-                    playerInfo.ReadyState = ReadyState.Ready;
-                    playerInfo.IsGameOwner = false;
-                    playerInfo.TeamId = player.TeamId;
+                    playerInfo.IsGameOwner = player.IsGameOwner;
                     playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
-                    playerInfo.IsNPCBot = true;
+                    playerInfo.ReadyState = player.ReadyState;
                     playerInfo.CharacterInfo = player.CharacterInfo;
-                    playerInfo.ControllingPlayerId = player.PlayerId;
+                    teamInfo.TeamPlayerInfo.Add(playerInfo);
+
+                    counter++;
                 }
-
-                teamInfo.TeamPlayerInfo.Add(playerInfo);
             }
-
             return teamInfo;
         }
 
@@ -221,66 +212,79 @@ namespace CentralServer.LobbyServer
 
             foreach (LobbyPlayerInfo player in originalTeamInfo.TeamPlayerInfo)
             {
-                LobbyServerPlayerInfo playerInfo = new LobbyServerPlayerInfo();
+                // LobbyServerPlayerInfo playerInfo = new LobbyServerPlayerInfo();
 
                 if (player.AccountId != 0 && player.ControllingPlayerId == 0)
                 {
-                    // Regular Player
                     PersistedAccountData account = DB.Get().AccountDao.GetAccount(player.AccountId);
-                    playerInfo = LobbyServerPlayerInfo.Of(account);
-                    playerInfo.ReadyState = ReadyState.Unknown;
+                    LobbyServerPlayerInfo playerInfo = LobbyServerPlayerInfo.Of(account);
                     playerInfo.TeamId = player.TeamId;
+                    playerInfo.IsNPCBot = false;
+                    playerInfo.IsGameOwner = player.IsGameOwner;
                     playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
+                    playerInfo.ReadyState = player.ReadyState;
+                    playerInfo.CharacterInfo = player.CharacterInfo;
+                    teamInfo.TeamPlayerInfo.Add(playerInfo);
                 }
+                else
+                {
+                    Send(new ChatNotification
+                    {
+                        SenderAccountId = AccountId,
+                        ConsoleMessageType = ConsoleMessageType.SystemMessage,
+                        Text = "Bots/Remote Characters are not supported"
+                    });
+                }
+                // TODO: Remote characters
+                /*
                 else if (player.AccountId != 0 && player.ControllingPlayerId != 0)
                 {
                     // Bot is assigned to another player
                     LobbyServerPlayerInfo controllingPlayer = teamInfo.TeamPlayerInfo.Find(p => p.PlayerId == player.ControllingPlayerId);
-                    if (controllingPlayer != null)
+                    if (controllingPlayer == null)
                     {
-                        PersistedAccountData account = DB.Get().AccountDao.GetAccount(controllingPlayer.AccountId);
+                        continue;
+                    }
+                    PersistedAccountData account = DB.Get().AccountDao.GetAccount(controllingPlayer.AccountId);
 
-                        playerInfo = LobbyServerPlayerInfo.Of(account);
-                        playerInfo.ReadyState = ReadyState.Ready;
-                        playerInfo.IsGameOwner = false;
-                        playerInfo.TeamId = player.TeamId;
-                        playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
-                        playerInfo.IsNPCBot = false;
-                        playerInfo.CharacterInfo = LobbyCharacterInfo.Of(account.CharacterData[player.CharacterType]);
-                        playerInfo.ControllingPlayerId = controllingPlayer.PlayerId;
-                        playerInfo.ControllingPlayerInfo = LobbyServerPlayerInfo.Of(account);
-                        controllingPlayer.ProxyPlayerIds.Add(playerInfo.PlayerId);
-                    }
-                    else
-                    {
-                        break;
-                    }
+                    playerInfo = LobbyServerPlayerInfo.Of(account);
+                    playerInfo.ReadyState = ReadyState.Ready;
+                    playerInfo.IsGameOwner = false;
+                    playerInfo.TeamId = player.TeamId;
+                    playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
+                    playerInfo.IsNPCBot = false;
+                    playerInfo.Handle = player.Handle;
+                    playerInfo.CharacterInfo = LobbyCharacterInfo.Of(account.CharacterData[player.CharacterType]);
+                    playerInfo.ControllingPlayerId = controllingPlayer.PlayerId;
+                    playerInfo.ControllingPlayerInfo = LobbyServerPlayerInfo.Of(account);
+                    controllingPlayer.ProxyPlayerIds.Add(playerInfo.PlayerId);
+
                 }
                 else if (player.AccountId == 0 && player.ControllingPlayerId == 0)
                 {
 
                     // Add bot and automatically assign bot to first player of team
                     LobbyServerPlayerInfo controllingPlayer = teamInfo.TeamPlayerInfo.First(p => p.TeamId == player.TeamId);
-                    if (controllingPlayer != null) { 
-                        PersistedAccountData account = DB.Get().AccountDao.GetAccount(controllingPlayer.AccountId);
-
-                        playerInfo = LobbyServerPlayerInfo.Of(account);
-                        playerInfo.ReadyState = ReadyState.Ready;
-                        playerInfo.IsGameOwner = false;
-                        playerInfo.TeamId = player.TeamId;
-                        playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
-                        playerInfo.IsNPCBot = false;
-                        playerInfo.CharacterInfo = LobbyCharacterInfo.Of(account.CharacterData[player.CharacterType]);
-                        playerInfo.ControllingPlayerId = controllingPlayer.PlayerId;
-                        playerInfo.ControllingPlayerInfo = LobbyServerPlayerInfo.Of(account);
-                        controllingPlayer.ProxyPlayerIds.Add(playerInfo.PlayerId);
-                    } 
-                    else
+                    if (controllingPlayer == null)
                     {
-                        break;
+                        continue;
                     }
+                    PersistedAccountData account = DB.Get().AccountDao.GetAccount(controllingPlayer.AccountId);
+
+                    playerInfo = LobbyServerPlayerInfo.Of(account);
+                    playerInfo.ReadyState = ReadyState.Ready;
+                    playerInfo.IsGameOwner = true;
+                    playerInfo.TeamId = player.TeamId;
+                    playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
+                    playerInfo.IsNPCBot = true;
+                    playerInfo.CharacterInfo = player.CharacterInfo;
+                    playerInfo.CharacterInfo = LobbyCharacterInfo.Of(account.CharacterData[player.CharacterType]);
+                    playerInfo.ControllingPlayerId = controllingPlayer.PlayerId;
+                    playerInfo.ControllingPlayerInfo = LobbyServerPlayerInfo.Of(account);
+                    controllingPlayer.ProxyPlayerIds.Add(playerInfo.PlayerId);
                 }
                 teamInfo.TeamPlayerInfo.Add(playerInfo);
+                */
             }
             return teamInfo;
         }
@@ -299,37 +303,52 @@ namespace CentralServer.LobbyServer
                 return;
             }
 
-            LobbyServerTeamInfo teamInfo = CreateTeamInfo(currentServer.TeamInfo);
+            if (joinGameRequest.AsSpectator && currentServer.GameInfo.GameConfig.Spectators == currentServer.TeamInfo.SpectatorInfo.Count())
+            {
+                Send(new JoinGameResponse()
+                {
+                    ResponseId = joinGameRequest.RequestId,
+                    LocalizedFailure = LocalizationPayload.Create("LobbyServerFull@RegisterGameClient"),
+                    Success = false
+                });
+                return;
+            }
+
+            if (!joinGameRequest.AsSpectator && currentServer.GameInfo.GameConfig.TotalPlayers == (currentServer.TeamInfo.TeamAPlayerInfo.Count() + currentServer.TeamInfo.TeamBPlayerInfo.Count()))
+            {
+                Send(new JoinGameResponse()
+                {
+                    ResponseId = joinGameRequest.RequestId,
+                    LocalizedFailure = LocalizationPayload.Create("LobbyServerFull@RegisterGameClient"),
+                    Success = false
+                });
+                return;
+            }
+
+            BridgeServerProtocol server = currentServer;
+
+            Team teamToJoin = Team.TeamA;
+
+            if (server.TeamInfo.TeamAPlayerInfo.Count() == server.GameInfo.GameConfig.TeamAPlayers)
+            {
+                teamToJoin = Team.TeamB;
+            }
+
+            
 
             PersistedAccountData newAccount = DB.Get().AccountDao.GetAccount(AccountId);
             LobbyServerPlayerInfo newPlayerInfo = LobbyServerPlayerInfo.Of(newAccount);
-            newPlayerInfo.ReadyState = ReadyState.Unknown;
-            newPlayerInfo.TeamId = joinGameRequest.AsSpectator ? Team.Spectator : Team.TeamB;
+            newPlayerInfo.TeamId = joinGameRequest.AsSpectator ? Team.Spectator : teamToJoin;
             newPlayerInfo.PlayerId = currentServer.TeamInfo.TeamPlayerInfo.Count + 1;
-            teamInfo.TeamPlayerInfo.Add(newPlayerInfo);
-
-            // Set the TeamInfo new values
-            currentServer.SetTeamInfo(teamInfo);
-
-
-            Send(new GameAssignmentNotification
-            {
-                GameInfo = currentServer.GameInfo,
-                GameResult = GameResult.NoResult,
-                Observer = false,
-                PlayerInfo = LobbyPlayerInfo.FromServer(newPlayerInfo, 0, new MatchmakingQueueConfig()),
-                Reconnection = false,
-                GameplayOverrides = GetGameplayOverrides()
-            });
-
-            Send(new GameInfoNotification
-            {
-                GameInfo = currentServer.GameInfo,
-                TeamInfo = LobbyTeamInfo.FromServer(teamInfo, 0, new MatchmakingQueueConfig()),
-                PlayerInfo = LobbyPlayerInfo.FromServer(newPlayerInfo, 0, new MatchmakingQueueConfig())
-            });
+            newPlayerInfo.IsNPCBot = false;
+            newPlayerInfo.IsGameOwner = false;
+            //newPlayerInfo.CustomGameVisualSlot = 5;
+            currentServer.TeamInfo.TeamPlayerInfo.Add(newPlayerInfo);
 
             CurrentServer = currentServer;
+
+            currentServer.SendGameAssignmentNotification(this);
+
             currentServer.SendGameInfoNotifications();
 
             Send(new JoinGameResponse()
@@ -342,6 +361,23 @@ namespace CentralServer.LobbyServer
 
         private void HandleGameInfoUpdateRequest(GameInfoUpdateRequest gameInfoUpdateRequest)
         {
+            // Check if player is kicked
+            foreach (LobbyServerPlayerInfo player in CurrentServer.TeamInfo.TeamPlayerInfo)
+            {
+                if (!gameInfoUpdateRequest.TeamInfo.TeamPlayerInfo.Any(u => u.AccountId == player.AccountId))
+                {
+                    log.Info($"Player {player.AccountId} was kicked from the game {CurrentServer.ProcessCode}");
+                    LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(player.AccountId);
+                    playerConnection.Send(new GameAssignmentNotification
+                    {
+                        GameInfo = null,
+                        GameResult = GameResult.ClientKicked,
+                        Reconnection = false
+                    });
+                    playerConnection.CurrentServer = null;
+                }
+            }
+
             LobbyServerTeamInfo teamInfo = CreateTeamInfo(gameInfoUpdateRequest.TeamInfo);
 
             CurrentServer.GameInfo.GameConfig = gameInfoUpdateRequest.GameInfo.GameConfig;
@@ -402,6 +438,7 @@ namespace CentralServer.LobbyServer
                 teamPlayerInfo.TeamId = Team.TeamA;
                 teamPlayerInfo.PlayerId = playerid++;
                 teamPlayerInfo.Handle = playerAccount.Handle;
+                teamPlayerInfo.IsGameOwner = accountId == AccountId;
                 teamInfo.TeamPlayerInfo.Add(teamPlayerInfo);
             }
 
@@ -553,14 +590,14 @@ namespace CentralServer.LobbyServer
         {
             bool allAreReady = true;
             LobbyServerTeamInfo teamInfo = CurrentServer.TeamInfo;
-            if (teamInfo.TeamPlayerInfo.Any((u) => u.ReadyState != ReadyState.Ready))
+            if (teamInfo.TeamPlayerInfo.Any((u) => u.ReadyState != ReadyState.Ready && !u.IsSpectator))
             {
                 allAreReady = false;
             }
 
-            if (allAreReady)
+            if (allAreReady && CurrentServer.GameInfo.GameConfig.TotalHumanPlayers == (teamInfo.TeamAPlayerInfo.Count() + teamInfo.TeamBPlayerInfo.Count()))
             {
-                MatchmakingManager.StartCustomGame(CurrentServer);
+                _ = MatchmakingManager.StartCustomGameAsync(CurrentServer);
             }
         }
 
@@ -865,6 +902,81 @@ namespace CentralServer.LobbyServer
 
         public void HandlePreviousGameInfoRequest(PreviousGameInfoRequest request)
         {
+            // This gets called, when they leave a Custom game creation, not sure if theres anything else that gets called to put this in
+            BridgeServerProtocol customServer = ServerManager.GetCustomServerWithPlayer(AccountId);
+            if (customServer != null)
+            {
+                if (customServer.GameInfo.GameServerProcessCode.StartsWith("CustomGame-"))
+                {
+                    // Remove player from Custom game, if no player left delete the CustomGame itself
+                    BridgeServerProtocol currentServer = ServerManager.GetServerByProcessCode(customServer.GameInfo.GameServerProcessCode);
+
+                    if (currentServer == null)
+                    {
+                        Send(new PreviousGameInfoResponse()
+                        {
+                            ResponseId = request.RequestId,
+                            Success = false
+                        });
+                        // Doesnt Exist anymore
+                        return;
+                    }
+
+                    // Check if Owner Left
+                    if (currentServer.TeamInfo.TeamPlayerInfo.Find(u => u.AccountId == AccountId).IsGameOwner)
+                    {
+                        log.Info($"Owner Left Game kicking all players");
+                        foreach (LobbyServerPlayerInfo playerCheck in currentServer.TeamInfo.TeamPlayerInfo)
+                        {
+                            LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(playerCheck.AccountId);
+                            if (playerCheck.AccountId != AccountId)
+                            {
+                                playerConnection.Send(new GameAssignmentNotification
+                                {
+                                    GameInfo = null,
+                                    GameResult = GameResult.OwnerLeft,
+                                    Reconnection = false
+                                });
+                            }
+                            playerConnection.CurrentServer = null;
+                        }
+
+                        ServerManager.RemoveServer(currentServer.GameInfo.GameServerProcessCode);
+
+                        return;
+                    }
+
+                    LobbyServerPlayerInfo player = currentServer.TeamInfo.TeamPlayerInfo.Find(u => u.AccountId == AccountId);
+
+                    currentServer.TeamInfo.TeamPlayerInfo.Remove(player);
+
+                    //LobbyServerTeamInfo teamInfo = CreateTeamInfo(currentServer.TeamInfo);
+
+                    if (currentServer.TeamInfo.TeamPlayerInfo.Count > 0)
+                    {
+                        // Set the TeamInfo new values
+                        currentServer.SetTeamInfo(currentServer.TeamInfo);
+                        currentServer.SetGameInfo(currentServer.GameInfo);
+                        currentServer.SendGameInfoNotifications();
+                    }
+                    else
+                    {
+                        // No players left remove server
+                        ServerManager.RemoveServer(currentServer.GameInfo.GameServerProcessCode);
+                    }
+
+                    CurrentServer = null;
+
+                    Send(new PreviousGameInfoResponse()
+                    {
+                        ResponseId = request.RequestId,
+                        Success = false
+                    });
+
+                    return;
+                }
+            }
+
             BridgeServerProtocol server = ServerManager.GetServerWithPlayer(AccountId);
             LobbyGameInfo lobbyGameInfo = null;
 

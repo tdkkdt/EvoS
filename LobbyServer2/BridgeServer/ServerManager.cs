@@ -75,6 +75,28 @@ namespace CentralServer.BridgeServer
             }
         }
 
+        public static BridgeServerProtocol GetCustomServerWithPlayer(long accountId)
+        {
+            lock (ServerPool)
+            {
+                foreach (BridgeServerProtocol server in ServerPool.Values)
+                {
+                    if (server.IsPrivate) 
+                    { 
+                        foreach (long player in server.GetPlayers())
+                        {
+                            if (player.Equals(accountId))
+                            {
+                                return server;
+                            }
+                        }
+                    }
+                }
+
+                return null;
+            }
+        }
+
         public static bool IsAnyServerAvailable()
         {
             lock (ServerPool)

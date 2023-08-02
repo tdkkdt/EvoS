@@ -295,9 +295,9 @@ namespace CentralServer.BridgeServer
             await Orchestrator.StartGameAsync(teamA, teamB, gameType, gameSubType);
         }
 
-        public void StartCustomGame(BridgeServerProtocol game)
+        public async Task StartCustomGameAsync(BridgeServerProtocol game)
         {
-            Orchestrator.StartCustomGame(game);
+            await Orchestrator.StartCustomGameAsync(game);
         }
 
         public void StartGameForReconnection(long accountId)
@@ -397,13 +397,14 @@ namespace CentralServer.BridgeServer
 
         public void BuildGameInfoCustomGame(LobbyGameInfo gameinfo)
         {
-            int playerCount = TeamInfo.TeamPlayerInfo.Count;
             GameInfo = gameinfo.Clone();
-            GameInfo.ActivePlayers = playerCount;
-            GameInfo.AcceptedPlayers = playerCount;
-            GameInfo.ActiveHumanPlayers = playerCount;
+            GameInfo.ActivePlayers = TeamInfo.TeamAPlayerInfo.Count() + TeamInfo.TeamAPlayerInfo.Count();
+            GameInfo.LoadoutSelectTimeout = TimeSpan.FromSeconds(30);
+            GameInfo.AcceptedPlayers = TeamInfo.TeamPlayerInfo.Count;
+            GameInfo.ActiveHumanPlayers = TeamInfo.TeamAPlayerInfo.Count() + TeamInfo.TeamAPlayerInfo.Count();
             GameInfo.GameConfig.TeamAPlayers = TeamInfo.TeamAPlayerInfo.Count();
             GameInfo.GameConfig.TeamAPlayers = TeamInfo.TeamAPlayerInfo.Count();
+            GameInfo.GameConfig.Spectators = TeamInfo.SpectatorInfo.Count();
             GameInfo.GameServerAddress = this.URI;
             GameInfo.GameServerProcessCode = this.ProcessCode;
         }
