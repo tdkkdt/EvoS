@@ -95,6 +95,10 @@ namespace CentralServer.LobbyServer.Chat
                         }
                         OnGlobalChatMessage(message);
                     }
+                    else
+                    {
+                        SendMessageToPlayer(conn.AccountId, message);
+                    }
                     break;
                 }
                 case ConsoleMessageType.WhisperChat:
@@ -125,6 +129,10 @@ namespace CentralServer.LobbyServer.Chat
                         {
                             SendMessageToPlayer(accountId, message);
                         }
+                    }
+                    else
+                    {
+                        SendMessageToPlayer(conn.AccountId, message);
                     }
                     break;
                 }
@@ -162,6 +170,10 @@ namespace CentralServer.LobbyServer.Chat
                         {
                             SendMessageToPlayer(teammateAccountId, message);
                         }
+                    }
+                    else
+                    {
+                        SendMessageToPlayer(conn.AccountId, message);
                     }
                     break;
                 }
