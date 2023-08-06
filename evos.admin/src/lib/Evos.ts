@@ -73,6 +73,14 @@ export interface PenaltyInfo {
     description: string
 }
 
+export interface RegistrationCodeRequest {
+    issueFor: string;
+}
+
+export interface RegistrationCodeResponse {
+    code: string;
+}
+
 export interface SearchResults {
     players: PlayerData[];
 }
@@ -192,4 +200,11 @@ export function ban(authHeader: string, penaltyInfo: PenaltyInfo) {
         baseUrl + "/api/admin/player/banned",
         penaltyInfo,
         { headers: {'Authorization': authHeader} });
+}
+
+export function issueRegistrationCode(abort: AbortController, authHeader: string, data: RegistrationCodeRequest) {
+    return axios.post<RegistrationCodeResponse>(
+        baseUrl + "/api/admin/player/registrationCode",
+        data,
+        { headers: {'Authorization': authHeader}, signal: abort.signal });
 }

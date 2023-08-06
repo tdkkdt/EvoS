@@ -28,6 +28,7 @@ namespace EvoS.Framework.DataAccess.Mongo
         
         protected FilterDefinitionBuilder<TEntry> f => Builders<TEntry>.Filter;
         protected UpdateDefinitionBuilder<TEntry> u => Builders<TEntry>.Update;
+        protected SortDefinitionBuilder<TEntry> s => Builders<TEntry>.Sort;
 
         private FilterDefinition<TEntry> Key(TKey id)
         {

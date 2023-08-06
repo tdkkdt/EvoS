@@ -44,6 +44,8 @@ namespace EvoS.DirectoryServer.Account
         public const string TooManyLinkedAccounts = "You cannot link so many third-party accounts.";
         public const string InsufficientTrustLevel =
             "Unfortunately, provided third-party accounts do not match the required trust level. Please, try linking other accounts, or contact support.";
+        public const string RegistrationCodeNeeded = "A registration code is required to get access to this server.";
+        public const string RegistrationCodeInvalid = "Your registration code is not valid or already used.";
 
         public static long RegisterOrLogin(AuthInfo authInfo)
         {
@@ -65,7 +67,7 @@ namespace EvoS.DirectoryServer.Account
             return Register(authInfo.UserName, authInfo._Password);
         }
 
-        public static long Register(string username, string password, List<LinkedAccount.Ticket> linkedAccountTickets = null)
+        public static long Register(string username, string password, string code = null, List<LinkedAccount.Ticket> linkedAccountTickets = null)
         {
             LoginDao loginDao = DB.Get().LoginDao;
             LoginDao.LoginEntry entry = loginDao.Find(username.ToLower());
@@ -101,6 +103,24 @@ namespace EvoS.DirectoryServer.Account
             {
                 throw new ArgumentException(TooManyLinkedAccounts);
             }
+
+            RegistrationCodeDao.RegistrationCodeEntry registrationCodeEntry = null;
+            RegistrationCodeDao registrationCodeDao = DB.Get().RegistrationCodeDao;
+            if (EvosConfiguration.GetRequireRegistrationCode())
+            {
+                if (code is null)
+                {
+                    throw new ArgumentException(RegistrationCodeNeeded);
+                }
+
+                RegistrationCodeDao.RegistrationCodeEntry e = registrationCodeDao.Find(code);
+                if (e is null || !e.IsValid)
+                {
+                    throw new ArgumentException(RegistrationCodeInvalid);
+                }
+
+                registrationCodeEntry = e;
+            }
             
             long accountId = GenerateAccountId(username);
             for (int i = 0; loginDao.Find(accountId) != null; ++i)
@@ -120,6 +140,10 @@ namespace EvoS.DirectoryServer.Account
             }
             
             SaveLogin(accountId, username, password, linkedAccounts);
+            if (registrationCodeEntry is not null)
+            {
+                registrationCodeDao.Save(registrationCodeEntry.Use(accountId));
+            }
             log.Info($"Successfully registered new user {accountId}/{username}");
             return accountId;
         }

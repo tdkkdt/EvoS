@@ -176,6 +176,37 @@ namespace CentralServer.ApiServer
             bool success = AdminManager.Get().Ban(data.accountId, TimeSpan.FromMinutes(data.durationMinutes), adminHandle, data.description);
             return success ? Results.Ok() : Results.Problem();
         }
+        
+        public class RegistrationCodeRequestModel
+        {
+            public string issueFor { get; set; }
+        }
+        
+        public class RegistrationCodeResponseModel
+        {
+            public string code { get; set; }
+        }
+        
+        public static IResult IssueRegistrationCode([FromBody] RegistrationCodeRequestModel data, ClaimsPrincipal user)
+        {
+            if (!ValidateAdmin(user, out IResult error, out long adminAccountId, out string adminHandle))
+            {
+                return error;
+            }
+
+            log.Info($"API ISSUE by {adminHandle} ({adminAccountId}): {data.issueFor}");
+            string code = Guid.NewGuid().ToString();
+            DB.Get().RegistrationCodeDao.Save(new RegistrationCodeDao.RegistrationCodeEntry
+            {
+                Code = code,
+                IssuedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddHours(8),
+                IssuedBy = adminAccountId,
+                IssuedTo = data.issueFor,
+                UsedBy = 0
+            });
+            return Results.Ok(new RegistrationCodeResponseModel { code = code });
+        }
 
         private static bool ValidateAdmin(
             ClaimsPrincipal user,

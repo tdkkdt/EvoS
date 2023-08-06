@@ -45,11 +45,11 @@ public class UserApiServer : ApiServer
         log.Info($"Registering via api: {authInfo.UserName}");
         try
         {
-            LoginManager.Register(authInfo.UserName, authInfo._Password, authInfo.LinkedAccountTickets);
+            LoginManager.Register(authInfo.UserName, authInfo._Password, authInfo.Code, authInfo.LinkedAccountTickets);
         }
         catch (ArgumentException e)
         {
-            log.Info($"Cannot register {authInfo.UserName} with given username and/or password", e);
+            log.Info($"Cannot register {authInfo.UserName} with given credentials", e);
             return Results.BadRequest(new ErrorResponseModel{ message = e.Message });
         }
         catch (Exception e)
