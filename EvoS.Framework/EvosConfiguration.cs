@@ -1,4 +1,7 @@
-﻿using System.IO;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using EvoS.Framework.Auth;
 using YamlDotNet.Serialization;
 using EvoS.Framework.Misc;
 
@@ -6,13 +9,18 @@ namespace EvoS.Framework
 {
     public class EvosConfiguration
     {
-        private static EvosConfiguration Instance = null;
         public int DirectoryServerPort = 6050;
         public string LobbyServerAddress = "127.0.0.1";
         public int LobbyServerPort = 6060;
         public string GameServerExecutable = "";
         public string GameServerExecutableArgs = "";
+        public string SteamWebApiKey = "";
         public bool AutoRegisterNewUsers = true;
+        public HashSet<LinkedAccount.AccountType> LinkedAccountAllowedTypes = new HashSet<LinkedAccount.AccountType>();
+        public List<List<LinkedAccount.Condition>> LinkedAccountRegistrationConditions = new List<List<LinkedAccount.Condition>>();
+        public List<List<LinkedAccount.Condition>> LinkedAccountLoginConditions = null;
+        public HashSet<LinkedAccount.AccountType> LinkedAccountsForPasswordReset = new HashSet<LinkedAccount.AccountType>();
+        public int MaxLinkedAccounts = 6;
         public DBConfig Database = new DBConfig();
         public string UserApiKey = "";
         public int UserApiPort = 3002;
@@ -23,97 +31,61 @@ namespace EvoS.Framework
         
         public bool PingOnGroupRequest = true;
 
-        private static EvosConfiguration GetInstance()
-        {
-            if (Instance == null)
-            {
-                var deserializer = new DeserializerBuilder()
-                    .Build();
+        private static Lazy<EvosConfiguration> _instance = new Lazy<EvosConfiguration>(() =>
+            new DeserializerBuilder().Build().Deserialize<EvosConfiguration>(File.ReadAllText("settings.yaml")));
 
-                Instance = deserializer.Deserialize<EvosConfiguration>(File.ReadAllText("settings.yaml"));
-            }
+        private static EvosConfiguration Instance => _instance.Value;
 
-            return Instance;
-        }
+        public static int GetDirectoryServerPort() => Instance.DirectoryServerPort;
 
-        public static int GetDirectoryServerPort()
-        {
-            return GetInstance().DirectoryServerPort;
-        }
+        public static string GetLobbyServerAddress() => Instance.LobbyServerAddress;
 
-        public static string GetLobbyServerAddress()
-        {
-            return GetInstance().LobbyServerAddress;
-        }
-
-        public static int GetLobbyServerPort()
-        {
-            return GetInstance().LobbyServerPort;
-        }
+        public static int GetLobbyServerPort() => Instance.LobbyServerPort;
 
         /// <summary>
         /// Full path to server's "AtlasReactor.exe"
         /// </summary>
         /// <returns></returns>
-        public static string GetGameServerExecutable()
-        {
-            return GetInstance().GameServerExecutable;
-        }
+        public static string GetGameServerExecutable() => Instance.GameServerExecutable;
+
+        public static string GetGameServerExecutableArgs() => Instance.GameServerExecutableArgs;
+
+        /// <summary>
+        /// You can get one from https://steamcommunity.com/dev/registerkey
+        /// </summary>
+        /// <returns></returns>
+        public static string GetSteamWebApiKey() => Instance.SteamWebApiKey;
+        public static bool SteamApiEnabled => !string.IsNullOrWhiteSpace(GetSteamWebApiKey());
+
+        public static bool GetAutoRegisterNewUsers() => Instance.AutoRegisterNewUsers;
         
-        public static string GetGameServerExecutableArgs()
-        {
-            return GetInstance().GameServerExecutableArgs;
-        }
-
-        public static bool GetAutoRegisterNewUsers()
-        {
-            return GetInstance().AutoRegisterNewUsers;
-        }
+        public static HashSet<LinkedAccount.AccountType> GetLinkedAccountAllowedTypes() => Instance.LinkedAccountAllowedTypes;
         
-        public static DBConfig GetDBConfig()
-        {
-            return GetInstance().Database;
-        }
+        public static List<List<LinkedAccount.Condition>> GetLinkedAccountRegistrationConditions() => Instance.LinkedAccountRegistrationConditions;
+        
+        public static List<List<LinkedAccount.Condition>> GetLinkedAccountLoginConditions() => Instance.LinkedAccountLoginConditions ?? GetLinkedAccountRegistrationConditions();
+        
+        public static HashSet<LinkedAccount.AccountType> GetLinkedAccountsForPasswordReset() => Instance.LinkedAccountsForPasswordReset;
 
-        public static bool GetPingOnGroupRequest()
-        {
-            return GetInstance().PingOnGroupRequest;
-        }
+        public static int GetMaxLinkedAccounts() => Instance.MaxLinkedAccounts;
+        
+        public static DBConfig GetDBConfig() => Instance.Database;
 
-        public static string GetAdminApiKey()
-        {
-            return GetInstance().AdminApiKey;
-        }
+        public static bool GetPingOnGroupRequest() => Instance.PingOnGroupRequest;
 
-        public static string GetUserApiKey()
-        {
-            return GetInstance().UserApiKey;
-        }
+        public static string GetAdminApiKey() => Instance.AdminApiKey;
 
-        public static int GetAdminApiPort()
-        {
-            return GetInstance().AdminApiPort;
-        }
+        public static string GetUserApiKey() => Instance.UserApiKey;
 
-        public static int GetUserApiPort()
-        {
-            return GetInstance().UserApiPort;
-        }
+        public static int GetAdminApiPort() => Instance.AdminApiPort;
 
-        public static string GetTicketAuthKey()
-        {
-            return GetInstance().TicketAuthKey;
-        }
+        public static int GetUserApiPort() => Instance.UserApiPort;
 
-        public static bool GetAllowUsernamePasswordAuth()
-        {
-            return GetInstance().AllowUsernamePasswordAuth;
-        }
+        public static string GetTicketAuthKey() => Instance.TicketAuthKey;
 
-        public static bool GetAllowTicketAuth()
-        {
-            return !GetUserApiKey().IsNullOrEmpty() && !GetTicketAuthKey().IsNullOrEmpty();
-        }
+        public static bool GetAllowUsernamePasswordAuth() => Instance.AllowUsernamePasswordAuth;
+
+        public static bool GetAllowTicketAuth() => !GetUserApiKey().IsNullOrEmpty() && !GetTicketAuthKey().IsNullOrEmpty();
 
         public enum DBType
         {

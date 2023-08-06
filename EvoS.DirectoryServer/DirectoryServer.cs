@@ -23,6 +23,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace EvoS.DirectoryServer
 {
@@ -56,7 +57,7 @@ namespace EvoS.DirectoryServer
             var serverAddressesFeature = app.ServerFeatures.Get<IServerAddressesFeature>();
             log.Info($"Started DirectoryServer on '0.0.0.0:{EvosConfiguration.GetDirectoryServerPort()}'");
 
-            app.Run((context) =>
+            app.Run(async (context) =>
             {
                 var syncIOFeature = context.Features.Get<IHttpBodyControlFeature>();
                 if (syncIOFeature != null)
@@ -70,12 +71,12 @@ namespace EvoS.DirectoryServer
                 ms.Position = 0;
                 string requestBody = new StreamReader(ms).ReadToEnd();
                 ms.Dispose();
-
+                
                 AssignGameClientRequest request = JsonConvert.DeserializeObject<AssignGameClientRequest>(requestBody);
                 log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
                 AssignGameClientResponse response = ProcessRequest(request, context);
                 log.Debug($"> {response.GetType().Name} {DefaultJsonSerializer.Serialize(response)}");
-                return context.Response.WriteAsync(JsonConvert.SerializeObject(response));
+                await context.Response.WriteAsync(JsonConvert.SerializeObject(response));
             });
         }
 

@@ -1,8 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using EvoS.DirectoryServer.ARLauncher;
 using EvoS.Framework;
+using EvoS.Framework.Auth;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.DataAccess.Daos;
 using EvoS.Framework.Misc;
@@ -19,92 +24,180 @@ namespace EvoS.DirectoryServer.Account
         private static readonly Regex bannedUsernameRegex = new Regex(@"^(?:(?:changeMeToYour)?user(?:name)?)$", RegexOptions.IgnoreCase);
         private static readonly Regex bannedPasswordRegex = new Regex(@"^(?:(?:changeMeToYour)?password)$", RegexOptions.IgnoreCase);
 
+        public const string PasswordIsIncorrect = "Password is incorrect";
+        public const string UserDoesNotExist = "User does not exist";
+        public const string InvalidUsername = "Invalid username. " +
+                        "Please use only latin characters, numbers, underscore and dash, and start with a letter. " +
+                        "4 symbols or more.";
+        public const string CannotUseThisUsername = "You cannot use this username. Please choose another.";
+        public const string CannotUseThisPassword = "You cannot use this password. Please choose another.";
+        public const string FailedToCreateAnAccount = "Failed to crate an account";
+        public const string UserNotFound = "User not found";
+        public const string LinkedAccountNotFound = "This third-party account is not linked to this account.";
+        public const string SteamIdMissing = "Account lacks SteamId. Please use ARLauncher to link your account to Steam.";
+        public const string SteamIdZero = "No SteamId was provided. Please use ARLauncher to create an account or to link existing account to Steam.";
+        public const string SteamIdAlreadyUsed = "Provided SteamId was already used for another account. Try logging into it instead. You can reset password if you forgot it.";
+        public const string SteamWebApiKeyMissing = "Server is not configured to use SteamWebApi";
+        public const string AccountWithSuchLinkedAccountNotFound = "Account linked to this third-party account was not found";
+        public const string AccountTypeNotSuitableForPasswordReset = "Third-party account you have logged in with cannot be used for password reset";
+        public const string UsernameIsAlreadyUsed = "This username is already in use. Please, choose another.";
+        public const string TooManyLinkedAccounts = "You cannot link so many third-party accounts.";
+        public const string InsufficientTrustLevel =
+            "Unfortunately, provided third-party accounts do not match the required trust level. Please, try linking other accounts, or contact support.";
+
         public static long RegisterOrLogin(AuthInfo authInfo)
         {
-            LoginDao loginDao = DB.Get().LoginDao;
-            LoginDao.LoginEntry entry = loginDao.Find(authInfo.UserName.ToLower());
-            if (entry != null)
-            {
-                string hash = Hash(entry.Salt, authInfo._Password);
-                if (entry.Hash.Equals(hash))
-                {
-                    log.Info($"User {entry.AccountId}/{entry.Username} successfully logged in");
-                    if (entry.Salt.IsNullOrEmpty())
-                    {
-                        SaveLogin(entry.AccountId, entry.Username, authInfo._Password);
-                    }
-                    return entry.AccountId;
-                }
-                else
-                {
-                    log.Warn($"Failed attempt to log is as {entry.AccountId}/{entry.Username}");
-                    throw new ArgumentException("Password is incorrect");
-                }
-            }
-            else
-            {
-                if (!EvosConfiguration.GetAutoRegisterNewUsers())
-                {
-                    log.Info($"Attempt to login as \"{authInfo.UserName}\"");
-                    throw new ArgumentException("User does not exist");
-                }
-
-                log.Info($"Registering user automatically: {authInfo.UserName}");
-                return Register(authInfo);
-            }
+            LoginDao.LoginEntry entry = DB.Get().LoginDao.Find(authInfo.UserName.ToLower());
+            return entry != null
+                ? Login(authInfo.UserName, authInfo._Password)
+                : AutoRegister(authInfo);
         }
 
-        public static long Register(AuthInfo authInfo)
+        private static long AutoRegister(AuthInfo authInfo)
+        {
+            if (!EvosConfiguration.GetAutoRegisterNewUsers())
+            {
+                log.Info($"Attempt to login as \"{authInfo.UserName}\"");
+                throw new ArgumentException(UserNotFound);
+            }
+
+            log.Info($"Registering user automatically: {authInfo.UserName}");
+            return Register(authInfo.UserName, authInfo._Password);
+        }
+
+        public static long Register(string username, string password, List<LinkedAccount.Ticket> linkedAccountTickets = null)
         {
             LoginDao loginDao = DB.Get().LoginDao;
-            LoginDao.LoginEntry entry = loginDao.Find(authInfo.UserName.ToLower());
+            LoginDao.LoginEntry entry = loginDao.Find(username.ToLower());
 
             if (entry is not null)
             {
-                log.Info($"Attempt to register as existing user \"{authInfo.UserName}\"");
-                throw new ArgumentException("This username is already in use. Please choose another.");
+                log.Info($"Attempt to register as existing user \"{username}\"");
+                throw new ArgumentException(UsernameIsAlreadyUsed);
             }
             
-            if (!usernameRegex.IsMatch(authInfo.UserName))
+            if (!usernameRegex.IsMatch(username))
             {
-                log.Info($"Attempt to register as \"{authInfo.UserName}\"");
-                throw new ArgumentException("Invalid username. " +
-                                            "Please use only latin characters, numbers, underscore and dash, and start with a letter. " +
-                                            "4 symbols or more.");
+                log.Info($"Attempt to register as \"{username}\"");
+                throw new ArgumentException(InvalidUsername);
             }
 
-            if (bannedUsernameRegex.IsMatch(authInfo.UserName))
+            if (bannedUsernameRegex.IsMatch(username))
             {
-                log.Info($"Attempt to register as \"{authInfo.UserName}\"");
-                throw new ArgumentException("You cannot use this username. Please choose another.");
+                log.Info($"Attempt to register as \"{username}\"");
+                throw new ArgumentException(CannotUseThisUsername);
             }
 
-            if (bannedPasswordRegex.IsMatch(authInfo.Password))
+            if (bannedPasswordRegex.IsMatch(password))
             {
                 log.Info($"Attempt to register with a bad password");
-                throw new ArgumentException("You cannot use this password. Please choose another.");
+                throw new ArgumentException(CannotUseThisPassword);
             }
 
-            long accountId = GenerateAccountId(authInfo.UserName);
+            List<LinkedAccount> linkedAccounts = ProcessLinkedAccountTickets(linkedAccountTickets);
+            ValidateLinkedAccountConditions(EvosConfiguration.GetLinkedAccountRegistrationConditions(), linkedAccounts);
+            
+            if (linkedAccounts.Count > EvosConfiguration.GetMaxLinkedAccounts())
+            {
+                throw new ArgumentException(TooManyLinkedAccounts);
+            }
+            
+            long accountId = GenerateAccountId(username);
             for (int i = 0; loginDao.Find(accountId) != null; ++i)
             {
                 accountId++;
                 if (i >= 100)
                 {
-                    log.Error($"Failed to register new user {authInfo.UserName}");
-                    throw new ApplicationException("Failed to create an account");
+                    log.Error($"Failed to register new user {username}");
+                    throw new EvosException(FailedToCreateAnAccount);
                 }
             }
 
-            PersistedAccountData account = CreateAccount(accountId, authInfo.UserName);
+            PersistedAccountData account = CreateAccount(accountId, username);
             if (account is null)
             {
-                throw new ApplicationException("Failed to create an account");
+                throw new EvosException(FailedToCreateAnAccount);
             }
             
-            SaveLogin(accountId, authInfo.UserName, authInfo._Password);
-            log.Info($"Successfully registered new user {accountId}/{authInfo.UserName}");
+            SaveLogin(accountId, username, password, linkedAccounts);
+            log.Info($"Successfully registered new user {accountId}/{username}");
             return accountId;
+        }
+
+        private static List<LinkedAccount> ProcessLinkedAccountTickets(
+            List<LinkedAccount.Ticket> linkedAccountTickets,
+            long allowDisabledAccountLinkedToAccountId = 0)
+        {
+            if (linkedAccountTickets is null)
+            {
+                return new List<LinkedAccount>();
+            }
+            
+            List<LinkedAccount> linkedAccounts = linkedAccountTickets.Select(CheckLinkedAccountTicket).ToList();
+            foreach (LinkedAccount linkedAccount in linkedAccounts)
+            {
+                LoginDao.LoginEntry existingAccount = DB.Get().LoginDao.FindByLinkedAccount(linkedAccount);
+                if (existingAccount != null
+                    && (allowDisabledAccountLinkedToAccountId == 0
+                        || existingAccount.AccountId != allowDisabledAccountLinkedToAccountId
+                        || (existingAccount.GetLinkedAccount(linkedAccount)?.Active ?? true)))
+                {
+                    log.Info(
+                        $"Won't allow creating account with {linkedAccount.Type} already linked to {existingAccount.Username}/{existingAccount.AccountId}");
+                    throw new ArgumentException(
+                        $"This {linkedAccount.Type} account is already linked to an existing Atlas Reactor account. Try logging into it instead.");
+                }
+            }
+            return CheckLinkedAccountLevels(linkedAccounts);
+        }
+
+        private static void ValidateLinkedAccountConditions(List<List<LinkedAccount.Condition>> conditions, List<LinkedAccount> linkedAccounts)
+        {
+            foreach (List<LinkedAccount.Condition> condition in conditions)
+            {
+                if (!condition.Any(c => c.Matches(linkedAccounts)))
+                {
+                    if (!condition.Any(c => c.Matches(linkedAccounts, true)))
+                    {
+                        throw new ArgumentException(
+                            $"You need to link one of the following third-party accounts: {string.Join(" or ", condition)}");
+                    }
+                    else
+                    {
+                        throw new ArgumentException(InsufficientTrustLevel);
+                    }
+                }
+            }
+        }
+
+        private static LinkedAccount CheckLinkedAccountTicket(LinkedAccount.Ticket ticket)
+        {
+            switch (ticket.Type)
+            {
+                case LinkedAccount.AccountType.STEAM:
+                    SteamWebApiConnector.Response steamResponse = Task.Run(() => SteamWebApiConnector.Instance.GetSteamIdAsync(ticket.Token)).GetAwaiter().GetResult();
+                    if (steamResponse.ResultCode != SteamWebApiConnector.GetSteamIdResult.Success || steamResponse.SteamId == 0UL)
+                    {
+                        log.Warn($"Failed to verify Steam account: {steamResponse.ResultCode} {steamResponse.SteamId}");
+                        throw new EvosException("Failed to verify Steam account");
+                    }
+
+                    return new LinkedAccount(
+                        LinkedAccount.AccountType.STEAM,
+                        steamResponse.SteamId.ToString(),
+                        steamResponse.SteamId.ToString(),
+                        0,
+                        DateTime.MinValue,
+                        true);
+                default:
+                    throw new ArgumentException($"{ticket.Type} account type is not supported");
+            }
+        }
+
+        private static List<LinkedAccount> CheckLinkedAccountLevels(List<LinkedAccount> linkedAccounts)
+        {
+            // TODO check linked account levels, pull usernames
+            return linkedAccounts;
         }
 
         public static PersistedAccountData CreateAccount(long accountId, string username)
@@ -119,7 +212,7 @@ namespace EvoS.DirectoryServer.Account
             return account;
         }
 
-        private static void SaveLogin(long accountId, string username, string password)
+        private static void SaveLogin(long accountId, string username, string password, List<LinkedAccount> linkedAccounts)
         {
             LoginDao loginDao = DB.Get().LoginDao;
             string salt = GenerateSalt();
@@ -129,30 +222,134 @@ namespace EvoS.DirectoryServer.Account
                 AccountId = accountId,
                 Salt = salt,
                 Hash = hash,
-                Username = username.ToLower()
+                Username = username.ToLower(),
+                LinkedAccounts = linkedAccounts,
             });
             log.Info($"Successfully generated new password hash for {accountId}/{username}");
         }
 
-        public static long Login(AuthInfo authInfo)
+        public static long Login(string username, string password)
         {
-            LoginDao.LoginEntry entry = DB.Get().LoginDao.Find(authInfo.UserName);
-            if (entry != null)
+            LoginDao.LoginEntry entry = DB.Get().LoginDao.Find(username);
+            if (entry == null)
             {
-                string hash = Hash(entry.Salt, authInfo._Password);
-                if (entry.Hash.Equals(hash))
-                {
-                    log.Info($"User {entry.AccountId}/{entry.Username} successfully logged in");
-                    return entry.AccountId;
-                }
-                else
-                {
-                    log.Warn($"Failed attempt to log is as {entry.AccountId}/{entry.Username}");
-                    throw new ArgumentException("Password is incorrect");
-                }
+                log.Warn($"Attempt to log is as non-existing user {username}");
+                throw new ArgumentException(UserNotFound);
             }
-            log.Warn($"Attempt to log is as non-existing user {authInfo.UserName}");
-            throw new ArgumentException("User not found");
+
+            string hash = Hash(entry.Salt, password);
+            if (!entry.Hash.Equals(hash))
+            {
+                log.Warn($"Failed attempt to log is as {entry.AccountId}/{entry.Username}");
+                throw new ArgumentException(PasswordIsIncorrect);
+            }
+
+            List<LinkedAccount> linkedAccounts = CheckLinkedAccountLevels(entry.LinkedAccounts);
+            ValidateLinkedAccountConditions(EvosConfiguration.GetLinkedAccountLoginConditions(), linkedAccounts);
+
+            entry.LinkedAccounts = linkedAccounts;
+            DB.Get().LoginDao.Save(entry);
+            
+            log.Info($"User {entry.AccountId}/{entry.Username} successfully logged in");
+            if (entry.Salt.IsNullOrEmpty())
+            {
+                UpdatePassword(entry, password);
+            }
+            return entry.AccountId;
+        }
+
+        public static void LinkAccounts(long accountId, List<LinkedAccount.Ticket> tickets)
+        {
+            List<LinkedAccount> linkedAccounts = ProcessLinkedAccountTickets(tickets, accountId);
+            
+            var loginDao = DB.Get().LoginDao;
+            var entry = loginDao.Find(accountId);
+            if (entry is null)
+            {
+                throw new ArgumentException(UserNotFound);
+            }
+
+            List<LinkedAccount> accounts = entry.LinkedAccounts.Where(la => !linkedAccounts.Any(la.IsSame)).ToList();
+            accounts.AddRange(linkedAccounts); // TODO multiple accounts of the same type?
+
+            if (accounts.Count > EvosConfiguration.GetMaxLinkedAccounts())
+            {
+                throw new ArgumentException(TooManyLinkedAccounts);
+            }
+
+            entry.LinkedAccounts = accounts;
+            loginDao.Save(entry);
+        }
+
+        public static void DisableLink(long accountId, LinkedAccount linkedAccount)
+        {
+            var loginDao = DB.Get().LoginDao;
+            var entry = loginDao.Find(accountId);
+            if (entry is null)
+            {
+                throw new ArgumentException(UserNotFound);
+            }
+
+            LinkedAccount linkedAccountToDisable = entry.GetLinkedAccount(linkedAccount);
+
+            if (linkedAccountToDisable is null)
+            {
+                throw new ArgumentException(LinkedAccountNotFound);
+            }
+
+            linkedAccountToDisable.Active = false;
+            loginDao.Save(entry);
+        }
+
+        // TODO API?
+        public static string RemindUsername(LinkedAccount.Ticket ticket)
+        {
+            LinkedAccount linkedAccount = CheckLinkedAccountTicket(ticket);
+            var entry = DB.Get().LoginDao.FindByLinkedAccount(linkedAccount);
+            if (entry == null)
+            {
+                throw new ArgumentException(AccountWithSuchLinkedAccountNotFound);
+            }
+            return entry.Username;
+        }
+
+        public static void ResetPassword(LinkedAccount.Ticket ticket, string newPassword)
+        {
+            if (!EvosConfiguration.GetLinkedAccountsForPasswordReset().Contains(ticket.Type))
+            {
+                throw new ArgumentException(AccountTypeNotSuitableForPasswordReset);
+            }
+            LinkedAccount linkedAccount = CheckLinkedAccountTicket(ticket);
+            var loginDao = DB.Get().LoginDao;
+            var entry = loginDao.FindByLinkedAccount(linkedAccount);
+            if (entry == null)
+            {
+                throw new ArgumentException(AccountWithSuchLinkedAccountNotFound);
+            }
+
+            ResetPassword(entry.AccountId, newPassword);
+        }
+        
+        public static void ResetPassword(long accountId, string newPassword)
+        {
+            if (bannedPasswordRegex.IsMatch(newPassword))
+            {
+                log.Info($"Attempt to reset password with a bad newPassword");
+                throw new ArgumentException(CannotUseThisPassword);
+            }
+            var loginDao = DB.Get().LoginDao;
+            var entry = loginDao.Find(accountId);
+            if (entry == null)
+            {
+                throw new ArgumentException(UserNotFound);
+            }
+
+            UpdatePassword(entry, newPassword);
+        }
+
+        private static void UpdatePassword(LoginDao.LoginEntry entry, string newPassword)
+        {
+            SaveLogin(entry.AccountId, entry.Username, newPassword, entry.LinkedAccounts);
         }
 
         private static long GenerateAccountId(string a)
@@ -196,7 +393,7 @@ namespace EvoS.DirectoryServer.Account
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
             if (account is null)
             {
-                throw new EvosException("Account not found");
+                throw new ArgumentException(UserNotFound);
             }
 
             account.ApiKey = GenerateApiKey();

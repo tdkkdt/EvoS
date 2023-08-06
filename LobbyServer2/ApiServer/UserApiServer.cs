@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Security.Claims;
 using CentralServer.LobbyServer.Session;
 using EvoS.DirectoryServer;
@@ -30,17 +31,21 @@ public class UserApiServer : ApiServer
         app.MapPost("/api/login", Login).AllowAnonymous();
         app.MapPost("/api/register", Register).AllowAnonymous();
         app.MapGet("/api/lobby/status", StatusController.GetSimpleStatus).AllowAnonymous();
+        // app.MapGet("/api/account/linkedAccountSupport", GetThirdPartyAccountTypes).RequireAuthorization();
+        // app.MapGet("/api/account/linkAccount", LinkAccount).RequireAuthorization();
+        // app.MapGet("/api/account/unlinkAccount", UnlinkAccount).RequireAuthorization();
+        // app.MapGet("/api/account/changePassword", ChangePassword).RequireAuthorization();
         app.MapGet("/api/ticket", GetTicket).RequireAuthorization();
         app.MapGet("/api/logout", LogOutEverywhere).RequireAuthorization();
         app.UseAuthorization();
     }
     
-    protected IResult Register(HttpContext httpContext, [FromBody] AuthInfo authInfo)
+    protected IResult Register(HttpContext httpContext, [FromBody] LoginModel authInfo)
     {
         log.Info($"Registering via api: {authInfo.UserName}");
         try
         {
-            LoginManager.Register(authInfo);
+            LoginManager.Register(authInfo.UserName, authInfo._Password, authInfo.LinkedAccountTickets);
         }
         catch (ArgumentException e)
         {
@@ -56,7 +61,7 @@ public class UserApiServer : ApiServer
         return Login(httpContext, authInfo);
     }
 
-    public IResult GetTicket(ClaimsPrincipal user)
+    protected IResult GetTicket(ClaimsPrincipal user)
     {
         if (!EvosConfiguration.GetAllowTicketAuth())
         {
@@ -85,6 +90,57 @@ public class UserApiServer : ApiServer
         
         SessionManager.GetClientConnection(tokenData.AccountId)?.CloseConnection();
 
+        return Results.Ok();
+    }
+
+    protected class ThirdPartyAccountModel
+    {
+        public HashSet<LinkedAccount.AccountType> SupportedAccountTypes;
+    }
+
+    protected IResult GetThirdPartyAccountTypes()
+    {
+        return Results.Ok(new ThirdPartyAccountModel
+        {
+            SupportedAccountTypes = EvosConfiguration.GetLinkedAccountAllowedTypes()
+        });
+    }
+
+    protected class LinkedAccountTicketModel
+    {
+        public LinkedAccount.Ticket Ticket;
+    }
+
+    protected IResult LinkAccount(ClaimsPrincipal user, [FromBody] LinkedAccountTicketModel ticket)
+    {
+        EvosAuth.TokenData tokenData = EvosAuth.GetTokenData(user);
+        log.Info($"Linking {ticket.Ticket.Type} account to {tokenData.Handle}/{tokenData.AccountId}");
+        LoginManager.LinkAccounts(tokenData.AccountId, new List<LinkedAccount.Ticket>{ticket.Ticket});
+        log.Info($"Successfully linked {ticket.Ticket.Type} account to {tokenData.Handle}/{tokenData.AccountId}");
+        return Results.Ok();
+    }
+
+    protected class LinkedAccountModel
+    {
+        public LinkedAccount Account;
+    }
+
+    protected IResult UnlinkAccount(ClaimsPrincipal user, [FromBody] LinkedAccountModel linkedAccount)
+    {
+        EvosAuth.TokenData tokenData = EvosAuth.GetTokenData(user);
+        log.Info($"Unlinking {linkedAccount.Account.Type} account from {tokenData.Handle}/{tokenData.AccountId}");
+        LoginManager.DisableLink(tokenData.AccountId, linkedAccount.Account);
+        log.Info($"Successfully unlinked {linkedAccount.Account.Type} account from {tokenData.Handle}/{tokenData.AccountId}");
+        return Results.Ok();
+    }
+
+    protected IResult ChangePassword(HttpContext httpContext, ClaimsPrincipal user, [FromBody] LoginModel authInfo)
+    {
+        // TODO with third-party logins, verify that changing password is allowed
+        EvosAuth.TokenData tokenData = EvosAuth.GetTokenData(user);
+        log.Info($"Change password: {tokenData.Handle} {tokenData.AccountId} {httpContext.Connection.RemoteIpAddress}");
+        LoginManager.ResetPassword(tokenData.AccountId, authInfo._Password);
+        log.Info($"Successfully updated password: {tokenData.Handle} {tokenData.AccountId} {httpContext.Connection.RemoteIpAddress}");
         return Results.Ok();
     }
 }

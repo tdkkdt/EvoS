@@ -2,6 +2,7 @@
 LobbyServerAddress: 127.0.0.1
 LobbyServerPort: 6060
 GameServerExecutable: ""
+SteamWebApiKey: ""
 Database:
   Type: "None" # Set to "Mongo" and fill out variables below to use database
   URI: "localhost:27017"

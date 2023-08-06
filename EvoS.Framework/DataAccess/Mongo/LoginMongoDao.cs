@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using EvoS.Framework.Auth;
 using EvoS.Framework.DataAccess.Daos;
 using log4net;
 using MongoDB.Bson;
@@ -30,10 +31,21 @@ namespace EvoS.Framework.DataAccess.Mongo
             return findById(accountId);
         }
 
+        // TODO index
+        public LoginDao.LoginEntry FindByLinkedAccount(LinkedAccount linkedAccount)
+        {
+            return c.Find(f.ElemMatch(
+                "LinkedAccounts",
+                f.And(
+                    f.Eq("type", linkedAccount.Type),
+                    f.Eq("id", linkedAccount.Id))
+                )).FirstOrDefault();
+        }
+
         public void Save(LoginDao.LoginEntry entry)
         {
             log.Info($"New player {entry.AccountId}: {entry.Username}");
             insert(entry.AccountId, entry);
         }
     }
-} 
+}
