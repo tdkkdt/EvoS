@@ -254,7 +254,7 @@ namespace EvoS.DirectoryServer.Account
 
         public static long Login(string username, string password)
         {
-            LoginDao.LoginEntry entry = DB.Get().LoginDao.Find(username);
+            LoginDao.LoginEntry entry = DB.Get().LoginDao.Find(username.ToLower());
             if (entry == null)
             {
                 log.Warn($"Attempt to log is as non-existing user {username}");

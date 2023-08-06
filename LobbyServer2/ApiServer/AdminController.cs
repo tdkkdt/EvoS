@@ -115,7 +115,7 @@ namespace CentralServer.ApiServer
                 query = query.Substring(0, delimiter);
             }
 
-            LoginDao.LoginEntry loginEntry = DB.Get().LoginDao.Find(query);
+            LoginDao.LoginEntry loginEntry = DB.Get().LoginDao.Find(query.ToLower());
             if (loginEntry != null)
             {
                 PersistedAccountData acc = DB.Get().AccountDao.GetAccount(loginEntry.AccountId);

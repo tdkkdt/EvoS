@@ -19,7 +19,7 @@ namespace CentralServer.LobbyServer.Utils
                 ? handle.Substring(0, hashPos)
                 : handle;
             
-            LoginDao.LoginEntry loginEntry = DB.Get().LoginDao.Find(username);
+            LoginDao.LoginEntry loginEntry = DB.Get().LoginDao.Find(username.ToLower());
             return loginEntry?.AccountId ?? 0;
         }
 
