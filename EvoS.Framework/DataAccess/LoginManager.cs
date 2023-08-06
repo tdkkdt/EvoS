@@ -228,7 +228,7 @@ namespace EvoS.DirectoryServer.Account
             log.Info($"Successfully generated new password hash for {accountId}/{username}");
         }
 
-        public static long Login(string username, string password, bool ignoreSteam = false)
+        public static long Login(string username, string password)
         {
             LoginDao.LoginEntry entry = DB.Get().LoginDao.Find(username);
             if (entry == null)
