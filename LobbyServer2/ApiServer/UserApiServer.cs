@@ -31,10 +31,10 @@ public class UserApiServer : ApiServer
         app.MapPost("/api/login", Login).AllowAnonymous();
         app.MapPost("/api/register", Register).AllowAnonymous();
         app.MapGet("/api/lobby/status", StatusController.GetSimpleStatus).AllowAnonymous();
-        app.MapGet("/api/account/linkedAccountSupport", GetThirdPartyAccountTypes).RequireAuthorization();
-        app.MapGet("/api/account/linkAccount", LinkAccount).RequireAuthorization();
-        app.MapGet("/api/account/unlinkAccount", UnlinkAccount).RequireAuthorization();
-        app.MapGet("/api/account/changePassword", ChangePassword).RequireAuthorization();
+        // app.MapGet("/api/account/linkedAccountSupport", GetThirdPartyAccountTypes).RequireAuthorization();
+        // app.MapGet("/api/account/linkAccount", LinkAccount).RequireAuthorization();
+        // app.MapGet("/api/account/unlinkAccount", UnlinkAccount).RequireAuthorization();
+        // app.MapGet("/api/account/changePassword", ChangePassword).RequireAuthorization();
         app.MapGet("/api/ticket", GetTicket).RequireAuthorization();
         app.MapGet("/api/logout", LogOutEverywhere).RequireAuthorization();
         app.UseAuthorization();
