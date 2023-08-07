@@ -78,7 +78,7 @@ namespace EvoS.DirectoryServer.Account
                 throw new ArgumentException(UsernameIsAlreadyUsed);
             }
             
-            if (!usernameRegex.IsMatch(username))
+            if (!IsValidUsername(username))
             {
                 log.Info($"Attempt to register as \"{username}\"");
                 throw new ArgumentException(InvalidUsername);
@@ -114,7 +114,7 @@ namespace EvoS.DirectoryServer.Account
                 }
 
                 RegistrationCodeDao.RegistrationCodeEntry e = registrationCodeDao.Find(code);
-                if (e is null || !e.IsValid)
+                if (e is null || !e.IsValid || !e.IssuedTo.Equals(username.ToLower()))
                 {
                     throw new ArgumentException(RegistrationCodeInvalid);
                 }
@@ -422,6 +422,11 @@ namespace EvoS.DirectoryServer.Account
 
             account.ApiKey = GenerateApiKey();
             DB.Get().AccountDao.UpdateAccount(account);
+        }
+
+        public static bool IsValidUsername(string username)
+        {
+            return usernameRegex.IsMatch(username);
         }
     }
 }

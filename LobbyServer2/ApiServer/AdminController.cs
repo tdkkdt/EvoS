@@ -5,6 +5,7 @@ using System.Security.Claims;
 using CentralServer.LobbyServer;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
+using EvoS.DirectoryServer.Account;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.DataAccess.Daos;
 using EvoS.Framework.Network.Static;
@@ -194,15 +195,20 @@ namespace CentralServer.ApiServer
                 return error;
             }
 
+            if (!LoginManager.IsValidUsername(data.issueFor))
+            {
+                return Results.BadRequest();
+            }
+
             log.Info($"API ISSUE by {adminHandle} ({adminAccountId}): {data.issueFor}");
             string code = Guid.NewGuid().ToString();
             DB.Get().RegistrationCodeDao.Save(new RegistrationCodeDao.RegistrationCodeEntry
             {
                 Code = code,
                 IssuedAt = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddHours(8),
+                ExpiresAt = DateTime.UtcNow.AddHours(48),
                 IssuedBy = adminAccountId,
-                IssuedTo = data.issueFor,
+                IssuedTo = data.issueFor.Trim().ToLower(),
                 UsedBy = 0
             });
             return Results.Ok(new RegistrationCodeResponseModel { code = code });
