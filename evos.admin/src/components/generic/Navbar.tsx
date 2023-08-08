@@ -15,6 +15,7 @@ import ErrorDialog from "./ErrorDialog";
 const pages = [
     { text: "Status", url: '/' },
     { text: "Admin panel", url: '/admin' },
+    { text: "Codes", url: '/codes' },
 ];
 
 export const NavBarLink = styled(NavLink)({

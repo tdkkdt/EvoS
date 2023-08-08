@@ -23,6 +23,11 @@ namespace CentralServer.LobbyServer.Utils
             return loginEntry?.AccountId ?? 0;
         }
 
+        public static string GetHandle(long accountId)
+        {
+            return DB.Get().AccountDao.GetAccount(accountId)?.Handle ?? "UNKNOWN";
+        }
+
         public static string GameIdString(LobbyGameInfo gameInfo)
         {
             return gameInfo != null

@@ -81,6 +81,21 @@ export interface RegistrationCodeResponse {
     code: string;
 }
 
+export interface RegistrationCodeEntry {
+    code: string;
+    issuedBy: number;
+    issuedByHandle: string;
+    issuedTo: number;
+    issuedToHandle: string;
+    issuedAt: string;
+    expiresAt: string;
+    usedAt: string;
+}
+
+export interface RegistrationCodesResponse {
+    entries: RegistrationCodeEntry[];
+}
+
 export interface SearchResults {
     players: PlayerData[];
 }
@@ -207,4 +222,10 @@ export function issueRegistrationCode(abort: AbortController, authHeader: string
         baseUrl + "/api/admin/player/registrationCode",
         data,
         { headers: {'Authorization': authHeader}, signal: abort.signal });
+}
+
+export function getRegistrationCodes(abort: AbortController, authHeader: string, before: Date) {
+    return axios.get<RegistrationCodesResponse>(
+        baseUrl + "/api/admin/player/registrationCode",
+        { params: { before: Math.floor(before.getTime() / 1000) }, headers: {'Authorization': authHeader}, signal: abort.signal });
 }

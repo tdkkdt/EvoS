@@ -5,6 +5,7 @@ using System.Security.Claims;
 using CentralServer.LobbyServer;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
+using CentralServer.LobbyServer.Utils;
 using EvoS.DirectoryServer.Account;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.DataAccess.Daos;
@@ -212,6 +213,64 @@ namespace CentralServer.ApiServer
                 UsedBy = 0
             });
             return Results.Ok(new RegistrationCodeResponseModel { code = code });
+        }
+        
+        public class RegistrationCodesResponseModel
+        {
+            public List<RegistrationCodeEntryModel> entries { get; set; }
+        }
+
+        public class RegistrationCodeEntryModel
+        {
+            public string Code { get; set; }
+            public long IssuedBy { get; set; }
+            public string IssuedByHandle { get; set; }
+            public long IssuedTo { get; set; }
+            public string IssuedToHandle { get; set; }
+            public DateTime IssuedAt { get; set; }
+            public DateTime ExpiresAt { get; set; }
+            public DateTime UsedAt { get; set; }
+
+            public static RegistrationCodeEntryModel Of(RegistrationCodeDao.RegistrationCodeEntry e)
+            {
+                return new RegistrationCodeEntryModel
+                {
+                    Code = e.Code,
+                    IssuedBy = e.IssuedBy,
+                    IssuedByHandle = LobbyServerUtils.GetHandle(e.IssuedBy),
+                    IssuedTo = e.UsedBy,
+                    IssuedToHandle = e.UsedBy == 0 ? e.IssuedTo : LobbyServerUtils.GetHandle(e.UsedBy),
+                    IssuedAt = e.IssuedAt,
+                    ExpiresAt = e.ExpiresAt,
+                    UsedAt = e.UsedAt,
+                };
+            }
+        }
+
+        public static IResult GetRegistrationCodes(ClaimsPrincipal user, int limit = 0, int offset = 0, int before = 0)
+        {
+            if (offset > 0 && before >= 0)
+            {
+                return Results.BadRequest("You cannot specify both offset and issue time limit.");
+            }
+            
+            if (!ValidateAdmin(user, out IResult error, out _, out _))
+            {
+                return error;
+            }
+
+            if (limit <= 0 || limit > RegistrationCodeDao.LIMIT)
+            {
+                limit = RegistrationCodeDao.LIMIT;
+            }
+
+            RegistrationCodeDao dao = DB.Get().RegistrationCodeDao;
+            List<RegistrationCodeEntryModel> entries = (before > 0
+                    ? dao.FindBefore(limit, DateTimeOffset.FromUnixTimeSeconds(before).UtcDateTime)
+                    : dao.FindAll(limit, offset))
+                .Select(RegistrationCodeEntryModel.Of)
+                .ToList();
+            return Results.Ok(new RegistrationCodesResponseModel { entries = entries });
         }
 
         private static bool ValidateAdmin(

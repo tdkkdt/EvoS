@@ -37,18 +37,34 @@ namespace EvoS.Framework.DataAccess.Daos
             return nonCachedEntry;
         }
 
-        public List<RegistrationCodeDao.RegistrationCodeEntry> FindBefore(DateTime dateTime)
+        public List<RegistrationCodeDao.RegistrationCodeEntry> FindBefore(int limit, DateTime dateTime)
         {
             if (dao is RegistrationCodeMockDao)
             {
                 return cache.Values
                     .Where(x => x.IssuedAt < dateTime)
                     .OrderByDescending(x => x.IssuedAt)
-                    .Take(RegistrationCodeDao.LIMIT)
+                    .Take(limit)
                     .ToList();
             }
             
-            List<RegistrationCodeDao.RegistrationCodeEntry> daoEntries = dao.FindBefore(dateTime);
+            List<RegistrationCodeDao.RegistrationCodeEntry> daoEntries = dao.FindBefore(limit, dateTime);
+            daoEntries.ForEach(Cache);
+            return daoEntries;
+        }
+
+        public List<RegistrationCodeDao.RegistrationCodeEntry> FindAll(int limit, int offset)
+        {
+            if (dao is RegistrationCodeMockDao)
+            {
+                return cache.Values
+                    .OrderByDescending(x => x.IssuedAt)
+                    .Skip(offset)
+                    .Take(limit)
+                    .ToList();
+            }
+            
+            List<RegistrationCodeDao.RegistrationCodeEntry> daoEntries = dao.FindAll(limit, offset);
             daoEntries.ForEach(Cache);
             return daoEntries;
         }

@@ -37,6 +37,7 @@ public class AdminApiServer : ApiServer
         app.MapPost("/api/admin/player/muted", AdminController.MuteUser).RequireAuthorization("api_admin");
         app.MapPost("/api/admin/player/banned", AdminController.BanUser).RequireAuthorization("api_admin");
         app.MapPost("/api/admin/player/registrationCode", AdminController.IssueRegistrationCode).RequireAuthorization("api_admin");
+        app.MapGet("/api/admin/player/registrationCode", AdminController.GetRegistrationCodes).RequireAuthorization("api_admin");
         app.UseAuthorization();
     }
 

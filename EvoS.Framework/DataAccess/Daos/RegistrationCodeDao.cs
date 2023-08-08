@@ -11,7 +11,8 @@ namespace EvoS.Framework.DataAccess.Daos
         public const int LIMIT = 25;
         
         public RegistrationCodeEntry? Find(string code);
-        public List<RegistrationCodeEntry> FindBefore(DateTime dateTime);
+        public List<RegistrationCodeEntry> FindBefore(int limit, DateTime dateTime);
+        public List<RegistrationCodeEntry> FindAll(int limit, int offset);
         public void Save(RegistrationCodeEntry entry);
 
         public class RegistrationCodeEntry

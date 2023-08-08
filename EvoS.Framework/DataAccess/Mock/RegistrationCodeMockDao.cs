@@ -11,7 +11,12 @@ namespace EvoS.Framework.DataAccess.Mock
             return null;
         }
 
-        public List<RegistrationCodeDao.RegistrationCodeEntry> FindBefore(DateTime dateTime)
+        public List<RegistrationCodeDao.RegistrationCodeEntry> FindBefore(int limit, DateTime dateTime)
+        {
+            return new List<RegistrationCodeDao.RegistrationCodeEntry>();
+        }
+
+        public List<RegistrationCodeDao.RegistrationCodeEntry> FindAll(int limit, int offset)
         {
             return new List<RegistrationCodeDao.RegistrationCodeEntry>();
         }

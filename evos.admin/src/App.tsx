@@ -8,6 +8,7 @@ import AdminPage from "./components/pages/AdminPage";
 import ProfilePage from "./components/pages/ProfilePage";
 import {colors, createTheme, CssBaseline, Paper, ThemeProvider} from "@mui/material";
 import ProfileSearchPage from "./components/pages/ProfileSearchPage";
+import CodesPage from './components/pages/CodesPage';
 
 const theme = createTheme({
     components: {
@@ -104,6 +105,7 @@ function App() {
                         <Route path="/" element={page("Lobby status", <StatusPage/>)}/>
                         <Route path="/login" element={page("Atlas Reactor: Login", <LoginPage/>)}/>
                         <Route path="/admin" element={page("Admin panel", <AdminPage/>)}/>
+                        <Route path="/codes" element={page("Codes", <CodesPage/>)}/>
                         <Route path="/account" element={page("Search", <ProfileSearchPage/>)}/>
                         <Route path="/account/:accountId" element={page("Account", <ProfilePage/>)}/>
                     </Routes>
