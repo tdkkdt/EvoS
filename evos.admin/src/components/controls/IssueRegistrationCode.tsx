@@ -96,38 +96,40 @@ export default function IssueRegistrationCode() {
 
         {error && <Typography>{`Failed to load codes: ${error.text}${error.description ? `(${error.description})` : ""}`}</Typography>}
         {codes &&
-            <Table>
-                <TableHead>
-                    <TableRow>
-                        <TableCell>Issued to</TableCell>
-                        <TableCell>Issued by</TableCell>
-                        <TableCell>Code</TableCell>
-                        <TableCell>Issued at</TableCell>
-                        <TableCell>Expires at</TableCell>
-                    </TableRow>
-                </TableHead>
-                <TableBody>
-                    {codes.map((row) => {
-                        const used= row.issuedTo !== 0;
-                        const expired = !used && new Date(row.expiresAt) < new Date();
-                        return <TableRow
-                            key={row.code}
-                            sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                        >
-                            <TableCell>{used
-                                ? link(row.issuedTo, row.issuedToHandle, navigate)
-                                : row.issuedToHandle}</TableCell>
-                            <TableCell>{link(row.issuedBy, row.issuedByHandle, navigate)}</TableCell>
-                            <TableCell>{used || expired
-                                ? <Tooltip title={used ? "Used" : "Expired"}><span style={{ textDecoration: "line-through"}}>{row.code}</span></Tooltip>
-                                : <span>{row.code}</span>}
-                            </TableCell>
-                            <TableCell>{formatDate(row.issuedAt)}</TableCell>
-                            <TableCell>{formatDate(row.expiresAt)}</TableCell>
+            <Box style={{ margin: "0 auto" }}>
+                <Table>
+                    <TableHead>
+                        <TableRow>
+                            <TableCell>Issued to</TableCell>
+                            <TableCell>Issued by</TableCell>
+                            <TableCell>Code</TableCell>
+                            <TableCell>Issued at</TableCell>
+                            <TableCell>Expires at</TableCell>
                         </TableRow>
-                    })}
-                </TableBody>
-            </Table>
+                    </TableHead>
+                    <TableBody>
+                        {codes.map((row) => {
+                            const claimed= row.issuedTo !== 0;
+                            const expired = !claimed && new Date(row.expiresAt) < new Date();
+                            return <TableRow
+                                key={row.code}
+                                sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                            >
+                                <TableCell>{claimed
+                                    ? link(row.issuedTo, row.issuedToHandle, navigate)
+                                    : row.issuedToHandle}</TableCell>
+                                <TableCell>{link(row.issuedBy, row.issuedByHandle, navigate)}</TableCell>
+                                <TableCell>{claimed || expired
+                                    ? <Tooltip title={claimed ? "Claimed" : "Expired"}><span style={{ textDecoration: "line-through"}}>{row.code}</span></Tooltip>
+                                    : <span>{row.code}</span>}
+                                </TableCell>
+                                <TableCell>{formatDate(row.issuedAt)}</TableCell>
+                                <TableCell>{formatDate(row.expiresAt)}</TableCell>
+                            </TableRow>
+                        })}
+                    </TableBody>
+                </Table>
+            </Box>
         }
     </FlexBox>;
 }
