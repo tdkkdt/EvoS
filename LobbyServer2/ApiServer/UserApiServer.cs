@@ -87,8 +87,7 @@ public class UserApiServer : ApiServer
         log.Info($"Log out everywhere: {tokenData.Handle} {tokenData.AccountId} {httpContext.Connection.RemoteIpAddress}");
         
         LoginManager.RevokeActiveTickets(tokenData.AccountId);
-        
-        SessionManager.GetClientConnection(tokenData.AccountId)?.CloseConnection();
+        SessionManager.KillSession(tokenData.AccountId);
 
         return Results.Ok();
     }

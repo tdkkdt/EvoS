@@ -203,7 +203,7 @@ namespace CentralServer.LobbyServer.Session
             return session.sessionInfo;
         }
 
-        private static LobbySessionInfo KillSession(long accountId)
+        public static LobbySessionInfo KillSession(long accountId)
         {
             if (SessionInfos.TryRemove(accountId, out SessionInfo sessionInfo))
             {
