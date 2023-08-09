@@ -51,7 +51,7 @@ export default function IssueRegistrationCode() {
             .catch(e => processError(e, err => setCode(err.text), navigate))
             .then(() => {
                 setProcessing(false);
-                setCodesBefore(new Date());
+                setCodesBefore(new Date(new Date().getTime() + 60000));
             });
 
         return () => abort.abort();
