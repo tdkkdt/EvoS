@@ -1,4 +1,6 @@
+using System;
 using EvoS.DirectoryServer;
+using EvoS.DirectoryServer.Account;
 using EvoS.Framework;
 using EvoS.Framework.Network.Static;
 using log4net;
@@ -17,6 +19,19 @@ public class AdminApiServer : ApiServer
             EvosConfiguration.GetAdminApiPort(),
             EvosAuth.Context.ADMIN_API)
     {
+#if DEBUG
+        try
+        {
+            long accountId = LoginManager.Register("admin", "admin", ignoreConditions: true);
+            PersistedAccountData account = LoginManager.CreateAccount(accountId, "admin");
+            account.AccountComponent.AppliedEntitlements.TryAdd("DEVELOPER_ACCESS", 1);
+            log.Info("Created a debug admin account");
+        }
+        catch (Exception e)
+        {
+            log.Info("Failed to create a debug admin account", e);
+        }
+#endif
     }
 
     protected override void ConfigureBuilder(WebApplicationBuilder builder)

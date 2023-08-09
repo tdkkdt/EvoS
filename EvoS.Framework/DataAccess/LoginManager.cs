@@ -67,7 +67,12 @@ namespace EvoS.DirectoryServer.Account
             return Register(authInfo.UserName, authInfo._Password);
         }
 
-        public static long Register(string username, string password, string code = null, List<LinkedAccount.Ticket> linkedAccountTickets = null)
+        public static long Register(
+            string username,
+            string password,
+            string code = null,
+            List<LinkedAccount.Ticket> linkedAccountTickets = null,
+            bool ignoreConditions = false)
         {
             LoginDao loginDao = DB.Get().LoginDao;
             LoginDao.LoginEntry entry = loginDao.Find(username.ToLower());
@@ -84,7 +89,7 @@ namespace EvoS.DirectoryServer.Account
                 throw new ArgumentException(InvalidUsername);
             }
 
-            if (bannedUsernameRegex.IsMatch(username))
+            if (!IsAllowedUsername(username))
             {
                 log.Info($"Attempt to register as \"{username}\"");
                 throw new ArgumentException(CannotUseThisUsername);
@@ -97,7 +102,10 @@ namespace EvoS.DirectoryServer.Account
             }
 
             List<LinkedAccount> linkedAccounts = ProcessLinkedAccountTickets(linkedAccountTickets);
-            ValidateLinkedAccountConditions(EvosConfiguration.GetLinkedAccountRegistrationConditions(), linkedAccounts);
+            if (!ignoreConditions)
+            {
+                ValidateLinkedAccountConditions(EvosConfiguration.GetLinkedAccountRegistrationConditions(), linkedAccounts);
+            }
             
             if (linkedAccounts.Count > EvosConfiguration.GetMaxLinkedAccounts())
             {
@@ -106,7 +114,7 @@ namespace EvoS.DirectoryServer.Account
 
             RegistrationCodeDao.RegistrationCodeEntry registrationCodeEntry = null;
             RegistrationCodeDao registrationCodeDao = DB.Get().RegistrationCodeDao;
-            if (EvosConfiguration.GetRequireRegistrationCode())
+            if (EvosConfiguration.GetRequireRegistrationCode() && !ignoreConditions)
             {
                 if (code is null)
                 {
@@ -427,6 +435,12 @@ namespace EvoS.DirectoryServer.Account
         public static bool IsValidUsername(string username)
         {
             return usernameRegex.IsMatch(username);
+        }
+
+        public static bool IsAllowedUsername(string username)
+        {
+            return IsValidUsername(username)
+                   && !bannedUsernameRegex.IsMatch(username);
         }
     }
 }

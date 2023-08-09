@@ -196,7 +196,7 @@ namespace CentralServer.ApiServer
                 return error;
             }
 
-            if (!LoginManager.IsValidUsername(data.issueFor))
+            if (!LoginManager.IsAllowedUsername(data.issueFor))
             {
                 return Results.BadRequest(new ApiServer.ErrorResponseModel {message = "Invalid username"});
             }
