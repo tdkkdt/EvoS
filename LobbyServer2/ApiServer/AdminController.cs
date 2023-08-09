@@ -198,7 +198,12 @@ namespace CentralServer.ApiServer
 
             if (!LoginManager.IsValidUsername(data.issueFor))
             {
-                return Results.BadRequest();
+                return Results.BadRequest(new ApiServer.ErrorResponseModel {message = "Invalid username"});
+            }
+
+            if (DB.Get().LoginDao.Find(data.issueFor.ToLower()) is not null)
+            {
+                return Results.Conflict(new ApiServer.ErrorResponseModel {message = "Username already in use"});
             }
 
             log.Info($"API ISSUE by {adminHandle} ({adminAccountId}): {data.issueFor}");
