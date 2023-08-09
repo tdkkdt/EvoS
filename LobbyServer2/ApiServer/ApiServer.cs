@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.Tasks;
 using EvoS.DirectoryServer;
 using EvoS.DirectoryServer.Account;
 using EvoS.Framework;
@@ -94,15 +95,19 @@ public abstract class ApiServer
             {
                 case ArgumentException:
                     context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                    await context.Response.WriteAsync(ex.Message, Encoding.UTF8);
+                    await WriteError(context, ex.Message);
+                    break;
+                case ConflictException:
+                    context.Response.StatusCode = StatusCodes.Status409Conflict;
+                    await WriteError(context, ex.Message);
                     break;
                 case EvosException:
                     context.Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
-                    await context.Response.WriteAsync(ex.Message, Encoding.UTF8);
+                    await WriteError(context, ex.Message);
                     break;
                 default:
                     log.Warn("Unhandled exception in api request", ex);
-                    await context.Response.WriteAsync("Unexpected server error", Encoding.UTF8);
+                    await WriteError(context, "Unexpected server error");
                     break;
             }
         }));
@@ -114,6 +119,13 @@ public abstract class ApiServer
         
         log.Info($"Started {authContext} api server at {url}");
         return app;
+    }
+
+    private static async Task WriteError(HttpContext context, string msg)
+    {
+        await context.Response.WriteAsync(
+            JsonConvert.SerializeObject(new ErrorResponseModel { message = msg }),
+            Encoding.UTF8);
     }
 
     protected virtual void ConfigureBuilder(WebApplicationBuilder builder)

@@ -190,11 +190,7 @@ namespace EvoS.DirectoryServer
             {
                 accountId = LoginManager.RegisterOrLogin(request.AuthInfo);
             }
-            catch (ArgumentException e)
-            {
-                return Fail(request, e.Message);
-            }
-            catch (ApplicationException e)
+            catch (Exception e) when (e is ArgumentException or ApplicationException or EvosException or ConflictException)
             {
                 return Fail(request, e.Message);
             }

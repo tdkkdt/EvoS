@@ -75,7 +75,7 @@ namespace EvoS.DirectoryServer.Account
             if (entry is not null)
             {
                 log.Info($"Attempt to register as existing user \"{username}\"");
-                throw new ArgumentException(UsernameIsAlreadyUsed);
+                throw new ConflictException(UsernameIsAlreadyUsed);
             }
             
             if (!IsValidUsername(username))
