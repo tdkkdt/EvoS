@@ -49,7 +49,6 @@ namespace EvoS.Framework.DataAccess.Mongo
 
         public void Save(LoginDao.LoginEntry entry)
         {
-            log.Info($"New player {entry.AccountId}: {entry.Username}");
             insert(entry.AccountId, entry);
         }
     }

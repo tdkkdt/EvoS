@@ -22,7 +22,7 @@ namespace EvoS.Framework.DataAccess.Daos
             public string Username;
             public string Salt;
             public string Hash;
-            public List<LinkedAccount> LinkedAccounts;
+            public List<LinkedAccount> LinkedAccounts = new();
 
             public LinkedAccount? GetLinkedAccount(LinkedAccount template)
             {
