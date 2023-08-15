@@ -12,6 +12,7 @@ namespace EvoS.Framework.DataAccess.Daos
         public LoginEntry? Find(long accountId);
         public List<LoginEntry> FindRegex(string username);
         public LoginEntry? FindByLinkedAccount(LinkedAccount account);
+        public List<LoginEntry> FindAll();
         public void Save(LoginEntry entry);
 
         public class LoginEntry

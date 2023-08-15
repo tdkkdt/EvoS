@@ -81,6 +81,18 @@ namespace EvoS.Framework.DataAccess.Daos
             return daoEntries;
         }
 
+        public List<LoginDao.LoginEntry> FindAll()
+        {
+            if (dao is LoginMockDao)
+            {
+                return usernameCache.Values.ToList();
+            }
+            
+            List<LoginDao.LoginEntry> daoEntries = dao.FindAll();
+            daoEntries.ForEach(Cache);
+            return daoEntries;
+        }
+
         public void Save(LoginDao.LoginEntry entry)
         {
             dao.Save(entry);

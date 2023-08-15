@@ -35,6 +35,11 @@ namespace EvoS.Framework.DataAccess.Mock
             return null;
         }
 
+        List<LoginDao.LoginEntry> LoginDao.FindAll()
+        {
+            return new List<LoginDao.LoginEntry>();
+        }
+
         void LoginDao.Save(LoginDao.LoginEntry entry)
         {
         }

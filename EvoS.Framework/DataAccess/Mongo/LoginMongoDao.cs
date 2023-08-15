@@ -26,6 +26,11 @@ namespace EvoS.Framework.DataAccess.Mongo
             return c.Find(f.Regex("Username", new BsonRegularExpression(Regex.Escape(username), "i"))).ToList();
         }
 
+        public List<LoginDao.LoginEntry> FindAll()
+        {
+            return c.Find(f.Empty).ToList();
+        }
+
         public LoginDao.LoginEntry Find(long accountId)
         {
             return findById(accountId);
