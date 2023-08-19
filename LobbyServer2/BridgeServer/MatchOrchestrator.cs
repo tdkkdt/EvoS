@@ -372,7 +372,7 @@ namespace CentralServer.BridgeServer
             IEnumerable<LobbyServerPlayerInfo> duplicateChars = playerInfo.TeamId == Team.TeamA ? duplicateCharsA : duplicateCharsB;
             CharacterConfigs.Characters.TryGetValue(playerInfo.CharacterInfo.CharacterType, out CharacterConfig characterConfig);
             return playerInfo.CharacterType == CharacterType.PendingWillFill
-                   || (playerInfo.TeamId == Team.TeamA && duplicateChars.Contains(playerInfo) && duplicateChars.First() != playerInfo)
+                   || (duplicateChars.Contains(playerInfo) && duplicateChars.First() != playerInfo)
                    || !characterConfig.AllowForPlayers;
         }
 
@@ -400,26 +400,19 @@ namespace CentralServer.BridgeServer
                 foreach (long player in server.GetPlayers())
                 {
                     LobbyServerPlayerInfo playerInfo = server.GetPlayerInfo(player);
-                    LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(player);
-                    PersistedAccountData account = DB.Get().AccountDao.GetAccount(playerInfo.AccountId);
-                    
+
                     if (IsCharacterUnavailable(playerInfo, duplicateCharsA, duplicateCharsB)
                         && playerInfo.ReadyState != ReadyState.Ready)
                     {
-                        CharacterType randomType = account.AccountComponent.LastCharacter;
-                        if (account.AccountComponent.LastCharacter == playerInfo.CharacterType)
-                        {
-                            // If they do not press ready and do not select a new character
-                            // force them a random character else use the one they selected
-                            randomType = AssignRandomCharacter(
-                                playerInfo, 
-                                playerInfo.TeamId == Team.TeamA ? teamACharacters : teamBCharacters, 
-                                usedFillCharacters);
-                        }
+                        CharacterType randomType = AssignRandomCharacter(
+                            playerInfo,
+                            playerInfo.TeamId == Team.TeamA ? teamACharacters : teamBCharacters,
+                            usedFillCharacters);
                         log.Info($"{playerInfo.Handle} switched from {playerInfo.CharacterType} to {randomType}");
 
                         usedFillCharacters.Add(randomType);
 
+                        LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(player);
                         if (playerConnection != null)
                         {
                             NotifyCharacterChange(playerConnection, playerInfo, randomType);
