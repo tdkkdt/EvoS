@@ -46,6 +46,7 @@ namespace EvoS.DirectoryServer.Account
             "Unfortunately, provided third-party accounts do not match the required trust level. Please, try linking other accounts, or contact support.";
         public const string RegistrationCodeNeeded = "A registration code is required to get access to this server.";
         public const string RegistrationCodeInvalid = "Your registration code is not valid or already used.";
+        public const string RegistrationCodeExpired = "Your registration code has expired. Please, request a new one.";
 
         public static long RegisterOrLogin(AuthInfo authInfo)
         {
@@ -122,6 +123,10 @@ namespace EvoS.DirectoryServer.Account
                 }
 
                 RegistrationCodeDao.RegistrationCodeEntry e = registrationCodeDao.Find(code);
+                if (e is not null && !e.IsUsed && e.HasExpired && e.IssuedTo.Equals(username.ToLower()))
+                {
+                    throw new ArgumentException(RegistrationCodeExpired);
+                }
                 if (e is null || !e.IsValid || !e.IssuedTo.Equals(username.ToLower()))
                 {
                     throw new ArgumentException(RegistrationCodeInvalid);

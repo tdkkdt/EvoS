@@ -27,7 +27,13 @@ namespace EvoS.Framework.DataAccess.Daos
             public long UsedBy;
 
             [JsonIgnore]
-            public bool IsValid => UsedBy == 0 && ExpiresAt > DateTime.UtcNow;
+            public bool IsValid => !IsUsed && !HasExpired;
+
+            [JsonIgnore]
+            public bool IsUsed => UsedBy != 0;
+
+            [JsonIgnore]
+            public bool HasExpired => ExpiresAt < DateTime.UtcNow;
 
             public RegistrationCodeEntry Use(long accountId)
             {
