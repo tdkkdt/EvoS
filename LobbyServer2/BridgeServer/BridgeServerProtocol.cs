@@ -64,7 +64,13 @@ namespace CentralServer.BridgeServer
 
         public void SetBotCharacter(int playerId, CharacterType characterType)
         {
-            TeamInfo.TeamPlayerInfo.Find(p => p.PlayerId == playerId).CharacterInfo = new LobbyCharacterInfo() { CharacterType = characterType };
+            LobbyServerPlayerInfo lobbyServerPlayerInfo = TeamInfo.TeamPlayerInfo.Find(p => p.PlayerId == playerId);
+            if (lobbyServerPlayerInfo is null)
+            {
+                log.Error($"Failed to set bot character for player {playerId}");
+                return;
+            }
+            lobbyServerPlayerInfo.CharacterInfo = new LobbyCharacterInfo() { CharacterType = characterType };
         }
 
         public IEnumerable<long> GetPlayers(Team team)
@@ -205,6 +211,7 @@ namespace CentralServer.BridgeServer
 
         private void HandleServerGameMetricsNotification(ServerGameMetricsNotification request)
         {
+            GameMetrics = request.GameMetrics;
             log.Info($"Game {GameInfo?.Name} Turn {request.GameMetrics?.CurrentTurn}, " +
                      $"{request.GameMetrics?.TeamAPoints}-{request.GameMetrics?.TeamBPoints}, " +
                      $"frame time: {request.GameMetrics?.AverageFrameTime}");

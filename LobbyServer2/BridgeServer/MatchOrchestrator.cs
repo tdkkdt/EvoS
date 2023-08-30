@@ -153,6 +153,17 @@ namespace CentralServer.BridgeServer
 
             await Task.Delay(server.GameInfo.LoadoutSelectTimeout);
 
+            log.Info("Launching...");
+            server.SetGameStatus(GameStatus.Launching);
+            server.SendGameInfoNotifications();
+
+            // If game server failed to start, we go back to the character select screen
+            // TODO check that CancelMatch works properly with custom games
+            if (!CheckIfAllParticipantsAreConnected())
+            {
+                return;
+            }
+
             server.StartGame();
 
             server.SetGameStatus(GameStatus.Launched);
@@ -315,7 +326,7 @@ namespace CentralServer.BridgeServer
                 {
                     serverPlayerInfo.CharacterInfo = characterInfo;
                 }
-                else
+                else if (update.CharacterType.HasValue)
                 {
                     server.SetBotCharacter(update.PlayerId, update.CharacterType.Value);
                 }
