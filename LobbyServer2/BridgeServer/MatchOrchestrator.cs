@@ -194,13 +194,17 @@ namespace CentralServer.BridgeServer
 
         private bool CheckIfPlayersAreConnected()
         {
-            foreach (long accountId in server.GetPlayers())
+            foreach (LobbyServerPlayerInfo playerInfo in server.TeamInfo.TeamPlayerInfo)
             {
-                LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(accountId);
+                if (playerInfo.TeamId != Team.TeamA && playerInfo.TeamId != Team.TeamB)
+                {
+                    continue;
+                }
+                LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(playerInfo.AccountId);
                 if (playerConnection == null || !playerConnection.IsConnected || playerConnection.CurrentServer != server)
                 {
-                    log.Error($"Player {accountId} who was to participate in game {server.GameInfo.Name} has disconnected");
-                    CancelMatch(DB.Get().AccountDao.GetAccount(accountId)?.Handle);
+                    log.Error($"Player {playerInfo.Handle}/{playerInfo.AccountId} who was to participate in game {server.GameInfo.Name} has disconnected");
+                    CancelMatch(playerInfo.Handle);
                     return false;
                 }
             }

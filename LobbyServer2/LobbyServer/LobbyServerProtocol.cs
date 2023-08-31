@@ -245,12 +245,9 @@ namespace CentralServer.LobbyServer
 
         public void JoinServer(GameServerBase server)
         {
-            if (CurrentServer != null)
-            {
-                log.Debug($"{AccountId} is jumping from {CurrentServer.ProcessCode} to {server.ProcessCode}");
-            }
-
+            GameServerBase prevServer = CurrentServer;
             CurrentServer = server;
+            log.Info($"{LobbyServerUtils.GetHandle(AccountId)} joined {server?.ProcessCode} (was in {prevServer?.ProcessCode})");
         }
 
         public bool LeaveServer(GameServerBase server)
