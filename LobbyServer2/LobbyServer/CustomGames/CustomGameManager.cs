@@ -19,10 +19,10 @@ namespace CentralServer.LobbyServer.CustomGames
 
         public static GameServerBase CreateGame(long accountId, LobbyGameConfig gameConfig)
         {
+            CustomGame game;
             lock (Games)
             {
                 DeleteGame(accountId);
-                CustomGame game;
                 try
                 {
                     game = new CustomGame(accountId, gameConfig);
@@ -34,9 +34,10 @@ namespace CentralServer.LobbyServer.CustomGames
                     log.Error("Failed to create a custom game", e);
                     return null;
                 }
-                log.Info($"{LobbyServerUtils.GetHandle(accountId)} created a custom game {game.GameInfo.GameServerProcessCode}");
-                return game;
             }
+            log.Info($"{LobbyServerUtils.GetHandle(accountId)} created a custom game {game.GameInfo.GameServerProcessCode}");
+            NotifyUpdate();
+            return game;
         }
 
         public static void DeleteGame(long accountId)
@@ -49,6 +50,7 @@ namespace CentralServer.LobbyServer.CustomGames
                     oldGame.Terminate();
                 }
             }
+            NotifyUpdate();
         }
 
         private static CustomGame GetGame(string processCode)
@@ -91,7 +93,7 @@ namespace CentralServer.LobbyServer.CustomGames
             }
         }
 
-        private static void NotifyUpdate()
+        public static void NotifyUpdate()
         {
             LobbyCustomGamesNotification notify = MakeNotification();
             List<long> toRemove = new List<long>();

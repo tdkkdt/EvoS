@@ -174,6 +174,7 @@ public class CustomGame : GameServerBase
     {
         TeamInfo = CreateBalancedTeamInfo(slots);
         SendGameInfoNotifications();
+        CustomGameManager.NotifyUpdate();
     }
 
     // TODO slots are not used
@@ -375,6 +376,7 @@ public class CustomGame : GameServerBase
         GameInfo.ActivePlayers = TeamInfo.TeamPlayerInfo.Count;
 
         SendGameInfoNotifications();
+        CustomGameManager.NotifyUpdate();
     }
 
     public override void DisconnectPlayer(long accountId)
@@ -413,6 +415,7 @@ public class CustomGame : GameServerBase
             // No players left remove server
             CustomGameManager.DeleteGame(Owner);
         }
+        CustomGameManager.NotifyUpdate();
     }
 
     public override void SetPlayerReady(long accountId)
