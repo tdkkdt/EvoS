@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Character;
 using CentralServer.LobbyServer.Config;
+using CentralServer.LobbyServer.CustomGames;
 using CentralServer.LobbyServer.Discord;
 using CentralServer.LobbyServer.Friend;
 using CentralServer.LobbyServer.Group;
@@ -15,7 +15,6 @@ using EvoS.DirectoryServer.Inventory;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
-using EvoS.Framework.Misc;
 using EvoS.Framework.Exceptions;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
@@ -30,11 +29,11 @@ namespace CentralServer.LobbyServer
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(LobbyServerProtocol));
 
-        private BridgeServerProtocol _currentServer;
+        private GameServerBase _currentServer;
 
         public PlayerOnlineStatus Status = PlayerOnlineStatus.Online;
-
-        public BridgeServerProtocol CurrentServer
+        
+        public GameServerBase CurrentServer
         {
             get => _currentServer;
             private set
@@ -75,7 +74,6 @@ namespace CentralServer.LobbyServer
             RegisterHandler<PlayerMatchDataRequest>(HandlePlayerMatchDataRequest);
             RegisterHandler<SetGameSubTypeRequest>(HandleSetGameSubTypeRequest);
             RegisterHandler<PlayerInfoUpdateRequest>(HandlePlayerInfoUpdateRequest);
-            RegisterHandler<UpdateRemoteCharacterRequest>(HandleUpdateRemoteCharacterRequest);
             RegisterHandler<CheckAccountStatusRequest>(HandleCheckAccountStatusRequest);
             RegisterHandler<CheckRAFStatusRequest>(HandleCheckRAFStatusRequest);
             RegisterHandler<ClientErrorSummary>(HandleClientErrorSummary);
@@ -158,326 +156,72 @@ namespace CentralServer.LobbyServer
 
         private void HandleBalancedTeamRequest(BalancedTeamRequest request)
         {
-            LobbyServerTeamInfo teamInfo = CreateBalancedTeamInfo(CurrentServer.TeamInfo);
-
-            CurrentServer.SetTeamInfo(teamInfo);
-            CurrentServer.SetGameInfo(CurrentServer.GameInfo);
-            CurrentServer.SendGameInfoNotifications();
-
-            Send(new BalancedTeamResponse()
+            bool success = CustomGameManager.BalanceTeams(AccountId, request.Slots);
+            Send(new BalancedTeamResponse
             {
-                Success = true,
+                Success = success,
                 ResponseId = request.RequestId,
                 Slots = request.Slots
             });
         }
 
-        private static LobbyServerTeamInfo CreateBalancedTeamInfo(LobbyServerTeamInfo originalTeamInfo)
-        {
-            LobbyServerTeamInfo teamInfo = new LobbyServerTeamInfo()
-            {
-                TeamPlayerInfo = new List<LobbyServerPlayerInfo>()
-            };
-
-            int counter = 0;
-
-            foreach (LobbyServerPlayerInfo player in originalTeamInfo.TeamPlayerInfo)
-            {
-                if (player.AccountId != 0 && player.ControllingPlayerId == 0)
-                {
-                    PersistedAccountData account = DB.Get().AccountDao.GetAccount(player.AccountId);
-                    LobbyServerPlayerInfo playerInfo = LobbyServerPlayerInfo.Of(account);
-
-                    playerInfo.TeamId = player.TeamId == Team.Spectator ? player.TeamId : counter % 2 == 0 ? Team.TeamA : Team.TeamB;
-
-                    playerInfo.IsNPCBot = false;
-                    playerInfo.IsGameOwner = player.IsGameOwner;
-                    playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
-                    playerInfo.ReadyState = player.ReadyState;
-                    playerInfo.CharacterInfo = player.CharacterInfo;
-                    teamInfo.TeamPlayerInfo.Add(playerInfo);
-
-                    counter++;
-                }
-            }
-            return teamInfo;
-        }
-
-        private LobbyServerTeamInfo CreateTeamInfo(LobbyTeamInfo originalTeamInfo)
-        {
-            LobbyServerTeamInfo teamInfo = new LobbyServerTeamInfo()
-            {
-                TeamPlayerInfo = new List<LobbyServerPlayerInfo>()
-            };
-
-            foreach (LobbyPlayerInfo player in originalTeamInfo.TeamPlayerInfo)
-            {
-                // LobbyServerPlayerInfo playerInfo = new LobbyServerPlayerInfo();
-
-                if (player.AccountId != 0 && player.ControllingPlayerId == 0)
-                {
-                    PersistedAccountData account = DB.Get().AccountDao.GetAccount(player.AccountId);
-                    LobbyServerPlayerInfo playerInfo = LobbyServerPlayerInfo.Of(account);
-                    playerInfo.TeamId = player.TeamId;
-                    playerInfo.IsNPCBot = false;
-                    playerInfo.IsGameOwner = player.IsGameOwner;
-                    playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
-                    playerInfo.ReadyState = player.ReadyState;
-                    playerInfo.CharacterInfo = player.CharacterInfo;
-                    teamInfo.TeamPlayerInfo.Add(playerInfo);
-                }
-                else
-                {
-                    Send(new ChatNotification
-                    {
-                        SenderAccountId = AccountId,
-                        ConsoleMessageType = ConsoleMessageType.SystemMessage,
-                        Text = "Bots/Remote Characters are not supported"
-                    });
-                }
-                // TODO: Remote characters
-                /*
-                else if (player.AccountId != 0 && player.ControllingPlayerId != 0)
-                {
-                    // Bot is assigned to another player
-                    LobbyServerPlayerInfo controllingPlayer = teamInfo.TeamPlayerInfo.Find(p => p.PlayerId == player.ControllingPlayerId);
-                    if (controllingPlayer == null)
-                    {
-                        continue;
-                    }
-                    PersistedAccountData account = DB.Get().AccountDao.GetAccount(controllingPlayer.AccountId);
-
-                    playerInfo = LobbyServerPlayerInfo.Of(account);
-                    playerInfo.ReadyState = ReadyState.Ready;
-                    playerInfo.IsGameOwner = false;
-                    playerInfo.TeamId = player.TeamId;
-                    playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
-                    playerInfo.IsNPCBot = false;
-                    playerInfo.Handle = player.Handle;
-                    playerInfo.CharacterInfo = LobbyCharacterInfo.Of(account.CharacterData[player.CharacterType]);
-                    playerInfo.ControllingPlayerId = controllingPlayer.PlayerId;
-                    playerInfo.ControllingPlayerInfo = LobbyServerPlayerInfo.Of(account);
-                    controllingPlayer.ProxyPlayerIds.Add(playerInfo.PlayerId);
-
-                }
-                else if (player.AccountId == 0 && player.ControllingPlayerId == 0)
-                {
-
-                    // Add bot and automatically assign bot to first player of team
-                    LobbyServerPlayerInfo controllingPlayer = teamInfo.TeamPlayerInfo.First(p => p.TeamId == player.TeamId);
-                    if (controllingPlayer == null)
-                    {
-                        continue;
-                    }
-                    PersistedAccountData account = DB.Get().AccountDao.GetAccount(controllingPlayer.AccountId);
-
-                    playerInfo = LobbyServerPlayerInfo.Of(account);
-                    playerInfo.ReadyState = ReadyState.Ready;
-                    playerInfo.IsGameOwner = true;
-                    playerInfo.TeamId = player.TeamId;
-                    playerInfo.PlayerId = teamInfo.TeamPlayerInfo.Count + 1;
-                    playerInfo.IsNPCBot = true;
-                    playerInfo.CharacterInfo = player.CharacterInfo;
-                    playerInfo.CharacterInfo = LobbyCharacterInfo.Of(account.CharacterData[player.CharacterType]);
-                    playerInfo.ControllingPlayerId = controllingPlayer.PlayerId;
-                    playerInfo.ControllingPlayerInfo = LobbyServerPlayerInfo.Of(account);
-                    controllingPlayer.ProxyPlayerIds.Add(playerInfo.PlayerId);
-                }
-                teamInfo.TeamPlayerInfo.Add(playerInfo);
-                */
-            }
-            return teamInfo;
-        }
-
         private void HandleJoinGameRequest(JoinGameRequest joinGameRequest)
         {
-            BridgeServerProtocol currentServer = ServerManager.GetServerByProcessCode(joinGameRequest.GameServerProcessCode);
-            if (currentServer == null)
+            GameServerBase game = CustomGameManager.JoinGame(
+                AccountId,
+                joinGameRequest.GameServerProcessCode,
+                joinGameRequest.AsSpectator,
+                out LocalizationPayload failure);
+            if (game == null)
             {
-                Send(new JoinGameResponse()
+                Send(new JoinGameResponse
                 {
                     ResponseId = joinGameRequest.RequestId,
-                    LocalizedFailure = LocalizationPayload.Create("UnknownErrorTryAgain@Frontend"),
+                    LocalizedFailure = failure,
                     Success = false
                 });
                 return;
             }
-
-            if (joinGameRequest.AsSpectator && currentServer.GameInfo.GameConfig.Spectators == currentServer.TeamInfo.SpectatorInfo.Count())
-            {
-                Send(new JoinGameResponse()
-                {
-                    ResponseId = joinGameRequest.RequestId,
-                    LocalizedFailure = LocalizationPayload.Create("LobbyServerFull@RegisterGameClient"),
-                    Success = false
-                });
-                return;
-            }
-
-            if (!joinGameRequest.AsSpectator && currentServer.GameInfo.GameConfig.TotalPlayers == (currentServer.TeamInfo.TeamAPlayerInfo.Count() + currentServer.TeamInfo.TeamBPlayerInfo.Count()))
-            {
-                Send(new JoinGameResponse()
-                {
-                    ResponseId = joinGameRequest.RequestId,
-                    LocalizedFailure = LocalizationPayload.Create("LobbyServerFull@RegisterGameClient"),
-                    Success = false
-                });
-                return;
-            }
-
-            BridgeServerProtocol server = currentServer;
-
-            Team teamToJoin = Team.TeamA;
-
-            if (server.TeamInfo.TeamAPlayerInfo.Count() == server.GameInfo.GameConfig.TeamAPlayers)
-            {
-                teamToJoin = Team.TeamB;
-            }
-
             
-
-            PersistedAccountData newAccount = DB.Get().AccountDao.GetAccount(AccountId);
-            LobbyServerPlayerInfo newPlayerInfo = LobbyServerPlayerInfo.Of(newAccount);
-            newPlayerInfo.TeamId = joinGameRequest.AsSpectator ? Team.Spectator : teamToJoin;
-            newPlayerInfo.PlayerId = currentServer.TeamInfo.TeamPlayerInfo.Count + 1;
-            newPlayerInfo.IsNPCBot = false;
-            newPlayerInfo.IsGameOwner = false;
-            //newPlayerInfo.CustomGameVisualSlot = 5;
-            currentServer.TeamInfo.TeamPlayerInfo.Add(newPlayerInfo);
-
-            CurrentServer = currentServer;
-
-            currentServer.SendGameAssignmentNotification(this);
-
-            currentServer.SendGameInfoNotifications();
-
-            Send(new JoinGameResponse()
+            JoinServer(game);
+            Send(new JoinGameResponse
             {
                 ResponseId = joinGameRequest.RequestId
             });
-
         }
-
-
+        
         private void HandleGameInfoUpdateRequest(GameInfoUpdateRequest gameInfoUpdateRequest)
         {
-            // Check if player is kicked
-            foreach (LobbyServerPlayerInfo player in CurrentServer.TeamInfo.TeamPlayerInfo)
+            bool success = CustomGameManager.UpdateGameInfo(AccountId, gameInfoUpdateRequest.GameInfo, gameInfoUpdateRequest.TeamInfo);
+            GameServerBase game = CustomGameManager.GetMyGame(AccountId);
+
+            Send(new GameInfoUpdateResponse
             {
-                if (!gameInfoUpdateRequest.TeamInfo.TeamPlayerInfo.Any(u => u.AccountId == player.AccountId))
-                {
-                    log.Info($"Player {player.AccountId} was kicked from the game {CurrentServer.ProcessCode}");
-                    LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(player.AccountId);
-                    playerConnection.Send(new GameAssignmentNotification
-                    {
-                        GameInfo = null,
-                        GameResult = GameResult.ClientKicked,
-                        Reconnection = false
-                    });
-                    playerConnection.CurrentServer = null;
-                }
-            }
-
-            LobbyServerTeamInfo teamInfo = CreateTeamInfo(gameInfoUpdateRequest.TeamInfo);
-
-            CurrentServer.GameInfo.GameConfig = gameInfoUpdateRequest.GameInfo.GameConfig;
-            CurrentServer.GameInfo.ActivePlayers = teamInfo.TeamPlayerInfo.Count;
-
-            // Set the TeamInfo and GameInfo to the new values
-            CurrentServer.SetTeamInfo(teamInfo);
-            CurrentServer.SetGameInfo(CurrentServer.GameInfo);
-            CurrentServer.SendGameInfoNotifications();
-
-            Send(new GameInfoUpdateResponse()
-            {
+                Success = success,
                 ResponseId = gameInfoUpdateRequest.RequestId,
-                GameInfo = CurrentServer.GameInfo,
-                TeamInfo = LobbyTeamInfo.FromServer(teamInfo, 0, new MatchmakingQueueConfig()),
+                GameInfo = game?.GameInfo,
+                TeamInfo = LobbyTeamInfo.FromServer(game?.TeamInfo, 0, new MatchmakingQueueConfig()),
             });
         }
-
-
+        
         private void HandleCreateGameRequest(CreateGameRequest createGameRequest)
         {
-
-            List<GroupInfo> teamA = new List<GroupInfo>
+            GameServerBase game = CustomGameManager.CreateGame(AccountId, createGameRequest.GameConfig);
+            if (game == null)
             {
-                GroupManager.GetPlayerGroup(AccountId)
-            };
-
-            PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
-            LobbyServerPlayerInfo playerInfo = LobbyServerPlayerInfo.Of(account);
-
-            LobbyGameInfo lobbyGameInfo = new LobbyGameInfo
-            {
-                AcceptedPlayers = GroupManager.GetPlayerGroup(AccountId).Members.Count,
-                AcceptTimeout = new TimeSpan(0, 0, 0),
-                SelectTimeout = TimeSpan.FromSeconds(30),
-                LoadoutSelectTimeout = TimeSpan.FromSeconds(30),
-                ActiveHumanPlayers = GroupManager.GetPlayerGroup(AccountId).Members.Count,
-                ActivePlayers = GroupManager.GetPlayerGroup(AccountId).Members.Count,
-                CreateTimestamp = DateTime.UtcNow.Ticks,
-                GameConfig = createGameRequest.GameConfig,
-                GameResult = GameResult.NoResult,
-                GameStatus = GameStatus.Assembling,
-                GameServerProcessCode = $"CustomGame-{Guid.NewGuid()}",
-            };
-            lobbyGameInfo.GameConfig.GameType = GameType.Custom;
-
-            LobbyServerTeamInfo teamInfo = new LobbyServerTeamInfo()
-            {
-                TeamPlayerInfo = new List<LobbyServerPlayerInfo>()
-            };
-
-            int playerid = 0;
-            foreach (long accountId in teamA.SelectMany(group => group.Members).ToList())
-            {
-                PersistedAccountData playerAccount = DB.Get().AccountDao.GetAccount(accountId);
-                LobbyServerPlayerInfo teamPlayerInfo = LobbyServerPlayerInfo.Of(playerAccount);
-                teamPlayerInfo.ReadyState = ReadyState.Unknown;
-                teamPlayerInfo.TeamId = Team.TeamA;
-                teamPlayerInfo.PlayerId = playerid++;
-                teamPlayerInfo.Handle = playerAccount.Handle;
-                teamPlayerInfo.IsGameOwner = accountId == AccountId;
-                teamInfo.TeamPlayerInfo.Add(teamPlayerInfo);
-            }
-
-            BridgeServerProtocol currentServer = new();
-            currentServer.SetNewCustomGame(lobbyGameInfo.GameServerProcessCode);
-            currentServer.SetTeamInfo(teamInfo);
-            currentServer.SetGameInfo(lobbyGameInfo);
-
-            foreach (long accountId in teamA.SelectMany(group => group.Members).ToList())
-            {
-                LobbyServerProtocol client = SessionManager.GetClientConnection(accountId);
-                if (client != null)
+                Send(new CreateGameResponse
                 {
-                    client.Send(new GameAssignmentNotification
-                    {
-                        GameInfo = lobbyGameInfo,
-                        GameResult = GameResult.NoResult,
-                        Observer = false,
-                        PlayerInfo = LobbyPlayerInfo.FromServer(playerInfo, 0, new MatchmakingQueueConfig()),
-                        Reconnection = false,
-                        GameplayOverrides = GetGameplayOverrides()
-                    });
-
-                    client.Send(new GameInfoNotification
-                    {
-                        GameInfo = lobbyGameInfo,
-                        TeamInfo = LobbyTeamInfo.FromServer(teamInfo, 0, new MatchmakingQueueConfig()),
-                        PlayerInfo = LobbyPlayerInfo.FromServer(playerInfo, 0, new MatchmakingQueueConfig())
-                    });
-
-                    client.CurrentServer = currentServer;
-                }
+                    ResponseId = createGameRequest.RequestId,
+                    Success = false,
+                    AllowRetry = true,
+                });
+                return;
             }
-
+            JoinServer(game);
             Send(new CreateGameResponse
             {
                 ResponseId = createGameRequest.RequestId,
                 AllowRetry = true,
-                Success = true
             });
         }
 
@@ -499,7 +243,7 @@ namespace CentralServer.LobbyServer
             BroadcastRefreshFriendList();
         }
 
-        public void JoinServer(BridgeServerProtocol server)
+        public void JoinServer(GameServerBase server)
         {
             if (CurrentServer != null)
             {
@@ -509,7 +253,7 @@ namespace CentralServer.LobbyServer
             CurrentServer = server;
         }
 
-        public bool LeaveServer(BridgeServerProtocol server)
+        public bool LeaveServer(GameServerBase server)
         {
             if (server == null)
             {
@@ -583,21 +327,6 @@ namespace CentralServer.LobbyServer
             else if (!allAreReady && isGroupQueued)
             {
                 MatchmakingManager.RemoveGroupFromQueue(group, true);
-            }
-        }
-
-        public void CheckCustomGameStart()
-        {
-            bool allAreReady = true;
-            LobbyServerTeamInfo teamInfo = CurrentServer.TeamInfo;
-            if (teamInfo.TeamPlayerInfo.Any((u) => u.ReadyState != ReadyState.Ready && !u.IsSpectator))
-            {
-                allAreReady = false;
-            }
-
-            if (allAreReady && CurrentServer.GameInfo.GameConfig.TotalHumanPlayers == (teamInfo.TeamAPlayerInfo.Count() + teamInfo.TeamBPlayerInfo.Count()))
-            {
-                _ = MatchmakingManager.StartCustomGameAsync(CurrentServer);
             }
         }
 
@@ -788,25 +517,18 @@ namespace CentralServer.LobbyServer
             Send(response);
         }
 
-        public void HandleUpdateRemoteCharacterRequest(UpdateRemoteCharacterRequest request)
-        {
-            log.Info($"Character: {request.Characters} index: {request.RemoteSlotIndexes}");
-        }
-
         public void HandlePlayerInfoUpdateRequest(PlayerInfoUpdateRequest request)
         {
             LobbyPlayerInfoUpdate update = request.PlayerInfoUpdate;
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
-            LobbyServerPlayerInfo playerInfo = PlayerInfo;
-            bool updateSelectedCharacter = playerInfo == null;
+            LobbyServerPlayerInfo playerInfo = update.PlayerId == 0 ? PlayerInfo : CurrentServer?.GetPlayerById(update.PlayerId);
+            bool updateSelectedCharacter = playerInfo == null && update.PlayerId == 0;
             playerInfo ??= LobbyServerPlayerInfo.Of(account);
 
             // TODO validate what player has purchased
 
             // building character info to validate it for current game
-            CharacterType characterType = update.CharacterType
-                                          ?? CurrentServer?.GetPlayerInfo(AccountId)?.CharacterType
-                                          ?? account.AccountComponent.LastCharacter;
+            CharacterType characterType = update.CharacterType ?? playerInfo.CharacterType;
 
             log.Debug($"HandlePlayerInfoUpdateRequest characterType={characterType} " +
                      $"(update={update.CharacterType} " +
@@ -902,81 +624,6 @@ namespace CentralServer.LobbyServer
 
         public void HandlePreviousGameInfoRequest(PreviousGameInfoRequest request)
         {
-            // This gets called, when they leave a Custom game creation, not sure if theres anything else that gets called to put this in
-            BridgeServerProtocol customServer = ServerManager.GetCustomServerWithPlayer(AccountId);
-            if (customServer != null)
-            {
-                if (customServer.GameInfo.GameServerProcessCode.StartsWith("CustomGame-"))
-                {
-                    // Remove player from Custom game, if no player left delete the CustomGame itself
-                    BridgeServerProtocol currentServer = ServerManager.GetServerByProcessCode(customServer.GameInfo.GameServerProcessCode);
-
-                    if (currentServer == null)
-                    {
-                        Send(new PreviousGameInfoResponse()
-                        {
-                            ResponseId = request.RequestId,
-                            Success = false
-                        });
-                        // Doesnt Exist anymore
-                        return;
-                    }
-
-                    // Check if Owner Left
-                    if (currentServer.TeamInfo.TeamPlayerInfo.Find(u => u.AccountId == AccountId).IsGameOwner)
-                    {
-                        log.Info($"Owner Left Game kicking all players");
-                        foreach (LobbyServerPlayerInfo playerCheck in currentServer.TeamInfo.TeamPlayerInfo)
-                        {
-                            LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(playerCheck.AccountId);
-                            if (playerCheck.AccountId != AccountId)
-                            {
-                                playerConnection.Send(new GameAssignmentNotification
-                                {
-                                    GameInfo = null,
-                                    GameResult = GameResult.OwnerLeft,
-                                    Reconnection = false
-                                });
-                            }
-                            playerConnection.CurrentServer = null;
-                        }
-
-                        ServerManager.RemoveServer(currentServer.GameInfo.GameServerProcessCode);
-
-                        return;
-                    }
-
-                    LobbyServerPlayerInfo player = currentServer.TeamInfo.TeamPlayerInfo.Find(u => u.AccountId == AccountId);
-
-                    currentServer.TeamInfo.TeamPlayerInfo.Remove(player);
-
-                    //LobbyServerTeamInfo teamInfo = CreateTeamInfo(currentServer.TeamInfo);
-
-                    if (currentServer.TeamInfo.TeamPlayerInfo.Count > 0)
-                    {
-                        // Set the TeamInfo new values
-                        currentServer.SetTeamInfo(currentServer.TeamInfo);
-                        currentServer.SetGameInfo(currentServer.GameInfo);
-                        currentServer.SendGameInfoNotifications();
-                    }
-                    else
-                    {
-                        // No players left remove server
-                        ServerManager.RemoveServer(currentServer.GameInfo.GameServerProcessCode);
-                    }
-
-                    CurrentServer = null;
-
-                    Send(new PreviousGameInfoResponse()
-                    {
-                        ResponseId = request.RequestId,
-                        Success = false
-                    });
-
-                    return;
-                }
-            }
-
             BridgeServerProtocol server = ServerManager.GetServerWithPlayer(AccountId);
             LobbyGameInfo lobbyGameInfo = null;
 
@@ -1029,7 +676,8 @@ namespace CentralServer.LobbyServer
 
         public void HandleLeaveGameRequest(LeaveGameRequest request)
         {
-            BridgeServerProtocol server = CurrentServer;
+            GameServerBase server = CurrentServer;
+            log.Info($"{AccountId} leaves game {server?.ProcessCode}");
             if (server != null)
             {
                 LeaveServer(server);
@@ -1065,37 +713,30 @@ namespace CentralServer.LobbyServer
             }
             
             GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
-            IsReady = contextualReadyState.ReadyState == ReadyState.Ready;
+            IsReady = contextualReadyState.ReadyState == ReadyState.Ready;  // TODO can be Accepted and others
             if (group == null)
             {
                 MatchmakingManager.StartPractice(this);
-            }
-            else if (contextualReadyState.GameProcessCode.StartsWith("CustomGame-"))
-            {
-                if (contextualReadyState.ReadyState == ReadyState.Ready)
-                {
-                    CurrentServer.SetPlayerReady(AccountId);
-                }
-                {
-                    CurrentServer.SetPlayerUnReady(AccountId);
-                }
-
-                // Update all users in the custom game
-                
-                LobbyServerTeamInfo teamInfo = CurrentServer.TeamInfo;
-                teamInfo.TeamPlayerInfo.Find((u) => u.AccountId == AccountId).ReadyState = contextualReadyState.ReadyState;
-                CurrentServer.SetTeamInfo(teamInfo);
-
-                CurrentServer.SendGameInfoNotifications();
-                CheckCustomGameStart();
             }
             else
             {
                 if (CurrentServer != null)
                 {
-                    if (contextualReadyState.ReadyState == ReadyState.Ready)
+                    if (CurrentServer.ProcessCode != contextualReadyState.GameProcessCode)
+                    {
+                        log.Error($"Received ready state {contextualReadyState.ReadyState} " +
+                                  $"from {LobbyServerUtils.GetHandle(AccountId)} " +
+                                  $"for game {contextualReadyState.GameProcessCode} " +
+                                  $"while they are in game {CurrentServer.ProcessCode}");
+                        return;
+                    }
+                    if (contextualReadyState.ReadyState == ReadyState.Ready)  // TODO can be Accepted and others
                     {
                         CurrentServer.SetPlayerReady(AccountId);
+                    }
+                    else
+                    {
+                        CurrentServer.SetPlayerUnReady(AccountId);
                     }
                 }
                 else
@@ -1324,7 +965,6 @@ namespace CentralServer.LobbyServer
 
         private void OnAccountVisualsUpdated()
         {
-
             BroadcastRefreshFriendList();
             BroadcastRefreshGroup();
             CurrentServer?.OnAccountVisualsUpdated(AccountId);
@@ -1715,20 +1355,12 @@ namespace CentralServer.LobbyServer
 
         private void HandleSubscribeToCustomGamesRequest(SubscribeToCustomGamesRequest request)
         {
-            List<LobbyGameInfo> customGameInfos = new List<LobbyGameInfo>();
-            foreach (BridgeServerProtocol server in ServerManager.ListCustomServers())
-            {
-                customGameInfos.Add(server.GameInfo);
-            };
-
-            Send(new LobbyCustomGamesNotification
-            {
-                CustomGameInfos = customGameInfos
-            });
+            CustomGameManager.Subscribe(this);
         }
 
         private void HandleUnsubscribeFromCustomGamesRequest(UnsubscribeFromCustomGamesRequest request)
         {
+            CustomGameManager.Unsubscribe(this);
         }
 
         private void HandleRankedLeaderboardOverviewRequest(RankedLeaderboardOverviewRequest request)

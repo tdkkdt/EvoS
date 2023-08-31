@@ -10,6 +10,7 @@ using CentralServer.LobbyServer.Friend;
 using CentralServer.LobbyServer.Gamemode;
 using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Quest;
+using CentralServer.LobbyServer.Utils;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
@@ -134,7 +135,7 @@ namespace CentralServer.LobbyServer
                 AllowRelogin = false,
                 ClientAccessLevel = account.AccountComponent.AppliedEntitlements.ContainsKey("DEVELOPER_ACCESS") ? ClientAccessLevel.Admin : ClientAccessLevel.Full, 
                 ErrorReportRate = new TimeSpan(0, 3, 0),
-                GameplayOverrides = GetGameplayOverrides(),
+                GameplayOverrides = GameConfig.GetGameplayOverrides(),
                 HasPurchasedGame = true,
                 PacificNow = DateTime.UtcNow, // TODO ?
                 UtcNow = DateTime.UtcNow,
@@ -193,43 +194,6 @@ namespace CentralServer.LobbyServer
                 ReleaseNotesText = PatchNotesText, // ConfigManager.PatchNotesText,
             };
         }
-
-        public LobbyGameplayOverrides GetGameplayOverrides()
-        {
-            return new LobbyGameplayOverrides
-            {
-                AllowReconnectingToGameInstantly = true,
-                AllowSpectators = false,
-                AllowSpectatorsOutsideCustom = false,
-                CharacterConfigs = CharacterConfigs.Characters,
-                CharacterAbilityConfigOverrides = LobbyCharacterInfo.GetChacterAbilityConfigOverrides(),
-                //CharacterSkinConfigOverrides = null TODO: maybe can be used to unlock all skins
-                EnableAllMods = true,
-                EnableAllAbilityVfxSwaps = true,
-                EnableCards = true,
-                EnableClientPerformanceCollecting = false,
-                EnableDiscord = false,
-                EnableDiscordSdk = false,
-                EnableEventBonus = false,
-                EnableFacebook = false,
-                EnableHiddenCharacters = false,
-                EnableMods = true,
-                EnableSeasons = false,
-                EnableShop = true,
-                EnableQuests = false,
-                EnableSteamAchievements = false,
-                EnableTaunts = true,
-                CardConfigOverrides =
-                {
-                    { CardType.Cleanse_Prep, new CardConfigOverride { CardType = CardType.Cleanse_Prep, Allowed = false } },
-                    { CardType.TurtleTech, new CardConfigOverride { CardType = CardType.TurtleTech, Allowed = false } },
-                    { CardType.SecondWind, new CardConfigOverride { CardType = CardType.SecondWind, Allowed = false } },
-                    { CardType.ReduceCooldown, new CardConfigOverride { CardType = CardType.ReduceCooldown, Allowed = false } },
-                }
-            };
-        }
-
-        
 
         protected void SetGameType(GameType gameType)
         {

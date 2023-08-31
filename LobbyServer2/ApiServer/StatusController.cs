@@ -191,12 +191,12 @@ namespace CentralServer.ApiServer
                 bool hide = hideTeamSensitiveData && s.ServerGameStatus < GameStatus.LoadoutSelecting;
                 return new Game
                 {
-                    id = s.GetGameInfo?.GameServerProcessCode,
+                    id = s.GameInfo?.GameServerProcessCode,
                     ts = s.GameInfo != null ? $"{new DateTime(s.GameInfo.CreateTimestamp):yyyy_MM_dd__HH_mm_ss}" : null,
-                    map = hide ? MAP_UNKNOWN : s.GetGameInfo?.GameConfig.Map ?? MAP_UNKNOWN,
+                    map = hide ? MAP_UNKNOWN : s.GameInfo?.GameConfig.Map ?? MAP_UNKNOWN,
                     server = s.ProcessCode,
-                    teamA = s.GetTeamInfo.TeamAPlayerInfo.Select(p => GamePlayer.Of(p, hide)).ToList(),
-                    teamB = s.GetTeamInfo.TeamBPlayerInfo.Select(p => GamePlayer.Of(p, hide)).ToList(),
+                    teamA = s.TeamInfo.TeamAPlayerInfo.Select(p => GamePlayer.Of(p, hide)).ToList(),
+                    teamB = s.TeamInfo.TeamBPlayerInfo.Select(p => GamePlayer.Of(p, hide)).ToList(),
                     status = s.ServerGameStatus.ToString(),
                     turn = s.GameSummary?.NumOfTurns ?? s.GameMetrics.CurrentTurn,
                     teamAScore = s.GameSummary?.TeamAPoints ?? s.GameMetrics.TeamAPoints,

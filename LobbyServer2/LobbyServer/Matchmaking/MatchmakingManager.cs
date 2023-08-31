@@ -212,7 +212,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                     Observer = false,
                     PlayerInfo = LobbyPlayerInfo.FromServer(teamInfo.TeamPlayerInfo[0], 0, queueConfig),
                     Reconnection = false,
-                    GameplayOverrides = client.GetGameplayOverrides()
+                    GameplayOverrides = GameConfig.GetGameplayOverrides()
                 };
 
                 client.Send(notification1);
@@ -246,24 +246,6 @@ namespace CentralServer.LobbyServer.Matchmaking
             
             SendUnassignQueueNotification(server.GetClients());
             await server.StartGameAsync(teamA, teamB, gameType, gameSubType);
-        }
-
-        public static async Task StartCustomGameAsync(BridgeServerProtocol game)
-        {
-            log.Info($"Starting Custom game...");
-
-            // Get a server
-            BridgeServerProtocol server = ServerManager.GetServer();
-            if (server == null)
-            {
-                log.Info($"No available server for Custom gamemode");
-                return;
-            }
-
-            // Remove custom game server
-            ServerManager.RemoveServer(game.ProcessCode);
-
-            await server.StartCustomGameAsync(game);
         }
 
         public static void SendUnassignQueueNotification(List<LobbyServerProtocol> clients)

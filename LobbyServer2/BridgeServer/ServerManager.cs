@@ -75,28 +75,6 @@ namespace CentralServer.BridgeServer
             }
         }
 
-        public static BridgeServerProtocol GetCustomServerWithPlayer(long accountId)
-        {
-            lock (ServerPool)
-            {
-                foreach (BridgeServerProtocol server in ServerPool.Values)
-                {
-                    if (server.IsPrivate) 
-                    { 
-                        foreach (long player in server.GetPlayers())
-                        {
-                            if (player.Equals(accountId))
-                            {
-                                return server;
-                            }
-                        }
-                    }
-                }
-
-                return null;
-            }
-        }
-
         public static bool IsAnyServerAvailable()
         {
             lock (ServerPool)
@@ -107,38 +85,6 @@ namespace CentralServer.BridgeServer
                 }
 
                 return false;
-            }
-        }
-
-        public static List<BridgeServerProtocol> ListCustomServers()
-        {
-            lock (ServerPool)
-            {
-                List<BridgeServerProtocol> bridgeServers = new List<BridgeServerProtocol>();
-                foreach (BridgeServerProtocol server in ServerPool.Values)
-                {
-                    if (server.IsPrivate) { 
-                        bridgeServers.Add(server);
-                    }
-                }
-
-                return bridgeServers;
-            }
-        }
-
-        public static BridgeServerProtocol GetServerByProcessCode(string processCode)
-        {
-            lock (ServerPool)
-            {
-                foreach (BridgeServerProtocol server in ServerPool.Values)
-                {
-                    if (server.ProcessCode == processCode)
-                    {
-                        return server;
-                    }
-                }
-
-                return null;
             }
         }
 

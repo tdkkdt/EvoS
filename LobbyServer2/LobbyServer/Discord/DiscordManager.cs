@@ -423,7 +423,7 @@ namespace CentralServer.LobbyServer.Discord
                     eb.AddField("Reported Account", $"{message.ReportedPlayerHandle} #{message.ReportedPlayerAccountId}", true);
                 }
 
-                BridgeServerProtocol server = SessionManager.GetClientConnection(accountId)?.CurrentServer;
+                GameServerBase server = SessionManager.GetClientConnection(accountId)?.CurrentServer;
                 if (server != null)
                 {
                     eb.AddField("Game", $"{server.Name} {LobbyServerUtils.GameIdString(server.GameInfo)}", true);

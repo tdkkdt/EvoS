@@ -123,14 +123,12 @@ namespace CentralServer.BridgeServer
             log.Info($"Game {gameType} started");
         }
 
-        public async Task StartCustomGameAsync(BridgeServerProtocol game)
+        public async Task StartCustomGameAsync()
         {
             // this all loads me into a custom game
-            server.SetTeamInfo(game.TeamInfo);
 
             server.TeamInfo.TeamPlayerInfo.ForEach(p => log.Info($"Player {p.AccountId} is on team {p.TeamId}"));
 
-            server.BuildGameInfoCustomGame(game.GameInfo);
 
             // Assign all users to the new Current Server
             server.GetClients().ForEach(c => c.JoinServer(server));
@@ -328,25 +326,11 @@ namespace CentralServer.BridgeServer
                 }
                 else if (update.CharacterType.HasValue)
                 {
-                    server.SetBotCharacter(update.PlayerId, update.CharacterType.Value);
+                    server.SetSecondaryCharacter(accountId, update.PlayerId, update.CharacterType.Value);
                 }
 
                 server.SendGameInfoNotifications();
                 return true;
-            }
-        }
-
-        public void UpdateAccountVisuals(long accountId)
-        {
-            LobbyServerPlayerInfo serverPlayerInfo = server.GetPlayerInfo(accountId);
-            PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
-            if (account != null)
-            {
-                serverPlayerInfo.TitleID = account.AccountComponent.SelectedTitleID;
-                serverPlayerInfo.TitleLevel = account.AccountComponent.TitleLevels.GetValueOrDefault(account.AccountComponent.SelectedTitleID, 1);
-                serverPlayerInfo.BannerID = account.AccountComponent.SelectedBackgroundBannerID;
-                serverPlayerInfo.EmblemID = account.AccountComponent.SelectedForegroundBannerID;
-                serverPlayerInfo.RibbonID = account.AccountComponent.SelectedRibbonID;
             }
         }
 
@@ -360,8 +344,9 @@ namespace CentralServer.BridgeServer
                     ILookup<CharacterType, LobbyServerPlayerInfo> characters = GetCharactersByTeam(team);
                     log.Info($"{team}: {string.Join(", ", characters.Select(e => e.Key + ": [" + string.Join(", ", e.Select(x => x.Handle)) + "]"))}");
 
+                    bool allowDuplicates = server.GameInfo.GameConfig.HasGameOption(GameOptionFlag.AllowDuplicateCharacters);
                     List<LobbyServerPlayerInfo> playersRequiredToSwitch = characters
-                        .Where(players => players.Count() > 1 && players.Key != CharacterType.PendingWillFill)
+                        .Where(players => !allowDuplicates && players.Count() > 1 && players.Key != CharacterType.PendingWillFill)
                         .SelectMany(players => players.Skip(1))
                         .Concat(
                             characters
@@ -445,7 +430,7 @@ namespace CentralServer.BridgeServer
             IEnumerable<LobbyServerPlayerInfo> duplicateChars = playerInfo.TeamId == Team.TeamA ? duplicateCharsA : duplicateCharsB;
             CharacterConfigs.Characters.TryGetValue(playerInfo.CharacterInfo.CharacterType, out CharacterConfig characterConfig);
             return playerInfo.CharacterType == CharacterType.PendingWillFill
-                   || (duplicateChars.Contains(playerInfo) && duplicateChars.First() != playerInfo)
+                   || (!server.GameInfo.GameConfig.HasGameOption(GameOptionFlag.AllowDuplicateCharacters) && duplicateChars.Contains(playerInfo) && duplicateChars.First() != playerInfo)
                    || !characterConfig.AllowForPlayers;
         }
 
@@ -502,7 +487,8 @@ namespace CentralServer.BridgeServer
             {
                 LobbyServerPlayerInfo playerInfo = server.GetPlayerInfo(accountId);
                 ILookup<CharacterType, LobbyServerPlayerInfo> teamCharacters = GetCharactersByTeam(playerInfo.TeamId, accountId);
-                bool isValid = !teamCharacters.Contains(character);
+                bool isValid = CharacterConfigs.Characters[character].AllowForPlayers
+                               && (!teamCharacters.Contains(character) || server.GameInfo.GameConfig.HasGameOption(GameOptionFlag.AllowDuplicateCharacters));
                 log.Info($"Character validation: {playerInfo.Handle} is {(isValid ? "" : "not ")}allowed to use {character}"
                          + $"(teammates are {string.Join(", ", teamCharacters.Select(x => x.Key))})");
                 return isValid;
