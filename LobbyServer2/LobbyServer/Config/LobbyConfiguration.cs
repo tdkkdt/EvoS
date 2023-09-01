@@ -22,6 +22,7 @@ namespace EvoS.Framework
         public bool GameTypeRankedAvailable = false;
         public bool GameTypeCustomAvailable = false;
         public int MaxGroupSize = 5;
+        public bool MatchAbandoningPenalty = true;
         public DiscordConfiguration Discord = new DiscordConfiguration();
 
         private static LobbyConfiguration GetInstance()
@@ -100,6 +101,11 @@ namespace EvoS.Framework
         public static DiscordConfiguration GetDiscordConfiguration()
         {
             return GetInstance().Discord;
+        }
+        
+        public static bool GetMatchAbandoningPenalty()
+        {
+            return GetInstance().MatchAbandoningPenalty;
         }
     }
 }

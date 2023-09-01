@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Character;
 using CentralServer.LobbyServer.Config;
@@ -599,54 +600,13 @@ namespace CentralServer.LobbyServer
             });
         }
 
-        private bool CheckQueuePenalties(out LocalizationPayload failure)
-        {
-            PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
-            QueuePenalties queuePenalties = account.AdminComponent.ActiveQueuePenalties?.GetValueOrDefault(SelectedGameType);
-            if (queuePenalties is not null && queuePenalties.QueueDodgeBlockTimeout > DateTime.UtcNow.Add(TimeSpan.FromSeconds(5)))
-            {
-                TimeSpan duration = queuePenalties.QueueDodgeBlockTimeout.Subtract(DateTime.UtcNow);
-                LocalizationArg argDuration = LocalizationArg_TimeSpan.Create(duration);
-                failure = LocalizationPayload.Create("QueueDodgerPenaltyAppliedToSelf", "Matchmaking", argDuration);
-                SendSystemMessage(failure);
-                log.Info($"{account.Handle} cannot join {SelectedGameType} queue until {queuePenalties.QueueDodgeBlockTimeout}");
-                
-                GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
-                if (group != null)
-                {
-                    LocalizationArg argHandle = LocalizationArg_Handle.Create(account.Handle);
-                    foreach (long groupMember in group.Members)
-                    {
-                        if (groupMember == AccountId) continue;
-                        LobbyServerProtocol conn = SessionManager.GetClientConnection(groupMember);
-                        conn?.SendSystemMessage(
-                            LocalizationPayload.Create("QueueDodgerPenaltyAppliedToGroupmate", "Matchmaking", argHandle, argDuration));
-                    }
-                }
-                
-                // QueueDodgerPenaltyAppliedToSelf@Matchmaking,Text,0: timespan,,"Because you left the previous game after a match was found, you will not be allowed to queue for {0}."
-                // QueueDodgerPenaltyAppliedToGroupmate@Matchmaking,Text,"0: playername, 1: timespan",,{0} left their previous game after a match was found. They cannot re-queue for {1}.
-                // QueueDodgePenaltyBlocksQueueEntry@Matchmaking,Text,0: playername,,{0} is currently blocked from queueing because they left a recent game after a match was found.
-                // QueueDodgerPenaltyCleared@Matchmaking,Text,0: gametype,,You have been cleared of any penalty for dodging a {0} game.
-                // LeftTooManyActiveGamesToQueue@Matchmaking,Text,0: playername,,{0} has left too many games recently to be allowed to queue.
-                // AllGroupMembersHaveLeftTooManyActiveGamesToQueue@Matchmaking,Text,,,At least one group member must eliminate their Leaver penalty.
-                // CannotQueueUntilTimeout@Ranked,Text,0: datetime,,You cannot queue for this mode until {0} due to queue dodging.
-                // CannotQueueMembersPenalized@Ranked,Text,0: members banned,,"You cannot queue for this mode because {0} have been penalized"
-                // UnableToQueue@RankMode,Text,,,Unable To Queue
-
-                return true;
-            }
-
-            failure = null;
-            return false;
-        }
-        
         protected void SetContextualReadyState(ContextualReadyState contextualReadyState)
         {
             log.Info($"SetContextualReadyState {contextualReadyState.ReadyState} {contextualReadyState.GameProcessCode}");
 
-            if (CheckQueuePenalties(out _))
+            if (QueuePenaltyManager.CheckQueuePenalties(AccountId, SelectedGameType, out LocalizationPayload failure))
             {
+                SendSystemMessage(failure);
                 return;
             }
             
@@ -686,7 +646,7 @@ namespace CentralServer.LobbyServer
                     return;
                 }
 
-                if (CheckQueuePenalties(out LocalizationPayload failure))
+                if (QueuePenaltyManager.CheckQueuePenalties(AccountId, SelectedGameType, out LocalizationPayload failure))
                 {
                     Send(new JoinMatchmakingQueueResponse { Success = false, ResponseId = request.RequestId, LocalizedFailure = failure});
                     return;

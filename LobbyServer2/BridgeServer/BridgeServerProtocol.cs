@@ -28,6 +28,7 @@ namespace CentralServer.BridgeServer
         private MatchOrchestrator Orchestrator;
         public LobbyGameInfo GameInfo { private set; get; }
         public LobbyServerTeamInfo TeamInfo { private set; get; } = new LobbyServerTeamInfo() { TeamPlayerInfo = new List<LobbyServerPlayerInfo>() };
+        public DateTime StopTime { private set; get; }
 
         public string URI => "ws://" + Address + ":" + Port;
         
@@ -154,6 +155,7 @@ namespace CentralServer.BridgeServer
             DB.Get().MatchHistoryDao.Save(MatchHistoryDao.MatchEntry.Cons(GameInfo, GameSummary));
             
             ServerGameStatus = GameStatus.Stopped;
+            StopTime = DateTime.UtcNow.Add(TimeSpan.FromSeconds(8));
 
             _ = Orchestrator.FinalizeGame(GameSummary);
         }
@@ -170,6 +172,8 @@ namespace CentralServer.BridgeServer
                     break;
                 }
             }
+            
+            QueuePenaltyManager.SetQueuePenalty(request.PlayerInfo.AccountId, this);
 
             LobbyServerPlayerInfo playerInfo = GetPlayerInfo(request.PlayerInfo.AccountId);
             if (playerInfo != null)
