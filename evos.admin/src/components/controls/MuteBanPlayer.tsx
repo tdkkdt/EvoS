@@ -109,6 +109,10 @@ export default function MuteBanPlayer({disabled, deadline, accountId, action, ha
                     <MenuItem value={720}>12 hours</MenuItem>
                     <MenuItem value={1440}>1 day</MenuItem>
                     <MenuItem value={4320}>3 days</MenuItem>
+                    <MenuItem value={10080}>A week</MenuItem>
+                    <MenuItem value={43200}>A month</MenuItem>
+                    <MenuItem value={525600}>A year</MenuItem>
+                    <MenuItem value={52596000}>A century</MenuItem>
                 </Select>
                 <Button
                     type="submit"
