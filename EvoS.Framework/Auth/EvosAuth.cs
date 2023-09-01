@@ -106,7 +106,7 @@ public class EvosAuth
     {
         string staticKey = context switch
         {
-            Context.ADMIN_API => EvosConfiguration.GetTicketAuthKey(),
+            Context.ADMIN_API => EvosConfiguration.GetAdminApiKey(),
             Context.USER_API => EvosConfiguration.GetUserApiKey(),
             Context.TICKET_AUTH => EvosConfiguration.GetTicketAuthKey(),
             _ => throw new EvosException("Unknown security context")
