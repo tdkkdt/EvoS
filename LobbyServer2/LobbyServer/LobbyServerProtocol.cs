@@ -166,6 +166,7 @@ namespace CentralServer.LobbyServer
             }
 
             CurrentServer = null;
+            log.Info($"{LobbyServerUtils.GetHandle(AccountId)} leaves {server.ProcessCode}");
             
             // forcing catalyst panel update -- otherwise it would show catas for the character from the last game
             Send(new ForcedCharacterChangeFromServerNotification 
@@ -522,20 +523,28 @@ namespace CentralServer.LobbyServer
 
         public void HandlePreviousGameInfoRequest(PreviousGameInfoRequest request)
         {
-
             BridgeServerProtocol server = ServerManager.GetServerWithPlayer(AccountId);
             LobbyGameInfo lobbyGameInfo = null;
 
             if (server != null)
             {
-                // Make sure we wait untill gameserver disconects us
-                if (server.GetPlayerInfo(AccountId).ReplacedWithBots)
+                if (!server.GetPlayerInfo(AccountId).ReplacedWithBots)
                 {
-                    lobbyGameInfo = server.GameInfo;
+                    server.DisconnectPlayer(AccountId);
+                    log.Info($"{LobbyServerUtils.GetHandle(AccountId)} was in game {server.ProcessCode}, requesting disconnect");
                 }
+                else
+                {
+                    log.Info($"{LobbyServerUtils.GetHandle(AccountId)} was in game {server.ProcessCode}");
+                }
+                lobbyGameInfo = server.GameInfo;
+            }
+            else
+            {
+                log.Info($"{LobbyServerUtils.GetHandle(AccountId)} wasn't in any game");
             }
 
-            PreviousGameInfoResponse response = new PreviousGameInfoResponse()
+            PreviousGameInfoResponse response = new PreviousGameInfoResponse
             {
                 PreviousGameInfo = lobbyGameInfo,
                 ResponseId = request.RequestId
@@ -1303,7 +1312,7 @@ namespace CentralServer.LobbyServer
                 return;
             }
 
-            log.Info($"{UserName} wants to reconnect to a game");
+            log.Info($"{UserName} wants to reconnect to game {request.PreviousGameInfo.GameServerProcessCode}");
             
             BridgeServerProtocol server = ServerManager.GetServerWithPlayer(AccountId);
 
@@ -1311,6 +1320,7 @@ namespace CentralServer.LobbyServer
             {
                 // no longer in a game
                 Send(new RejoinGameResponse() { ResponseId = request.RequestId, Success = false });
+                log.Info($"Game {request.PreviousGameInfo.GameServerProcessCode} not found");
                 return;
             }
             
@@ -1319,10 +1329,12 @@ namespace CentralServer.LobbyServer
             {
                 // no longer in a game
                 Send(new RejoinGameResponse { ResponseId = request.RequestId, Success = false });
+                log.Info($"{UserName} was not in game {request.PreviousGameInfo.GameServerProcessCode}");
                 return;
             }
             
             Send(new RejoinGameResponse { ResponseId = request.RequestId, Success = true });
+            log.Info($"Reconnecting {UserName} to game {request.PreviousGameInfo.GameServerProcessCode}");
             JoinServer(server);
             playerInfo.ReplacedWithBots = false;
             server.SendGameAssignmentNotification(this, true);

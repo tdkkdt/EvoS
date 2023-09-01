@@ -45,6 +45,7 @@ namespace CentralServer.BridgeServer
 
         public LobbyServerTeamInfo GetTeamInfo => TeamInfo;
 
+        // TODO there can be multiple
         public LobbyServerPlayerInfo GetPlayerInfo(long accountId)
         {
             return TeamInfo.TeamPlayerInfo.Find(p => p.AccountId == accountId);
@@ -159,7 +160,7 @@ namespace CentralServer.BridgeServer
 
         private void HandlePlayerDisconnectedNotification(PlayerDisconnectedNotification request)
         {
-            log.Info($"Player {request.PlayerInfo.AccountId} left game {GameInfo?.GameServerProcessCode}");
+            log.Info($"{LobbyServerUtils.GetHandle(request.PlayerInfo.AccountId)} left game {GameInfo?.GameServerProcessCode}");
 
             foreach (LobbyServerProtocol client in GetClients())
             {
@@ -230,7 +231,7 @@ namespace CentralServer.BridgeServer
         {
             log.Info(
                 $"Player {response.PlayerInfo?.Handle} {response.PlayerInfo?.AccountId} {response.PlayerInfo?.CharacterType} " +
-                $"joined {GameInfo?.Name}  ({response.GameServerProcessCode})");
+                $"joined {GameInfo?.Name} ({response.GameServerProcessCode})");
         }
 
         private void HandleReconnectPlayerResponse(ReconnectPlayerResponse response)
