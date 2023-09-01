@@ -43,6 +43,7 @@ export default function AdminMessages({accountId}: AdminMessagesProps) {
     };
 
     useEffect(() => {
+        if (!accountId) return;
         const abort = new AbortController();
         getAdminMessages(abort, authHeader, accountId)
             .then((resp) => {

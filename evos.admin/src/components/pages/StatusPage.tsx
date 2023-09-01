@@ -29,7 +29,7 @@ function FormatAge(ageMs: number) {
         return `${RoundToNearest5(ageMs / 1000)} seconds ago`;
     }
     if (ageMs < 90000) {
-        return `A minute ago`;
+        return `a minute ago`;
     }
     return `${Math.round(ageMs / 60000)} minutes ago`;
 }
