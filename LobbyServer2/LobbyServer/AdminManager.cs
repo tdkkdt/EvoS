@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using CentralServer.LobbyServer.Chat;
 using CentralServer.LobbyServer.Session;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.Static;
@@ -13,6 +14,7 @@ namespace CentralServer.LobbyServer
         private static readonly ILog log = LogManager.GetLogger(typeof(AdminManager));
         
         public event Action<long, AdminComponent.AdminActionRecord> OnAdminAction = delegate {};
+        public event Action<long, long, string> OnAdminMessage = delegate {};
         
         private readonly CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
 
@@ -159,6 +161,21 @@ namespace CentralServer.LobbyServer
                 log.Info($"{account.Handle} is currently offline");
             }
 
+            return true;
+        }
+
+        public bool SendAdminMessage(long accountId, long adminAccountId, string msg)
+        {
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
+            if (account == null)
+            {
+                log.Error($"Cannot send admin message: account {accountId} not found");
+                return false;
+            }
+            
+            AdminMessageManager.SendAdminMessage(accountId, adminAccountId, msg);
+            
+            OnAdminMessage(accountId, adminAccountId, msg);
             return true;
         }
     }

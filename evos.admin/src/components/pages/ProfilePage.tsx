@@ -8,6 +8,7 @@ import {LinearProgress, Paper} from "@mui/material";
 import ErrorDialog from "../generic/ErrorDialog";
 import MuteBanPlayer from "../controls/MuteBanPlayer";
 import {EvosCard, StackWrapper} from "../generic/BasicComponents";
+import AdminMessages from "../controls/AdminMessages";
 
 
 export default function ProfilePage() {
@@ -69,6 +70,7 @@ export default function ProfilePage() {
                     doneText={"banned"}
                     onCommit={handleCommit}
                 />
+                <AdminMessages accountId={playerDetails?.player.accountId ?? 0} />
             </StackWrapper>
         </Paper>
     );

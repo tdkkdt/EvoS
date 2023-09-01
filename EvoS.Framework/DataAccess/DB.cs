@@ -14,6 +14,7 @@ namespace EvoS.Framework.DataAccess
         public readonly LoginDao LoginDao;
         public readonly MatchHistoryDao MatchHistoryDao;
         public readonly RegistrationCodeDao RegistrationCodeDao;
+        public readonly AdminMessageDao AdminMessageDao;
 
         private DB()
         {
@@ -25,6 +26,7 @@ namespace EvoS.Framework.DataAccess
                     LoginDao = new LoginDaoCached(new LoginMongoDao());
                     MatchHistoryDao = new MatchHistoryDaoCached(new MatchHistoryMongoDao());
                     RegistrationCodeDao = new RegistrationCodeDaoCached(new RegistrationCodeMongoDao());
+                    AdminMessageDao = new AdminMessageMongoDao();
                     break;
                 case EvosConfiguration.DBType.None:
                     log.Info("Not using any database, no data will be persisted");
@@ -32,6 +34,7 @@ namespace EvoS.Framework.DataAccess
                     LoginDao = new LoginDaoCached(new LoginMockDao());
                     MatchHistoryDao = new MatchHistoryDaoCached(new MatchHistoryMockDao());
                     RegistrationCodeDao = new RegistrationCodeDaoCached(new RegistrationCodeMockDao());
+                    AdminMessageDao = new AdminMessageDaoCached(new AdminMessageMockDao());
                     break;
             }
         }

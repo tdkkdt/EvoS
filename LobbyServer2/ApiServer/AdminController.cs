@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using CentralServer.LobbyServer;
+using CentralServer.LobbyServer.Chat;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Utils;
@@ -177,6 +178,65 @@ namespace CentralServer.ApiServer
             log.Info($"API {logString} by {adminHandle} ({adminAccountId}): {data.description}");
             bool success = AdminManager.Get().Ban(data.accountId, TimeSpan.FromMinutes(data.durationMinutes), adminHandle, data.description);
             return success ? Results.Ok() : Results.Problem();
+        }
+        
+        public static IResult SendAdminMessage([FromBody] PenaltyInfo data, ClaimsPrincipal user)
+        {
+            if (!ValidateAdmin(user, out IResult error, out long adminAccountId, out string adminHandle))
+            {
+                return error;
+            }
+            log.Info($"API ADMIN MESSAGE by {adminHandle} ({adminAccountId}) " +
+                     $"to {LobbyServerUtils.GetHandle(data.accountId)} ({data.accountId}): {data.description}");
+            bool success = AdminManager.Get().SendAdminMessage(data.accountId, adminAccountId, data.description);
+            return success ? Results.Ok() : Results.Problem();
+        }
+        
+        
+        public class AdminMessagesResponseModel
+        {
+            public List<AdminMessageEntryModel> entries { get; set; }
+        }
+
+        public class AdminMessageEntryModel
+        {
+            public long From { get; set; }
+            public string FromHandle { get; set; }
+            public string Text { get; set; }
+            public DateTime SentAt { get; set; }
+            public DateTime ViewedAt { get; set; }
+
+            public static AdminMessageEntryModel Of(AdminMessageDao.AdminMessage e)
+            {
+                return new AdminMessageEntryModel
+                {
+                    From = e.adminAccountId,
+                    FromHandle = LobbyServerUtils.GetHandle(e.adminAccountId),
+                    Text = e.message,
+                    SentAt = e.createdAt,
+                    ViewedAt = e.viewedAt,
+                };
+            }
+        }
+        
+        public static IResult GetAdminMessages(long accountId, ClaimsPrincipal user)
+        {
+            if (!ValidateAdmin(user, out IResult error, out long adminAccountId, out string adminHandle))
+            {
+                return error;
+            }
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
+            if (account == null)
+            {
+                log.Error($"Cannot view admin messages: account {accountId} not found");
+                return Results.NotFound();
+            }
+            return Results.Json(new AdminMessagesResponseModel
+            {
+                entries = AdminMessageManager.GetAdminMessages(accountId)
+                    .Select(AdminMessageEntryModel.Of)
+                    .ToList()
+            });
         }
         
         public class RegistrationCodeRequestModel

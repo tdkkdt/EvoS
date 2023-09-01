@@ -100,6 +100,18 @@ export interface SearchResults {
     players: PlayerData[];
 }
 
+export interface AdminMessage {
+    from: number;
+    fromHandle: string;
+    text: string;
+    sentAt: string;
+    viewedAt: string;
+}
+
+export interface AdminMessagesResponse {
+    entries: AdminMessage[];
+}
+
 export enum CharacterType {
     None = 'None',
     BattleMonk = 'BattleMonk',
@@ -156,6 +168,10 @@ export enum MapType {
 
 export function asDate(date?: string) : Date | undefined {
     return date ? new Date(date) : undefined;
+}
+
+export function formatDate(ts: string): string {
+    return ts ? new Date(ts).toLocaleString() : "N/A";
 }
 
 export function cap(txt: string) : string {
@@ -215,6 +231,19 @@ export function ban(authHeader: string, penaltyInfo: PenaltyInfo) {
         baseUrl + "/api/admin/player/banned",
         penaltyInfo,
         { headers: {'Authorization': authHeader} });
+}
+
+export function sendAdminMessage(abort: AbortController, authHeader: string, accountId: number, msg: string) {
+    return axios.post(
+        baseUrl + "/api/admin/player/adminMessage",
+        { accountId: accountId, description: msg },
+        { headers: {'Authorization': authHeader}, signal: abort.signal });
+}
+
+export function getAdminMessages(abort: AbortController, authHeader: string, accountId: number) {
+    return axios.get<AdminMessagesResponse>(
+        baseUrl + "/api/admin/player/adminMessage",
+        { params: { accountId: accountId }, headers: {'Authorization': authHeader}, signal: abort.signal });
 }
 
 export function issueRegistrationCode(abort: AbortController, authHeader: string, data: RegistrationCodeRequest) {

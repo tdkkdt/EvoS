@@ -86,6 +86,7 @@ namespace CentralServer.LobbyServer.Discord
             {
                 ChatManager.Get().OnChatMessage += SendChatMessageAuditAsync;
                 AdminManager.Get().OnAdminAction += SendAdminActionAuditAsync;
+                AdminManager.Get().OnAdminMessage += SendAdminMessageAuditAsync;
                 AdminController.OnAdminPauseQueue += SendAdminPauseQueueAuditAsync;
             }
 
@@ -126,6 +127,7 @@ namespace CentralServer.LobbyServer.Discord
             {
                 ChatManager.Get().OnChatMessage -= SendChatMessageAuditAsync;
                 AdminManager.Get().OnAdminAction -= SendAdminActionAuditAsync;
+                AdminManager.Get().OnAdminMessage -= SendAdminMessageAuditAsync;
                 AdminController.OnAdminPauseQueue -= SendAdminPauseQueueAuditAsync;
             }
             cancelTokenSource.Cancel();
@@ -282,6 +284,35 @@ namespace CentralServer.LobbyServer.Discord
             catch (Exception e)
             {
                 log.Error("Failed to send admin action audit message to discord webhook", e);
+            }
+        }
+
+        private void SendAdminMessageAuditAsync(long accountId, long adminAccountId, string msg)
+        {
+            _ = SendAdminMessageAudit(accountId, adminAccountId, msg);
+        }
+
+        private async Task SendAdminMessageAudit(long accountId, long adminAccountId, string msg)
+        {
+            if (adminChannel == null || !conf.AdminEnableAdminAudit)
+            {
+                return;
+            }
+            try
+            {
+                PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
+                await adminChannel.SendMessageAsync(
+                    username: LobbyServerUtils.GetHandle(adminAccountId),
+                    embeds: new[] { new EmbedBuilder
+                    {
+                        Title = $"Admin message for {account.Handle ?? $"#{accountId}"}",
+                        Description = msg,
+                        Color = DiscordUtils.GetLogColor(Level.Warn),
+                    }.Build() });
+            }
+            catch (Exception e)
+            {
+                log.Error("Failed to send admin message audit message to discord webhook", e);
             }
         }
 

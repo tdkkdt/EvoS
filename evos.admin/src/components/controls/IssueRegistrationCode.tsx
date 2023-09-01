@@ -2,7 +2,6 @@ import {
     Box,
     Button,
     LinearProgress,
-    Link,
     Table,
     TableBody,
     TableCell,
@@ -12,19 +11,13 @@ import {
     Tooltip,
     Typography
 } from "@mui/material";
-import {getRegistrationCodes, issueRegistrationCode, RegistrationCodeEntry} from "../../lib/Evos";
+import {formatDate, getRegistrationCodes, issueRegistrationCode, RegistrationCodeEntry} from "../../lib/Evos";
 import React, {useEffect, useState} from "react";
 import {useAuthHeader} from "react-auth-kit";
-import {NavigateFunction, useNavigate} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 import {EvosError, processError} from "../../lib/Error";
 import BaseDialog from "../generic/BaseDialog";
-import {EvosCard, FlexBox} from "../generic/BasicComponents";
-
-const formatDate = (ts: string) => ts ? new Date(ts).toLocaleString() : "N/A";
-const link = (accountId: number, text: string, navigate: NavigateFunction) => {
-    const uri = `/account/${accountId}`;
-    return <Link component={'button'} onClick={() => navigate(uri)}>{text}</Link>;
-}
+import {EvosCard, FlexBox, plainAccountLink} from "../generic/BasicComponents";
 
 export default function IssueRegistrationCode() {
     const [code, setCode] = useState<string>();
@@ -116,9 +109,9 @@ export default function IssueRegistrationCode() {
                                 sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                             >
                                 <TableCell>{claimed
-                                    ? link(row.issuedTo, row.issuedToHandle, navigate)
+                                    ? plainAccountLink(row.issuedTo, row.issuedToHandle, navigate)
                                     : row.issuedToHandle}</TableCell>
-                                <TableCell>{link(row.issuedBy, row.issuedByHandle, navigate)}</TableCell>
+                                <TableCell>{plainAccountLink(row.issuedBy, row.issuedByHandle, navigate)}</TableCell>
                                 <TableCell>{claimed || expired
                                     ? <Tooltip title={claimed ? "Claimed" : "Expired"}><span style={{ textDecoration: "line-through"}}>{row.code}</span></Tooltip>
                                     : <span>{row.code}</span>}

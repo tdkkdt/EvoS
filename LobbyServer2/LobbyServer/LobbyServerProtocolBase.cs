@@ -5,11 +5,11 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using CentralServer.LobbyServer.Character;
+using CentralServer.LobbyServer.Chat;
 using CentralServer.LobbyServer.Friend;
 using CentralServer.LobbyServer.Gamemode;
 using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Quest;
-using CentralServer.LobbyServer.Session;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
@@ -178,9 +178,15 @@ namespace CentralServer.LobbyServer
                 }
             }
 
+            string adminMessage = AdminMessageManager.PopAdminMessage(AccountId);
+            if (adminMessage is not null)
+            {
+                log.Info($"Sending admin message: {adminMessage}");
+            }
+
             return new ServerMessageOverrides
             {
-                MOTDPopUpText = LobbyConfiguration.GetMOTDPopUpText(), // Popup message when client connects to lobby
+                MOTDPopUpText = adminMessage ?? LobbyConfiguration.GetMOTDPopUpText(), // Popup message when client connects to lobby
                 MOTDText = LobbyConfiguration.GetMOTDText(), // "alert" text
                 ReleaseNotesHeader = LobbyConfiguration.GetPatchNotesHeader(),
                 ReleaseNotesDescription = LobbyConfiguration.GetPatchNotesDescription(),

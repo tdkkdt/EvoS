@@ -1,4 +1,5 @@
-import {Box, Card, Stack, styled} from "@mui/material";
+import {Box, Card, Link, Stack, styled} from "@mui/material";
+import {NavigateFunction} from "react-router-dom";
 
 export const BgImage = styled('span')({
     position: 'absolute',
@@ -29,3 +30,8 @@ export const StackWrapper = styled(Stack)(({theme}) => ({
     margin: 'auto',
     maxWidth: theme.size.basicWidth,
 }));
+
+export function plainAccountLink(accountId: number, text: string, navigate: NavigateFunction) {
+    const uri = `/account/${accountId}`;
+    return <Link component={'button'} onClick={() => navigate(uri)}>{text}</Link>;
+}
