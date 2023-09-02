@@ -46,6 +46,8 @@ namespace CentralServer.LobbyServer
 
         public bool IsInGame() => CurrentServer != null;
 
+        public bool IsInCharacterSelect() => CurrentServer != null && CurrentServer.ServerGameStatus <= GameStatus.FreelancerSelecting;
+
         public bool IsInGroup() => !GroupManager.GetPlayerGroup(AccountId)?.IsSolo() ?? false;
 
         public int GetGroupSize() => GroupManager.GetPlayerGroup(AccountId)?.Members.Count ?? 1;

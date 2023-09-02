@@ -62,7 +62,7 @@ namespace CentralServer.LobbyServer.Friend
             }
             if (client.IsInGame())
             {
-                return "In Game";
+                return client.IsInCharacterSelect() ? "Character Select" : "In Game";
             }
             if (client.IsInQueue())
             {
