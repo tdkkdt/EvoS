@@ -606,7 +606,8 @@ namespace CentralServer.LobbyServer
         {
             log.Info($"SetContextualReadyState {contextualReadyState.ReadyState} {contextualReadyState.GameProcessCode}");
 
-            if (QueuePenaltyManager.CheckQueuePenalties(AccountId, SelectedGameType, out LocalizationPayload failure))
+            LocalizationPayload failure = QueuePenaltyManager.CheckQueuePenalties(AccountId, SelectedGameType);
+            if (failure is not null)
             {
                 SendSystemMessage(failure);
                 return;
@@ -648,7 +649,8 @@ namespace CentralServer.LobbyServer
                     return;
                 }
 
-                if (QueuePenaltyManager.CheckQueuePenalties(AccountId, SelectedGameType, out LocalizationPayload failure))
+                LocalizationPayload failure = QueuePenaltyManager.CheckQueuePenalties(AccountId, SelectedGameType);
+                if (failure is not null)
                 {
                     Send(new JoinMatchmakingQueueResponse { Success = false, ResponseId = request.RequestId, LocalizedFailure = failure});
                     return;

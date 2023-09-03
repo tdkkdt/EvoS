@@ -173,7 +173,7 @@ namespace CentralServer.BridgeServer
                 }
             }
             
-            QueuePenaltyManager.SetQueuePenalty(request.PlayerInfo.AccountId, this);
+            QueuePenaltyManager.IssueQueuePenalty(request.PlayerInfo.AccountId, this);
 
             LobbyServerPlayerInfo playerInfo = GetPlayerInfo(request.PlayerInfo.AccountId);
             if (playerInfo != null)
