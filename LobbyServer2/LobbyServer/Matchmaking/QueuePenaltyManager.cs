@@ -43,6 +43,10 @@ public static class QueuePenaltyManager
     private static void AddQueuePenalty(long accountId, GameType gameType, TimeSpan timeSpan)
     {
         PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
+        if (account is null)
+        {
+            return;
+        }
         account.AdminComponent.ActiveQueuePenalties ??= new Dictionary<GameType, QueuePenalties>();
         QueuePenalties penalties = account.AdminComponent.ActiveQueuePenalties.GetValueOrDefault(gameType);
         DateTime newTimeout = DateTime.UtcNow.Add(timeSpan);
@@ -68,7 +72,7 @@ public static class QueuePenaltyManager
     public static bool CheckQueuePenalties(long accountId, GameType selectedGameType, out LocalizationPayload failure)
     {
         PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
-        QueuePenalties queuePenalties = account.AdminComponent.ActiveQueuePenalties?.GetValueOrDefault(selectedGameType);
+        QueuePenalties queuePenalties = account?.AdminComponent.ActiveQueuePenalties?.GetValueOrDefault(selectedGameType);
         if (queuePenalties is not null && queuePenalties.QueueDodgeBlockTimeout > DateTime.UtcNow.Add(TimeSpan.FromSeconds(5)))
         {
             TimeSpan duration = queuePenalties.QueueDodgeBlockTimeout.Subtract(DateTime.UtcNow);
