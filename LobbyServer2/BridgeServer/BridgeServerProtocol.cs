@@ -280,7 +280,7 @@ namespace CentralServer.BridgeServer
             Send(new ReconnectPlayerRequest
             {
                 AccountId = accountId,
-                NewSessionId = sessionInfo.ReconnectSessionToken
+                NewSessionId = sessionInfo.SessionToken
             });
         }
 

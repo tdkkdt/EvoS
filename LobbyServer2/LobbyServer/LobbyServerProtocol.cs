@@ -1350,7 +1350,7 @@ namespace CentralServer.LobbyServer
             }
             
             Send(new RejoinGameResponse { ResponseId = request.RequestId, Success = true });
-            log.Info($"Reconnecting {UserName} to game {request.PreviousGameInfo.GameServerProcessCode}");
+            log.Info($"Reconnecting {UserName} to game {server.GameInfo.GameServerProcessCode} ({server.ProcessCode})");
             JoinServer(server);
             playerInfo.ReplacedWithBots = false;
             server.SendGameAssignmentNotification(this, true);
