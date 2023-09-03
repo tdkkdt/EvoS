@@ -66,7 +66,10 @@ public static class QueuePenaltyManager
         DB.Get().AccountDao.UpdateAccount(account);
 
         GroupInfo playerGroup = GroupManager.GetPlayerGroup(accountId);
-        MatchmakingManager.RemoveGroupFromQueue(playerGroup, true);
+        if (playerGroup is not null)
+        {
+            MatchmakingManager.RemoveGroupFromQueue(playerGroup, true);
+        }
     }
 
     public static bool CheckQueuePenalties(long accountId, GameType selectedGameType, out LocalizationPayload failure)
