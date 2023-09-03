@@ -108,9 +108,9 @@ namespace EvoS.DirectoryServer
                         AuthTicket authTicket = AuthTicket.Parse(ticket);
                         return HandleConnectionWithToken(authTicket.AccountId, authTicket.Token, request, context);
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
-                        log.Warn("Received ticket data but failed to parse it");
+                        log.Warn("Received ticket data but failed to parse it", e);
                     }
                 }
             }
@@ -166,7 +166,7 @@ namespace EvoS.DirectoryServer
                  || !IPAddress.IsLoopback(tokenData.IpAddress)
                  || !IPAddress.IsLoopback(context.Connection.RemoteIpAddress)))
             {
-                log.Info($"qIP address mismatch on auth: {context.Connection.RemoteIpAddress} vs {tokenData.IpAddress}");
+                log.Info($"IP address mismatch on auth: {context.Connection.RemoteIpAddress} vs {tokenData.IpAddress}");
                 return Fail(request, AuthTicket.INVALID_IP_ADDRESS);
             }
 
