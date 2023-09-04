@@ -16,7 +16,6 @@ namespace EvoS.Framework.DataAccess.Daos
 
         public class AdminMessage
         {
-            [BsonId] public ObjectId _id;
             public required long accountId;
             public bool viewed;
             public required DateTime createdAt;
