@@ -95,6 +95,7 @@ namespace CentralServer.LobbyServer
             RegisterHandler<GroupChatRequest>(HandleGroupChatRequest);
             RegisterHandler<ClientFeedbackReport>(HandleClientFeedbackReport);
             RegisterHandler<RejoinGameRequest>(HandleRejoinGameRequest);
+            RegisterHandler<SetDevTagRequest>(HandleSetDevTagRequest);
 
             RegisterHandler<PurchaseModRequest>(HandlePurchaseModRequest);
             RegisterHandler<PurchaseTauntRequest>(HandlePurchaseTauntRequest);
@@ -122,6 +123,29 @@ namespace CentralServer.LobbyServer
             
             
             RegisterHandler<FriendUpdateRequest>(HandleFriendUpdate);
+        }
+
+        private void HandleSetDevTagRequest(SetDevTagRequest request)
+        {
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+            if (account == null)
+            {
+                return;
+            }
+            if (account.AccountComponent.AppliedEntitlements.ContainsKey("DEVELOPER_ACCESS"))
+            {
+                account.AccountComponent.DisplayDevTag = request.active;
+                Send(new SetDevTagResponse() { 
+                    Success = true,
+                });
+            } 
+            else
+            {
+                Send(new SetDevTagResponse()
+                {
+                    Success = false,
+                });
+            }
         }
 
         protected override void HandleClose(CloseEventArgs e)
