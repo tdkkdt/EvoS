@@ -65,7 +65,7 @@ namespace CentralServer.LobbyServer.Chat
                 ConsoleMessageType = notification.ConsoleMessageType,
                 Text = notification.Text,
                 EmojisAllowed = InventoryManager.GetUnlockedEmojiIDs(conn.AccountId),
-                DisplayDevTag = false,
+                DisplayDevTag = account.AccountComponent.DisplayDevTag,
             };
 
             LobbyServerPlayerInfo lobbyServerPlayerInfo = null;
