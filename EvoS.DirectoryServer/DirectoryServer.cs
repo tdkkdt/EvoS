@@ -87,7 +87,7 @@ namespace EvoS.DirectoryServer
             if (!ticket.IsNullOrEmpty())
             {
                 // If we received a valid TicketData, it means we were previously logged on (reconnection)
-                SessionTicketData ticketData = SessionTicketData.FromString(ticket);
+                SessionTicketData ticketData = SessionTicketData.FromString(ticket, out bool isSessionTicket);
                 if (ticketData != null)
                 {
                     request.SessionInfo.AccountId = ticketData.AccountID;
@@ -101,16 +101,12 @@ namespace EvoS.DirectoryServer
                     }
                 }
                 
-                if (EvosConfiguration.GetAllowTicketAuth())
+                if (!isSessionTicket && EvosConfiguration.GetAllowTicketAuth())
                 {
-                    try
+                    AuthTicket authTicket = AuthTicket.TryParse(ticket);
+                    if (authTicket != null)
                     {
-                        AuthTicket authTicket = AuthTicket.Parse(ticket);
                         return HandleConnectionWithToken(authTicket.AccountId, authTicket.Token, request, context);
-                    }
-                    catch (Exception e)
-                    {
-                        log.Warn("Received ticket data but failed to parse it", e);
                     }
                 }
             }

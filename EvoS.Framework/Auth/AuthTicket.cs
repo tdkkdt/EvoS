@@ -64,6 +64,18 @@ public class AuthTicket
 		};
 	}
 
+	public static AuthTicket TryParse(string ticketData)
+	{
+		try
+		{
+			return Parse(ticketData);
+		}
+		catch (Exception e)
+		{
+			return null;
+		}
+	}
+
 	public static AuthTicket Parse(string ticketData, string channelName = null)
 	{
 		AuthTicket authTicket = new AuthTicket();

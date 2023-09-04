@@ -1,9 +1,4 @@
-﻿using EvoS.Framework;
-using Org.BouncyCastle.Asn1.Mozilla;
-using Org.BouncyCastle.Crypto.Parameters;
-using System;
-using System.Collections.Generic;
-using System.Drawing.Text;
+﻿using System;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -28,17 +23,29 @@ namespace CentralServer.LobbyServer.Session
             return GetSignature()+"\n"+this.ToString();
         }
 
-        public static SessionTicketData FromString(string data)
+        public static SessionTicketData FromString(string data, out bool isSessionTicket)
         {
+            isSessionTicket = false;
             string[] parts = data.Split("\n");
-            if (parts.Length != 4) return null;
+            if (parts.Length != 4)
+            {
+                return null;
+            }
 
             string signature = parts[0];
             SessionTicketData ticket = new SessionTicketData();
-            ticket.AccountID = Convert.ToInt64(parts[1]);
-            ticket.SessionToken = Convert.ToInt64(parts[2]);
-            ticket.ReconnectionSessionToken = Convert.ToInt64(parts[3]);
+            try
+            {
+                ticket.AccountID = Convert.ToInt64(parts[1]);
+                ticket.SessionToken = Convert.ToInt64(parts[2]);
+                ticket.ReconnectionSessionToken = Convert.ToInt64(parts[3]);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
 
+            isSessionTicket = true;
             if (signature != ticket.GetSignature())
             {
                 return null;
