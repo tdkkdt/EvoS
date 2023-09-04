@@ -32,7 +32,7 @@ namespace EvoS.Framework.DataAccess.Mongo
 
         public void Save(AdminMessageDao.AdminMessage msg)
         {
-            c.InsertOne(msg);
+            insert(msg._id, msg);
         }
     }
 } 
