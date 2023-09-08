@@ -31,6 +31,7 @@ namespace CentralServer.LobbyServer.Discord
     {
         public string Webhook = "";
         public ulong? ThreadId = null;
+        public ulong? PingRoleId = null;
     }
 
     public static class DiscordConfigExtensions

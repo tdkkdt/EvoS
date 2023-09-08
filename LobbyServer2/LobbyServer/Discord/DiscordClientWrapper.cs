@@ -12,12 +12,14 @@ namespace CentralServer.LobbyServer.Discord
         
         private readonly DiscordWebhookClient client;
         private readonly ulong? threadId;
+        private readonly ulong? pingRoleId;
         
         public DiscordClientWrapper(DiscordChannel conf)
         {
             client = new DiscordWebhookClient(conf.Webhook);
             client.Log += Log;
             threadId = conf.ThreadId;
+            pingRoleId = conf.PingRoleId;
         }
 
         private static Task Log(LogMessage msg)
@@ -39,6 +41,14 @@ namespace CentralServer.LobbyServer.Discord
         {
             ulong? _threadId = threadIdOverride ?? threadId;
             if (_threadId == 0) _threadId = null;
+
+            if (pingRoleId != null) 
+            { 
+                text = text?
+                    .Replace("@here", $"<@&{pingRoleId}>")
+                    .Replace("@everyone", $"<@&{pingRoleId}>");
+            }
+
             return client.SendMessageAsync(
                 text, isTTS, embeds, username, avatarUrl, options, allowedMentions, components, flags, _threadId);
         }
