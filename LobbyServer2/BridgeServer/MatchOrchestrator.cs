@@ -91,6 +91,15 @@ namespace CentralServer.BridgeServer
             {
                 return;
             }
+            
+            foreach (LobbyServerProtocol client in server.GetClients())
+            {
+                if (client is not null && client.IsConnected)
+                {
+                    client.BroadcastRefreshFriendList();
+                    break;
+                }
+            }
 
             server.StartGame();
 
