@@ -172,14 +172,14 @@ namespace CentralServer.BridgeServer
                     break;
                 }
             }
-            
-            QueuePenaltyManager.IssueQueuePenalty(request.PlayerInfo.AccountId, this);
 
             LobbyServerPlayerInfo playerInfo = GetPlayerInfo(request.PlayerInfo.AccountId);
             if (playerInfo != null)
             {
                 playerInfo.ReplacedWithBots = true;
             }
+            
+            QueuePenaltyManager.IssueQueuePenalties(request.PlayerInfo.AccountId, this);
         }
 
         private void HandleServerGameMetricsNotification(ServerGameMetricsNotification request)
@@ -248,6 +248,7 @@ namespace CentralServer.BridgeServer
 
         protected override void HandleClose(CloseEventArgs e)
         {
+            QueuePenaltyManager.CapQueuePenalties(this);
             UnregisterAllHandlers();
             ServerManager.RemoveServer(ProcessCode);
         }

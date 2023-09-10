@@ -4,6 +4,7 @@ using System.Linq;
 using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Session;
+using CentralServer.LobbyServer.Utils;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
@@ -16,7 +17,7 @@ public static class QueuePenaltyManager
 {
     private static readonly ILog log = LogManager.GetLogger(typeof(QueuePenaltyManager));
     
-    public static void IssueQueuePenalty(long accountId, BridgeServerProtocol server)
+    public static void IssueQueuePenalties(long accountId, BridgeServerProtocol server)
     {
         if (!LobbyConfiguration.GetMatchAbandoningPenalty()
             || server?.GameInfo?.GameConfig is null
@@ -25,42 +26,81 @@ public static class QueuePenaltyManager
             return;
         }
 
-        if (server.TeamInfo.TeamPlayerInfo.Count(i => i.ReplacedWithBots) * 2 >=
-            server.TeamInfo.TeamPlayerInfo.Count)
+        lock (server)
         {
-            return;
-        }
-        if (server.ServerGameStatus != GameStatus.Stopped)
-        {
-            SetQueuePenalty(accountId, GameType.PvP, TimeSpan.FromSeconds(200));
-        }
-        else if (server.StopTime > DateTime.UtcNow)
-        {
-            SetQueuePenalty(accountId, GameType.PvP, DateTime.UtcNow.Subtract(server.StopTime).Add(TimeSpan.FromSeconds(30)));
+            int replacedWithBotsNum = server.TeamInfo.TeamPlayerInfo.Count(i => i.ReplacedWithBots);
+            if (replacedWithBotsNum == server.TeamInfo.TeamPlayerInfo.Count)
+            {
+                CapQueuePenalties(server);
+                return;
+            }
+            if (replacedWithBotsNum * 2 > server.TeamInfo.TeamPlayerInfo.Count)
+            {
+                return;
+            }
+            if (server.ServerGameStatus != GameStatus.Stopped)
+            {
+                SetQueuePenalty(accountId, GameType.PvP, TimeSpan.FromSeconds(200));
+            }
+            else if (server.StopTime > DateTime.UtcNow)
+            {
+                SetQueuePenalty(accountId, GameType.PvP, DateTime.UtcNow.Subtract(server.StopTime).Add(TimeSpan.FromSeconds(30)));
+            }
         }
     }
 
-    private static void SetQueuePenalty(long accountId, GameType gameType, TimeSpan timeSpan, bool overridePenalty = false)
+    public static void CapQueuePenalties(BridgeServerProtocol server)
+    {
+        foreach (long accountId in server.GetPlayers())
+        {
+            TimeSpan duration = TimeSpan.FromSeconds(15);
+            LocalizationArg argDuration = LocalizationArg_TimeSpan.Create(duration);
+            LocalizationPayload msg =
+                LocalizationPayload.Create("QueueDodgerPenaltyAppliedToSelf", "Matchmaking", argDuration);
+            if (SetQueuePenalty(accountId, GameType.PvP, duration, capPenalty: true))
+            {
+                log.Info($"{LobbyServerUtils.GetHandle(accountId)}'s queue penalty is pardoned (reset to {duration}");
+                SessionManager.GetClientConnection(accountId)?.SendSystemMessage(msg);
+            }
+        }
+    }
+
+    private static bool SetQueuePenalty(
+        long accountId,
+        GameType gameType,
+        TimeSpan timeSpan,
+        bool overridePenalty = false,
+        bool capPenalty = false)
     {
         PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
         if (account is null)
         {
-            return;
+            return false;
         }
         account.AdminComponent.ActiveQueuePenalties ??= new Dictionary<GameType, QueuePenalties>();
         QueuePenalties penalties = account.AdminComponent.ActiveQueuePenalties.GetValueOrDefault(gameType);
-        DateTime newTimeout = DateTime.UtcNow.Add(timeSpan);
+        DateTime referenceDateTime = DateTime.UtcNow;
+        DateTime newTimeout = referenceDateTime.Add(timeSpan);
         if (penalties is null)
         {
             penalties = new QueuePenalties();
             penalties.ResetQueueDodge();
         }
 
-        if (overridePenalty || penalties.QueueDodgeBlockTimeout < newTimeout)
+        DateTime oldTimeout = penalties.QueueDodgeBlockTimeout;
+
+        if (oldTimeout == newTimeout)
         {
-            penalties.QueueDodgeBlockTimeout = newTimeout;
-            log.Info($"{gameType} queue penalty for {account.Handle}: {timeSpan}");
+            return false;
         }
+        if (capPenalty != oldTimeout > newTimeout && !overridePenalty)
+        {
+            return false;
+        }
+        
+        penalties.QueueDodgeBlockTimeout = newTimeout;
+        log.Info(
+            $"{gameType} queue penalty for {account.Handle}: {timeSpan} (was {referenceDateTime.Subtract(oldTimeout)}");
 
         account.AdminComponent.ActiveQueuePenalties[gameType] = penalties;
         DB.Get().AccountDao.UpdateAccount(account);
@@ -70,6 +110,8 @@ public static class QueuePenaltyManager
         {
             MatchmakingManager.RemoveGroupFromQueue(playerGroup, true);
         }
+
+        return true;
     }
 
     public static LocalizationPayload CheckQueuePenalties(long accountId, GameType selectedGameType)
@@ -79,13 +121,6 @@ public static class QueuePenaltyManager
         if (queuePenalties is not null && queuePenalties.QueueDodgeBlockTimeout > DateTime.UtcNow.Add(TimeSpan.FromSeconds(5)))
         {
             TimeSpan duration = queuePenalties.QueueDodgeBlockTimeout.Subtract(DateTime.UtcNow);
-            if (selectedGameType == GameType.PvP && ServerManager.GetServerWithPlayer(accountId) is null)
-            {
-                log.Info($"{account.Handle}'s {duration} queue penalty is pardoned");
-                SetQueuePenalty(accountId, selectedGameType, TimeSpan.Zero, true);
-                return null;
-            }
-            
             LocalizationArg argDuration = LocalizationArg_TimeSpan.Create(duration);
             LocalizationPayload failure = LocalizationPayload.Create("QueueDodgerPenaltyAppliedToSelf", "Matchmaking", argDuration);
             log.Info($"{account.Handle} cannot join {selectedGameType} queue until {queuePenalties.QueueDodgeBlockTimeout}");
