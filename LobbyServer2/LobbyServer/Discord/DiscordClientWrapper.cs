@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Webhook;
+using EvoS.Framework.Misc;
 using log4net;
 
 namespace CentralServer.LobbyServer.Discord
@@ -13,6 +14,7 @@ namespace CentralServer.LobbyServer.Discord
         private readonly DiscordWebhookClient client;
         private readonly ulong? threadId;
         private readonly ulong? pingRoleId;
+        private readonly string? pingRoleHandle;
         
         public DiscordClientWrapper(DiscordChannel conf)
         {
@@ -20,6 +22,7 @@ namespace CentralServer.LobbyServer.Discord
             client.Log += Log;
             threadId = conf.ThreadId;
             pingRoleId = conf.PingRoleId;
+            pingRoleHandle = conf.PingRoleHandle;
         }
 
         private static Task Log(LogMessage msg)
@@ -47,6 +50,11 @@ namespace CentralServer.LobbyServer.Discord
                 text = text?
                     .Replace("@here", $"<@&{pingRoleId}>")
                     .Replace("@everyone", $"<@&{pingRoleId}>");
+
+                if (!pingRoleHandle.IsNullOrEmpty())
+                {
+                    text = text?.Replace($"@{pingRoleHandle}", $"<@&{pingRoleId}>");
+                }
             }
 
             return client.SendMessageAsync(
