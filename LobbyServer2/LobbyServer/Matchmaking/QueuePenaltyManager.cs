@@ -99,8 +99,8 @@ public static class QueuePenaltyManager
         }
         
         penalties.QueueDodgeBlockTimeout = newTimeout;
-        log.Info(
-            $"{gameType} queue penalty for {account.Handle}: {timeSpan} (was {referenceDateTime.Subtract(oldTimeout)}");
+        log.Info($"{gameType} queue penalty for {account.Handle}: {timeSpan}" 
+                 + (oldTimeout > referenceDateTime ? $" (was {oldTimeout.Subtract(referenceDateTime)})" : ""));
 
         account.AdminComponent.ActiveQueuePenalties[gameType] = penalties;
         DB.Get().AccountDao.UpdateAccount(account);
