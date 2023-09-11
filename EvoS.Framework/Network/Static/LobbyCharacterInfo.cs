@@ -151,6 +151,26 @@ namespace EvoS.Framework.Network.Static
             };
             overrides.Add(CharacterType.Tracker, TrackerAbilityConfigOverride);
 
+            // Disable Quark's "Piercing Light" mod
+            CharacterAbilityConfigOverride SparkAbilityConfigOverride = new CharacterAbilityConfigOverride(CharacterType.Spark);
+            SparkAbilityConfigOverride.AbilityConfigs[4] = new AbilityConfigOverride(CharacterType.Spark, 4)
+            {
+                AbilityModConfigs = new Dictionary<int, AbilityModConfigOverride>()
+                {
+                    {
+                        5,
+                        new AbilityModConfigOverride
+                        {
+                            AbilityIndex = 4,
+                            AbilityModIndex = 5,
+                            Allowed = false,
+                            CharacterType = CharacterType.Spark
+                        }
+                    }
+                }
+            };
+            overrides.Add(CharacterType.Spark, SparkAbilityConfigOverride);
+
 
             return overrides;
         }
