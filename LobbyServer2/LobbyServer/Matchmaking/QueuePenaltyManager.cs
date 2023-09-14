@@ -59,7 +59,7 @@ public static class QueuePenaltyManager
                 LocalizationPayload.Create("QueueDodgerPenaltyAppliedToSelf", "Matchmaking", argDuration);
             if (SetQueuePenalty(accountId, GameType.PvP, duration, capPenalty: true))
             {
-                log.Info($"{LobbyServerUtils.GetHandle(accountId)}'s queue penalty is pardoned (reset to {duration}");
+                log.Info($"{LobbyServerUtils.GetHandle(accountId)}'s queue penalty is pardoned (reset to {duration})");
                 SessionManager.GetClientConnection(accountId)?.SendSystemMessage(msg);
             }
         }
