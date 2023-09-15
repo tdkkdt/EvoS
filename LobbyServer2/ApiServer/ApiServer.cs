@@ -84,7 +84,7 @@ public abstract class ApiServer
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
         }); 
         app.UseCors();
-        app.UseMiddleware<ApiAuthMiddleware>();
+        app.UseMiddleware<ApiAuthMiddleware>(authContext);
         app.UseExceptionHandler(ehApp => ehApp.Run(async context =>
         {
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;

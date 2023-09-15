@@ -8,6 +8,7 @@ using EvoS.Framework;
 using EvoS.Framework.Auth;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.Static;
+using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
 
 namespace EvoS.DirectoryServer;
@@ -123,6 +124,25 @@ public class EvosAuth
             Context.ADMIN_API => DateTime.UtcNow.AddDays(1),
             Context.USER_API => DateTime.UtcNow.AddDays(30),
             Context.TICKET_AUTH => DateTime.UtcNow.AddMinutes(10),
+            _ => throw new EvosException("Unknown security context")
+        };
+    }
+
+    public static bool ValidateTokenData(HttpContext httpContext, TokenData tokenData, Context authContext)
+    {
+        return tokenData is not null
+               && tokenData.IpAddress.IsSameSubnet(
+                   httpContext.Connection.RemoteIpAddress,
+                   GetAllowedSubnet(authContext));
+    }
+
+    private static int GetAllowedSubnet(Context context)
+    {
+        return context switch
+        {
+            Context.ADMIN_API => 0,
+            Context.USER_API => 12,
+            Context.TICKET_AUTH => 12,
             _ => throw new EvosException("Unknown security context")
         };
     }

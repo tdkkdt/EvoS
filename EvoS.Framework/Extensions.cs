@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net;
 using System.Text;
 using EvoS.Framework.Constants.Enums;
 
@@ -69,6 +70,36 @@ namespace EvoS.Framework
                 GameResult.TeamBWon => team == Team.TeamB ? PlayerGameResult.Win : PlayerGameResult.Lose,
                 _ => PlayerGameResult.NoResult
             };
+        }
+        
+        public static IPAddress GetSubnet(this IPAddress address, int subnet)
+        {
+            byte[] ipAddressBytes = address.GetAddressBytes();
+            if (subnet == 0)
+            {
+                return new IPAddress(ipAddressBytes);
+            }
+            
+            if (subnet > 32)
+            {
+                throw new ArgumentException("Bad IP address mask");
+            }
+
+            byte[] broadcastAddress = new byte[ipAddressBytes.Length];
+            int maskPow = subnet;
+            for (int i = broadcastAddress.Length - 1; i >= 0; i--)
+            {
+                int maskBytePow = Math.Max(0, Math.Min(maskPow, 8));
+                maskPow -= 8;
+                byte maskByte = (byte)((1 << maskBytePow) - 1);
+                broadcastAddress[i] = (byte)(ipAddressBytes[i] | maskByte);
+            }
+            return new IPAddress(broadcastAddress);
+        }
+        
+        public static bool IsSameSubnet(this IPAddress address, IPAddress otherAddress, int subnet)
+        {
+            return address.GetSubnet(subnet).Equals(otherAddress.GetSubnet(subnet));
         }
     }
 }

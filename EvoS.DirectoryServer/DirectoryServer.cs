@@ -157,7 +157,7 @@ namespace EvoS.DirectoryServer
                 return Fail(request, "Failed to log in");
             }
 
-            if (!tokenData.IpAddress.Equals(context.Connection.RemoteIpAddress) &&
+            if (!EvosAuth.ValidateTokenData(context, tokenData, EvosAuth.Context.TICKET_AUTH) &&
                 (context.Connection.RemoteIpAddress is null
                  || !IPAddress.IsLoopback(tokenData.IpAddress)
                  || !IPAddress.IsLoopback(context.Connection.RemoteIpAddress)))

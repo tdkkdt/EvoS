@@ -16,10 +16,12 @@ public class ApiAuthMiddleware
     private static readonly ILog log = LogManager.GetLogger(typeof(ApiAuthMiddleware));
     
     private readonly RequestDelegate _next;
+    private readonly EvosAuth.Context _authContext;
 
-    public ApiAuthMiddleware(RequestDelegate next)
+    public ApiAuthMiddleware(RequestDelegate next, EvosAuth.Context authContext)
     {
         _next = next;
+        _authContext = authContext;
     }
 
     public async Task InvokeAsync(HttpContext httpContext)
@@ -28,7 +30,7 @@ public class ApiAuthMiddleware
         if (endpoint?.Metadata.GetMetadata<IAllowAnonymous>() == null)
         {
             EvosAuth.TokenData tokenData = EvosAuth.GetTokenData(httpContext.User);
-            if (!ValidateTokenData(httpContext, tokenData))
+            if (!EvosAuth.ValidateTokenData(httpContext, tokenData, _authContext))
             {
                 httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 await httpContext.Response.WriteAsync("");
@@ -38,11 +40,6 @@ public class ApiAuthMiddleware
         
         PopulateRoles(httpContext);
         await _next(httpContext);
-    }
-
-    private static bool ValidateTokenData(HttpContext httpContext, EvosAuth.TokenData tokenData)
-    {
-        return tokenData is not null && tokenData.IpAddress.Equals(httpContext.Connection.RemoteIpAddress);
     }
     
     private static void PopulateRoles(HttpContext httpContext)
