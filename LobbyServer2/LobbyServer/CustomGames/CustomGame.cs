@@ -373,7 +373,6 @@ public class CustomGame : GameServerBase
         
         TeamInfo = CreateTeamInfo(teamInfo);
         GameInfo.GameConfig = gameInfo.GameConfig;
-        GameInfo.ActivePlayers = TeamInfo.TeamPlayerInfo.Count;
 
         SendGameInfoNotifications();
         CustomGameManager.NotifyUpdate();

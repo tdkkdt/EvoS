@@ -136,6 +136,7 @@ namespace CentralServer.LobbyServer.CustomGames
                 log.Error("Failed to update game info", e);
                 return false;
             }
+            NotifyUpdate();
             return true;
         }
 
@@ -177,6 +178,7 @@ namespace CentralServer.LobbyServer.CustomGames
             if (game.Join(accountId, asSpectator))
             {
                 localizedFailure = null;
+                NotifyUpdate();
                 return game;
             }
             else

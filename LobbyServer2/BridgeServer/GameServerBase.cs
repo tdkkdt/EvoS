@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using CentralServer.LobbyServer;
@@ -140,6 +141,8 @@ public abstract class GameServerBase : WebSocketBehaviorBase<AllianceMessageBase
 
     public void SendGameInfoNotifications()
     {
+        GameInfo.ActivePlayers = TeamInfo.TeamPlayerInfo.Count;
+        GameInfo.UpdateTimestamp = DateTime.UtcNow.Ticks;
         foreach (long player in GetPlayers())
         {
             LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(player);
