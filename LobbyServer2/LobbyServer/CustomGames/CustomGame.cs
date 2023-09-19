@@ -322,7 +322,7 @@ public class CustomGame : GameServerBase
             log.Error($"Failed to set secondary character: {playerId} not found");
             return;
         }
-        if (lobbyServerPlayerInfo.AccountId != accountId)
+        if (Owner != accountId)
         {
             log.Error($"Failed to set secondary character: {playerId} does not belong to {LobbyServerUtils.GetHandle(accountId)}");
             return;

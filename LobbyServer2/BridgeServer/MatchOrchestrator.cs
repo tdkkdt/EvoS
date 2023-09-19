@@ -196,7 +196,7 @@ namespace CentralServer.BridgeServer
         {
             foreach (LobbyServerPlayerInfo playerInfo in server.TeamInfo.TeamPlayerInfo)
             {
-                if (playerInfo.TeamId != Team.TeamA && playerInfo.TeamId != Team.TeamB)
+                if (playerInfo.IsAIControlled || playerInfo.TeamId != Team.TeamA && playerInfo.TeamId != Team.TeamB)
                 {
                     continue;
                 }
