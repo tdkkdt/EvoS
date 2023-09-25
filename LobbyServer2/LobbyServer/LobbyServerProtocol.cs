@@ -31,6 +31,8 @@ namespace CentralServer.LobbyServer
         
         private BridgeServerProtocol _currentServer;
 
+        public PlayerOnlineStatus Status = PlayerOnlineStatus.Online;
+
         public BridgeServerProtocol CurrentServer
         {
             get => _currentServer;
@@ -206,10 +208,7 @@ namespace CentralServer.LobbyServer
 
         public void BroadcastRefreshFriendList()
         {
-            foreach (IWebSocketSession session in Sessions.Sessions)
-            {
-                ((LobbyServerProtocol)session)?.RefreshFriendList();
-            }
+            FriendManager.MarkForUpdate(this);
         }
 
         public void RefreshFriendList()

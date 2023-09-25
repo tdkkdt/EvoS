@@ -5,6 +5,7 @@ using CentralServer.BridgeServer;
 using CentralServer.LobbyServer;
 using CentralServer.LobbyServer.Chat;
 using CentralServer.LobbyServer.Discord;
+using CentralServer.LobbyServer.Friend;
 using EvoS.Framework;
 using log4net;
 using WebSocketSharp;
@@ -29,6 +30,9 @@ namespace CentralServer
             ChatManager.Get(); // TODO Dependency injection
             await DiscordManager.Get().Start();
             AdminManager.Get().Start();
+
+            FriendsTask friendsTask = new FriendsTask(CancellationToken.None);
+            _ = Task.Run(friendsTask.Run, CancellationToken.None);
             
             server.Start();
             log.Info($"Started lobby server on port {port}");
