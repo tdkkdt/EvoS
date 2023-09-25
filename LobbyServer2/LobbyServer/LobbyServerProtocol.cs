@@ -711,7 +711,7 @@ namespace CentralServer.LobbyServer
             catch (Exception e)
             {
                 Send(new LeaveMatchmakingQueueResponse { Success = false, ResponseId = request.RequestId });
-                log.Error("Failed to process join queue request", e);
+                log.Error("Failed to process leave queue request", e);
             }
         }
 

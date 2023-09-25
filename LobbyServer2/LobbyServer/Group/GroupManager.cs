@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
+using CentralServer.LobbyServer.Utils;
 using EvoS.Framework;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.Static;
@@ -39,9 +40,18 @@ namespace CentralServer.LobbyServer.Group
         {
             lock (_lock)
             {
-                return PlayerToGroup.TryGetValue(accountId, out long groupId)
-                    ? ActiveGroups[groupId]
-                    : null;
+                if (PlayerToGroup.TryGetValue(accountId, out long groupId))
+                {
+                    return ActiveGroups[groupId];
+                }
+                else
+                {
+                    log.Warn($"Player {LobbyServerUtils.GetHandle(accountId)} wasn't in any group");
+                    CreateGroup(accountId);
+                    return PlayerToGroup.TryGetValue(accountId, out groupId)
+                        ? ActiveGroups[groupId]
+                        : null;
+                }
             }
         }
         
@@ -135,6 +145,10 @@ namespace CentralServer.LobbyServer.Group
             {
                 OnJoinGroup(accountId);
                 OnGroupMembersUpdated(joinedGroup);
+            }
+            else
+            {
+                CreateGroup(accountId);
             }
         }
 
