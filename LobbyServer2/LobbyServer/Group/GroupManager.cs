@@ -44,15 +44,17 @@ namespace CentralServer.LobbyServer.Group
                 {
                     return ActiveGroups[groupId];
                 }
-                else
+                else if (SessionManager.GetClientConnection(accountId) is not null)
                 {
-                    log.Warn($"Player {LobbyServerUtils.GetHandle(accountId)} wasn't in any group");
+                    log.Error($"Player {LobbyServerUtils.GetHandle(accountId)} wasn't in any group");
                     CreateGroup(accountId);
                     return PlayerToGroup.TryGetValue(accountId, out groupId)
                         ? ActiveGroups[groupId]
                         : null;
                 }
             }
+
+            return null;
         }
         
         public static long CreateGroupRequest(long requesterAccountId, long requesteeAccountId, long groupId)

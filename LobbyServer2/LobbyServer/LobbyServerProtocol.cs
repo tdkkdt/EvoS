@@ -153,16 +153,18 @@ namespace CentralServer.LobbyServer
         protected override void HandleClose(CloseEventArgs e)
         {
             UnregisterAllHandlers();
-            if (!SessionCleaned)
-            {
-                SessionCleaned = true;
-                GroupManager.LeaveGroup(AccountId, false);
-            }
             log.Info(string.Format(Messages.PlayerDisconnected, this.UserName));
 
             // ServerManager.GetServerWithPlayer(AccountId)?.DisconnectPlayer(AccountId);
 
             SessionManager.OnPlayerDisconnect(this);
+            
+            if (!SessionCleaned)
+            {
+                SessionCleaned = true;
+                GroupManager.LeaveGroup(AccountId, false);
+            }
+            
             BroadcastRefreshFriendList();
         }
 
