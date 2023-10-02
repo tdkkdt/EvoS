@@ -1,12 +1,21 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using CentralServer.LobbyServer.Character;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.Network.Static;
+using log4net;
+using Newtonsoft.Json;
 
 namespace EvoS.DirectoryServer.Character
 {
     public class CharacterManager
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(CharacterManager));
+        
+        private static readonly Lazy<Dictionary<CharacterType, CharacterModInfo>> DEFAULT_EQUIP = new Lazy<Dictionary<CharacterType, CharacterModInfo>>(() =>
+            JsonConvert.DeserializeObject<Dictionary<CharacterType, CharacterModInfo>>(File.ReadAllText("config/defaultEquip.json")));
+        
         public static Dictionary<CharacterType, PersistedCharacterData> GetPersistedCharacterData(long accountId)
         {
             Dictionary<CharacterType, PersistedCharacterData> characterDatas = new Dictionary<CharacterType, PersistedCharacterData>();
@@ -27,16 +36,19 @@ namespace EvoS.DirectoryServer.Character
 
         public static CharacterComponent GetCharacterComponent(long accountId, CharacterType characterType)
         {
+            CharacterModInfo mods = GetDefaultMods(characterType);
             CharacterComponent characterComponent = new CharacterComponent()
             {
                 Unlocked = true,
                 LastSelectedLoadout = 0,
                 Skins = GetPlayerSkinDataList(characterType),
+                LastMods = mods,
+                LastRankedMods = mods,
                 CharacterLoadouts = new List<CharacterLoadout>()
                 {
                     new CharacterLoadout
                     (
-                        new CharacterModInfo() { ModForAbility0 = 0, ModForAbility1 = 0, ModForAbility2 = 0, ModForAbility3 = 0, ModForAbility4 = 0 },
+                        mods,
                         new CharacterAbilityVfxSwapInfo() { VfxSwapForAbility0 = 0, VfxSwapForAbility1 = 0, VfxSwapForAbility2 = 0, VfxSwapForAbility3 = 0, VfxSwapForAbility4 = 0 },
                         "Default",
                         ModStrictness.AllModes
@@ -45,36 +57,6 @@ namespace EvoS.DirectoryServer.Character
             };
 
             return characterComponent;
-        }
-
-        public static List<PersistedCharacterData> GetCharacterDataList(long accountId)
-        {
-            List<PersistedCharacterData> characterDataList = new List<PersistedCharacterData>();
-
-            foreach (PersistedCharacterData persistedCharacterData in GetPersistedCharacterData(accountId).Values)
-            {
-                characterDataList.Add(persistedCharacterData);
-            }
-
-            return characterDataList;
-        }
-
-        public static LobbyCharacterInfo GetCharacterInfo(long accountId, CharacterType characterType)
-        {
-            CharacterComponent characterComponent = GetCharacterComponent(accountId, characterType);
-            LobbyCharacterInfo characterInfo = new LobbyCharacterInfo()
-            {
-                CharacterAbilityVfxSwaps = characterComponent.LastAbilityVfxSwaps,
-                CharacterCards = characterComponent.LastCards,
-                CharacterLevel = 1,
-                CharacterLoadouts = characterComponent.CharacterLoadouts,
-                CharacterMatches = 0,
-                CharacterMods = LobbyCharacterInfo.RemoveDisabledMods(characterComponent.LastMods, characterType),
-                CharacterSkin = characterComponent.LastSkin,
-                CharacterTaunts = characterComponent.Taunts,
-                CharacterType = characterType,
-            };
-            return characterInfo;
         }
 
         private static List<PlayerSkinData> GetPlayerSkinDataList(CharacterType characterType)
@@ -151,6 +133,27 @@ namespace EvoS.DirectoryServer.Character
 
             
             return skins;
+        }
+
+        public static CharacterModInfo GetDefaultMods(CharacterType characterType)
+        {
+            try
+            {
+                if (DEFAULT_EQUIP.Value.TryGetValue(characterType, out CharacterModInfo info))
+                {
+                    log.Error($"Loading default loadout for {characterType}: {info.ToString()}");
+                    return info;
+                }
+                else
+                {
+                    log.Error($"Failed to find default loadout for {characterType}");
+                }
+            }
+            catch (Exception e)
+            {
+                log.Error($"Failed to find default loadout for {characterType}", e);
+            }
+            return new CharacterModInfo();
         }
     }
 }

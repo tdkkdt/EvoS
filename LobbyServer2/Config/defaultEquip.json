@@ -1,0 +1,234 @@
+{
+  "Archer": {
+    "ModForAbility0": 1,
+    "ModForAbility1": 5,
+    "ModForAbility2": 2,
+    "ModForAbility3": 1,
+    "ModForAbility4": 6
+  },
+  "BattleMonk": {
+    "ModForAbility0": 2,
+    "ModForAbility1": 3,
+    "ModForAbility2": 2,
+    "ModForAbility3": 1,
+    "ModForAbility4": 1
+  },
+  "BazookaGirl": {
+    "ModForAbility0": 1,
+    "ModForAbility1": 1,
+    "ModForAbility2": 10,
+    "ModForAbility3": 4,
+    "ModForAbility4": 9
+  },
+  "Blaster": {
+    "ModForAbility0": 1,
+    "ModForAbility1": 4,
+    "ModForAbility2": 1,
+    "ModForAbility3": 1,
+    "ModForAbility4": 2
+  },
+  "Claymore": {
+    "ModForAbility0": 7,
+    "ModForAbility1": 6,
+    "ModForAbility2": 8,
+    "ModForAbility3": 7,
+    "ModForAbility4": 5
+  },
+  "Cleric": {
+    "ModForAbility0": 1,
+    "ModForAbility1": 2,
+    "ModForAbility2": 3,
+    "ModForAbility3": 3,
+    "ModForAbility4": 4
+  },
+  "DigitalSorceress": {
+    "ModForAbility0": 3,
+    "ModForAbility1": 8,
+    "ModForAbility2": 1,
+    "ModForAbility3": 1,
+    "ModForAbility4": 4
+  },
+  "Dino": {
+    "ModForAbility0": 6,
+    "ModForAbility1": 4,
+    "ModForAbility2": 1,
+    "ModForAbility3": 2,
+    "ModForAbility4": 4
+  },
+  "Exo": {
+    "ModForAbility0": 1,
+    "ModForAbility1": 1,
+    "ModForAbility2": 1,
+    "ModForAbility3": 4,
+    "ModForAbility4": 5
+  },
+  "Fireborg": {
+    "ModForAbility0": 3,
+    "ModForAbility1": 1,
+    "ModForAbility2": 5,
+    "ModForAbility3": 1,
+    "ModForAbility4": 3
+  },
+  "FishMan": {
+    "ModForAbility0": 1,
+    "ModForAbility1": 2,
+    "ModForAbility2": 2,
+    "ModForAbility3": 5,
+    "ModForAbility4": 2
+  },
+  "Gremlins": {
+    "ModForAbility0": 1,
+    "ModForAbility1": 3,
+    "ModForAbility2": 8,
+    "ModForAbility3": 4,
+    "ModForAbility4": 3
+  },
+  "Iceborg": {
+    "ModForAbility0": 6,
+    "ModForAbility1": 1,
+    "ModForAbility2": 1,
+    "ModForAbility3": 1,
+    "ModForAbility4": 4,
+    "INVALID_A": 1
+  },
+  "Manta": {
+    "ModForAbility0": 1,
+    "ModForAbility1": 3,
+    "ModForAbility2": 1,
+    "ModForAbility3": 1,
+    "ModForAbility4": 5
+  },
+  "Martyr": {
+    "ModForAbility0": 4,
+    "ModForAbility1": 3,
+    "ModForAbility2": 4,
+    "ModForAbility3": 1,
+    "ModForAbility4": 5
+  },
+  "NanoSmith": {
+    "ModForAbility0": 2,
+    "ModForAbility1": 1,
+    "ModForAbility2": 9,
+    "ModForAbility3": 2,
+    "ModForAbility4": 1
+  },
+  "Neko": {
+    "ModForAbility0": 4,
+    "ModForAbility1": 1,
+    "ModForAbility2": 3,
+    "ModForAbility3": 3,
+    "ModForAbility4": 4
+  },
+  "RageBeast": {
+    "ModForAbility0": 11,
+    "ModForAbility1": 3,
+    "ModForAbility2": 1,
+    "ModForAbility3": 11,
+    "ModForAbility4": 9
+  },
+  "Rampart": {
+    "ModForAbility0": 1,
+    "ModForAbility1": 2,
+    "ModForAbility2": 5,
+    "ModForAbility3": 4,
+    "ModForAbility4": 3
+  },
+  "RobotAnimal": {
+    "ModForAbility0": 5,
+    "ModForAbility1": 2,
+    "ModForAbility2": 4,
+    "ModForAbility3": 2,
+    "ModForAbility4": 10
+  },
+  "Samurai": {
+    "ModForAbility0": 4,
+    "ModForAbility1": 4,
+    "ModForAbility2": 2,
+    "ModForAbility3": 4,
+    "ModForAbility4": 2
+  },
+  "Scamp": {
+    "ModForAbility0": 3,
+    "ModForAbility1": 2,
+    "ModForAbility2": 1,
+    "ModForAbility3": 2,
+    "ModForAbility4": 6
+  },
+  "Scoundrel": {
+    "ModForAbility0": 2,
+    "ModForAbility1": 1,
+    "ModForAbility2": 2,
+    "ModForAbility3": 1,
+    "ModForAbility4": 1
+  },
+  "Sensei": {
+    "ModForAbility0": 2,
+    "ModForAbility1": 1,
+    "ModForAbility2": 1,
+    "ModForAbility3": 4,
+    "ModForAbility4": 1
+  },
+  "Sniper": {
+    "ModForAbility0": 3,
+    "ModForAbility1": 3,
+    "ModForAbility2": 3,
+    "ModForAbility3": 6,
+    "ModForAbility4": 4
+  },
+  "Soldier": {
+    "ModForAbility0": 2,
+    "ModForAbility1": 3,
+    "ModForAbility2": 4,
+    "ModForAbility3": 3,
+    "ModForAbility4": 5
+  },
+  "SpaceMarine": {
+    "ModForAbility0": 3,
+    "ModForAbility1": 2,
+    "ModForAbility2": 3,
+    "ModForAbility3": 1,
+    "ModForAbility4": 3
+  },
+  "Spark": {
+    "ModForAbility0": 10,
+    "ModForAbility1": 3,
+    "ModForAbility2": 3,
+    "ModForAbility3": 7,
+    "ModForAbility4": 1
+  },
+  "TeleportingNinja": {
+    "ModForAbility0": 1,
+    "ModForAbility1": 2,
+    "ModForAbility2": 3,
+    "ModForAbility3": 1,
+    "ModForAbility4": 2
+  },
+  "Thief": {
+    "ModForAbility0": 2,
+    "ModForAbility1": 4,
+    "ModForAbility2": 3,
+    "ModForAbility3": 5,
+    "ModForAbility4": 4
+  },
+  "Tracker": {
+    "ModForAbility0": 1,
+    "ModForAbility1": 6,
+    "ModForAbility2": 11,
+    "ModForAbility3": 2,
+    "ModForAbility4": 3
+  },
+  "Trickster": {
+    "ModForAbility0": 1,
+    "ModForAbility1": 1,
+    "ModForAbility2": 4,
+    "ModForAbility3": 2,
+    "ModForAbility4": 1
+  },
+  "Valkyrie": {
+    "ModForAbility0": 4,
+    "ModForAbility1": 5,
+    "ModForAbility2": 1,
+    "ModForAbility3": 3,
+    "ModForAbility4": 2
+  }
+}
