@@ -119,10 +119,10 @@ namespace CentralServer.LobbyServer.Group
 
         public static void JoinGroup(long groupId, long accountId)
         {
-            LeaveGroup(accountId, false);
             GroupInfo joinedGroup = null;
             lock (_lock)
             {
+                LeaveGroup(accountId, false);
                 if (ActiveGroups.TryGetValue(groupId, out GroupInfo groupInfo))
                 {
                     if (groupInfo.Members.Count < LobbyConfiguration.GetMaxGroupSize())
