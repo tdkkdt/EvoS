@@ -142,6 +142,7 @@ public class CustomGame : GameServerBase
                 SetSecondaryCharacter(accountId, update.PlayerId, update.CharacterType.Value);
             }
 
+            CheckIfAllSelected();
             SendGameInfoNotifications();
             return true;
         }
@@ -327,6 +328,7 @@ public class CustomGame : GameServerBase
             log.Error($"Failed to set secondary character: {playerId} does not belong to {LobbyServerUtils.GetHandle(accountId)}");
             return;
         }
+        // TODO validate there is no duplicates/duplicates are allowed
         lobbyServerPlayerInfo.CharacterInfo = new LobbyCharacterInfo() { CharacterType = characterType };
     }
 
@@ -372,7 +374,9 @@ public class CustomGame : GameServerBase
         }
         
         TeamInfo = CreateTeamInfo(teamInfo);
+        CheckIfAllSelected();
         GameInfo.GameConfig = gameInfo.GameConfig;
+        ForceUnReady();
 
         SendGameInfoNotifications();
         CustomGameManager.NotifyUpdate();
@@ -466,5 +470,101 @@ public class CustomGame : GameServerBase
     protected override string GetConnContext()
     {
         return $"CG {ProcessCode}";
+    }
+
+    // TODO merge with match orchestrator
+    private void CheckIfAllSelected()
+    {
+        bool changed = false;
+        lock (characterSelectionLock)
+        {
+            ILookup<CharacterType, LobbyServerPlayerInfo> teamACharacters = GetCharactersByTeam(Team.TeamA);
+            ILookup<CharacterType, LobbyServerPlayerInfo> teamBCharacters = GetCharactersByTeam(Team.TeamB);
+
+            IEnumerable<LobbyServerPlayerInfo> duplicateCharsA = GetDuplicateCharacters(teamACharacters);
+            IEnumerable<LobbyServerPlayerInfo> duplicateCharsB = GetDuplicateCharacters(teamBCharacters);
+
+            HashSet<CharacterType> usedFillCharacters = new HashSet<CharacterType>();
+
+            foreach (LobbyServerPlayerInfo playerInfo in TeamInfo.TeamPlayerInfo) // custom game - bots don't have accounts
+            {
+                if (IsCharacterUnavailable(playerInfo, duplicateCharsA, duplicateCharsB)
+                    && playerInfo.ReadyState != ReadyState.Ready)
+                {
+                    CharacterType randomType = AssignRandomCharacter(
+                        playerInfo,
+                        playerInfo.TeamId == Team.TeamA ? teamACharacters : teamBCharacters,
+                        usedFillCharacters);
+                    log.Info($"{playerInfo.Handle} switched from {playerInfo.CharacterType} to {randomType}");
+
+                    usedFillCharacters.Add(randomType);
+                        
+                    // LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(player);
+                    // if (playerConnection != null)
+                    // {
+                    //     NotifyCharacterChange(playerConnection, playerInfo, randomType);
+                    //     SetPlayerReady(playerConnection, playerInfo, randomType);
+                    // }
+
+                    // custom game only
+                    changed = true;
+                    playerInfo.CharacterInfo.CharacterType = randomType; 
+                }
+            }
+            
+            // custom game only
+            if (changed)
+            {
+                CreateTeamInfo(LobbyTeamInfo.FromServer(TeamInfo, 0, new MatchmakingQueueConfig()));
+            }
+        }
+    }
+
+    // TODO merge with match orchestrator
+    private IEnumerable<LobbyServerPlayerInfo> GetDuplicateCharacters(ILookup<CharacterType, LobbyServerPlayerInfo> characters)
+    {
+        return characters.Where(c => c.Count() > 1).SelectMany(c => c);
+    }
+
+    // TODO merge with match orchestrator
+    private bool IsCharacterUnavailable(LobbyServerPlayerInfo playerInfo, IEnumerable<LobbyServerPlayerInfo> duplicateCharsA, IEnumerable<LobbyServerPlayerInfo> duplicateCharsB)
+    {
+        if (!playerInfo.IsRemoteControlled && !playerInfo.IsAIControlled) // for custom games only
+        {
+            return false;
+        }
+        
+        IEnumerable<LobbyServerPlayerInfo> duplicateChars = playerInfo.TeamId == Team.TeamA ? duplicateCharsA : duplicateCharsB;
+        CharacterConfigs.Characters.TryGetValue(playerInfo.CharacterInfo.CharacterType, out CharacterConfig characterConfig);
+        return playerInfo.CharacterType == CharacterType.PendingWillFill
+               || (!GameInfo.GameConfig.HasGameOption(GameOptionFlag.AllowDuplicateCharacters) && duplicateChars.Contains(playerInfo)) // && duplicateChars.First() != playerInfo) not in custom games
+               || !characterConfig.AllowForPlayers;
+    }
+
+    // TODO merge with match orchestrator
+    private CharacterType AssignRandomCharacter(
+        LobbyServerPlayerInfo playerInfo,
+        ILookup<CharacterType, LobbyServerPlayerInfo> teammates,
+        HashSet<CharacterType> usedFillCharacters)
+    {
+        HashSet<CharacterType> usedCharacters = teammates.Select(ct => ct.Key).ToHashSet();
+
+        List<CharacterType> availableTypes = CharacterConfigs.Characters
+            .Where(cc =>
+                cc.Value.AllowForPlayers
+                && cc.Value.CharacterRole != CharacterRole.None
+                && !usedCharacters.Contains(cc.Key)
+                && !usedFillCharacters.Contains(cc.Key))
+            .Select(cc => cc.Key)
+            .ToList();
+
+        Random rand = new Random();
+        CharacterType randomType = availableTypes[rand.Next(availableTypes.Count)];
+
+        log.Info($"Selected random character {randomType} for {playerInfo.Handle} " +
+                 $"(was {playerInfo.CharacterType}), options were {string.Join(", ", availableTypes)}, " +
+                 $"teammates: {string.Join(", ", usedCharacters)}, " +
+                 $"used fill characters: {string.Join(", ", usedFillCharacters)})");
+        return randomType;
     }
 }
