@@ -217,7 +217,8 @@ namespace CentralServer.LobbyServer
                 });
                 return;
             }
-            JoinServer(game);
+            GroupManager.GetPlayerGroup(AccountId).Members
+                .ForEach(groupMember => SessionManager.GetClientConnection(groupMember)?.JoinServer(game));
             Send(new CreateGameResponse
             {
                 ResponseId = createGameRequest.RequestId,
