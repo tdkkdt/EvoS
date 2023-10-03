@@ -34,7 +34,7 @@ public class UserApiServer : ApiServer
         // app.MapGet("/api/account/linkedAccountSupport", GetThirdPartyAccountTypes).RequireAuthorization();
         // app.MapGet("/api/account/linkAccount", LinkAccount).RequireAuthorization();
         // app.MapGet("/api/account/unlinkAccount", UnlinkAccount).RequireAuthorization();
-        // app.MapGet("/api/account/changePassword", ChangePassword).RequireAuthorization();
+        app.MapPut("/api/account/changePassword", ChangePassword).RequireAuthorization();
         app.MapGet("/api/ticket", GetTicket).RequireAuthorization();
         app.MapGet("/api/logout", LogOutEverywhere).RequireAuthorization();
         app.UseAuthorization();
@@ -135,7 +135,6 @@ public class UserApiServer : ApiServer
 
     protected IResult ChangePassword(HttpContext httpContext, ClaimsPrincipal user, [FromBody] LoginModel authInfo)
     {
-        // TODO with third-party logins, verify that changing password is allowed
         EvosAuth.TokenData tokenData = EvosAuth.GetTokenData(user);
         log.Info($"Change password: {tokenData.Handle} {tokenData.AccountId} {httpContext.Connection.RemoteIpAddress}");
         LoginManager.ResetPassword(tokenData.AccountId, authInfo._Password);
