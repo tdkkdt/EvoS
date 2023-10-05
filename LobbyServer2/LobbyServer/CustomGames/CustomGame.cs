@@ -450,7 +450,7 @@ public class CustomGame : GameServerBase
         log.Info($"Starting Custom game...");
 
         // Get a server
-        BridgeServerProtocol server = ServerManager.GetServer();
+        BridgeServerProtocol server = ServerManager.GetServer(true);
         if (server == null)
         {
             log.Info($"No available server for Custom game mode");
