@@ -19,9 +19,9 @@ namespace EvoS.Framework.DataAccess.Daos
         {
             [BsonId]
             public long AccountId;
-            public string Username;
-            public string Salt;
-            public string Hash;
+            public required string Username;
+            public required string Salt;
+            public required string Hash;
             public List<LinkedAccount> LinkedAccounts = new();
 
             public LinkedAccount? GetLinkedAccount(LinkedAccount template)

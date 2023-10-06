@@ -76,7 +76,7 @@ namespace CentralServer.LobbyServer.Character
                 CharacterType.Cleric,
                 new CharacterConfig()
                 {
-                    AllowForBots = true,
+                    AllowForBots = false,
                     AllowForPlayers = false,
                     CharacterRole = CharacterRole.Support,
                     CharacterType = CharacterType.Cleric,
@@ -102,7 +102,7 @@ namespace CentralServer.LobbyServer.Character
                 CharacterType.Dino,
                 new CharacterConfig()
                 {
-                    AllowForBots = true,
+                    AllowForBots = false,
                     AllowForPlayers = false,
                     CharacterRole = CharacterRole.Tank,
                     CharacterType = CharacterType.Dino,
@@ -128,7 +128,7 @@ namespace CentralServer.LobbyServer.Character
                 CharacterType.Fireborg,
                 new CharacterConfig()
                 {
-                    AllowForBots = true,
+                    AllowForBots = false,
                     AllowForPlayers = false,
                     CharacterRole = CharacterRole.Assassin,
                     CharacterType = CharacterType.Fireborg,
@@ -180,7 +180,7 @@ namespace CentralServer.LobbyServer.Character
                 CharacterType.Iceborg,
                 new CharacterConfig()
                 {
-                    AllowForBots = true,
+                    AllowForBots = false,
                     AllowForPlayers = false,
                     CharacterRole = CharacterRole.Assassin,
                     CharacterType = CharacterType.Iceborg,
@@ -232,7 +232,7 @@ namespace CentralServer.LobbyServer.Character
                 CharacterType.Neko,
                 new CharacterConfig()
                 {
-                    AllowForBots = true,
+                    AllowForBots = false,
                     AllowForPlayers = false,
                     CharacterRole = CharacterRole.Assassin,
                     CharacterType = CharacterType.Neko,
@@ -297,7 +297,7 @@ namespace CentralServer.LobbyServer.Character
                 CharacterType.Scamp,
                 new CharacterConfig()
                 {
-                    AllowForBots = true,
+                    AllowForBots = false,
                     AllowForPlayers = false,
                     CharacterRole = CharacterRole.Tank,
                     CharacterType = CharacterType.Scamp,

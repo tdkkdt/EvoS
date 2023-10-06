@@ -47,7 +47,7 @@ namespace EvoS.Framework.Network.Static
                     ? 65
                     : account.AccountComponent.SelectedForegroundBannerID, // patch for existing users: default is 65 
                 Handle = account.Handle,
-                IsGameOwner = true,
+                IsGameOwner = false,
                 IsLoadTestBot = false,
                 IsNPCBot = false,
                 PlayerId = 0,

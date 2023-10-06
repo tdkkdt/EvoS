@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Character;
 using CentralServer.LobbyServer.Config;
+using CentralServer.LobbyServer.CustomGames;
 using CentralServer.LobbyServer.Discord;
 using CentralServer.LobbyServer.Friend;
 using CentralServer.LobbyServer.Group;
@@ -28,12 +28,12 @@ namespace CentralServer.LobbyServer
     public class LobbyServerProtocol : LobbyServerProtocolBase
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(LobbyServerProtocol));
-        
-        private BridgeServerProtocol _currentServer;
+
+        private GameServerBase _currentServer;
 
         public PlayerOnlineStatus Status = PlayerOnlineStatus.Online;
-
-        public BridgeServerProtocol CurrentServer
+        
+        public GameServerBase CurrentServer
         {
             get => _currentServer;
             private set
@@ -55,14 +55,14 @@ namespace CentralServer.LobbyServer
         public int GetGroupSize() => GroupManager.GetPlayerGroup(AccountId)?.Members.Count ?? 1;
 
         public bool IsInQueue() => MatchmakingManager.IsQueued(GroupManager.GetPlayerGroup(AccountId));
-        
+
         public bool IsReady { get; private set; }
 
         public LobbyServerPlayerInfo PlayerInfo => CurrentServer?.GetPlayerInfo(AccountId);
-        
-        public event Action<LobbyServerProtocol, ChatNotification> OnChatNotification = delegate {};
-        public event Action<LobbyServerProtocol, GroupChatRequest> OnGroupChatRequest = delegate {};
-        
+
+        public event Action<LobbyServerProtocol, ChatNotification> OnChatNotification = delegate { };
+        public event Action<LobbyServerProtocol, GroupChatRequest> OnGroupChatRequest = delegate { };
+
 
         public LobbyServerProtocol()
         {
@@ -97,6 +97,8 @@ namespace CentralServer.LobbyServer
             RegisterHandler<GroupChatRequest>(HandleGroupChatRequest);
             RegisterHandler<ClientFeedbackReport>(HandleClientFeedbackReport);
             RegisterHandler<RejoinGameRequest>(HandleRejoinGameRequest);
+            RegisterHandler<JoinGameRequest>(HandleJoinGameRequest);
+            RegisterHandler<BalancedTeamRequest>(HandleBalancedTeamRequest);
             RegisterHandler<SetDevTagRequest>(HandleSetDevTagRequest);
 
             RegisterHandler<PurchaseModRequest>(HandlePurchaseModRequest);
@@ -110,6 +112,8 @@ namespace CentralServer.LobbyServer
             RegisterHandler<ClientStatusReport>(HandleClientStatusReport);
             RegisterHandler<SubscribeToCustomGamesRequest>(HandleSubscribeToCustomGamesRequest);
             RegisterHandler<UnsubscribeFromCustomGamesRequest>(HandleUnsubscribeFromCustomGamesRequest);
+            RegisterHandler<CreateGameRequest>(HandleCreateGameRequest);
+            RegisterHandler<GameInfoUpdateRequest>(HandleGameInfoUpdateRequest);
             RegisterHandler<RankedLeaderboardOverviewRequest>(HandleRankedLeaderboardOverviewRequest);
             RegisterHandler<CalculateFreelancerStatsRequest>(HandleCalculateFreelancerStatsRequest);
             RegisterHandler<PlayerPanelUpdatedNotification>(HandlePlayerPanelUpdatedNotification);
@@ -122,8 +126,8 @@ namespace CentralServer.LobbyServer
             RegisterHandler<PurchaseBannerBackgroundRequest>(HandlePurchaseBannerRequest);
             RegisterHandler<PurchaseAbilityVfxRequest>(HandlePurchasAbilityVfx);
             RegisterHandler<PurchaseInventoryItemRequest>(HandlePurchaseInventoryItemRequest);
-            
-            
+
+
             RegisterHandler<FriendUpdateRequest>(HandleFriendUpdate);
         }
 
@@ -150,6 +154,78 @@ namespace CentralServer.LobbyServer
             }
         }
 
+        private void HandleBalancedTeamRequest(BalancedTeamRequest request)
+        {
+            bool success = CustomGameManager.BalanceTeams(AccountId, request.Slots);
+            Send(new BalancedTeamResponse
+            {
+                Success = success,
+                ResponseId = request.RequestId,
+                Slots = request.Slots
+            });
+        }
+
+        private void HandleJoinGameRequest(JoinGameRequest joinGameRequest)
+        {
+            GameServerBase game = CustomGameManager.JoinGame(
+                AccountId,
+                joinGameRequest.GameServerProcessCode,
+                joinGameRequest.AsSpectator,
+                out LocalizationPayload failure);
+            if (game == null)
+            {
+                Send(new JoinGameResponse
+                {
+                    ResponseId = joinGameRequest.RequestId,
+                    LocalizedFailure = failure,
+                    Success = false
+                });
+                return;
+            }
+            
+            JoinServer(game);
+            Send(new JoinGameResponse
+            {
+                ResponseId = joinGameRequest.RequestId
+            });
+        }
+        
+        private void HandleGameInfoUpdateRequest(GameInfoUpdateRequest gameInfoUpdateRequest)
+        {
+            bool success = CustomGameManager.UpdateGameInfo(AccountId, gameInfoUpdateRequest.GameInfo, gameInfoUpdateRequest.TeamInfo);
+            GameServerBase game = CustomGameManager.GetMyGame(AccountId);
+
+            Send(new GameInfoUpdateResponse
+            {
+                Success = success,
+                ResponseId = gameInfoUpdateRequest.RequestId,
+                GameInfo = game?.GameInfo,
+                TeamInfo = LobbyTeamInfo.FromServer(game?.TeamInfo, 0, new MatchmakingQueueConfig()),
+            });
+        }
+        
+        private void HandleCreateGameRequest(CreateGameRequest createGameRequest)
+        {
+            GameServerBase game = CustomGameManager.CreateGame(AccountId, createGameRequest.GameConfig);
+            if (game == null)
+            {
+                Send(new CreateGameResponse
+                {
+                    ResponseId = createGameRequest.RequestId,
+                    Success = false,
+                    AllowRetry = true,
+                });
+                return;
+            }
+            GroupManager.GetPlayerGroup(AccountId).Members
+                .ForEach(groupMember => SessionManager.GetClientConnection(groupMember)?.JoinServer(game));
+            Send(new CreateGameResponse
+            {
+                ResponseId = createGameRequest.RequestId,
+                AllowRetry = true,
+            });
+        }
+
         protected override void HandleClose(CloseEventArgs e)
         {
             UnregisterAllHandlers();
@@ -168,17 +244,14 @@ namespace CentralServer.LobbyServer
             BroadcastRefreshFriendList();
         }
 
-        public void JoinServer(BridgeServerProtocol server)
+        public void JoinServer(GameServerBase server)
         {
-            if (CurrentServer != null)
-            {
-                log.Debug($"{AccountId} is jumping from {CurrentServer.ProcessCode} to {server.ProcessCode}");
-            }
-
+            GameServerBase prevServer = CurrentServer;
             CurrentServer = server;
+            log.Info($"{LobbyServerUtils.GetHandle(AccountId)} joined {server?.ProcessCode} (was in {prevServer?.ProcessCode})");
         }
 
-        public bool LeaveServer(BridgeServerProtocol server)
+        public bool LeaveServer(GameServerBase server)
         {
             if (server == null)
             {
@@ -200,11 +273,11 @@ namespace CentralServer.LobbyServer
             log.Info($"{LobbyServerUtils.GetHandle(AccountId)} leaves {server.ProcessCode}");
             
             // forcing catalyst panel update -- otherwise it would show catas for the character from the last game
-            Send(new ForcedCharacterChangeFromServerNotification 
+            Send(new ForcedCharacterChangeFromServerNotification
             {
                 ChararacterInfo = DB.Get().AccountDao.GetAccount(AccountId).GetCharacterInfo(),
             });
-            
+
             return true;
         }
 
@@ -310,7 +383,7 @@ namespace CentralServer.LobbyServer
                         Success = true
                     });
                 }
-                else 
+                else
                 {
                     Send(new GroupPromoteResponse()
                     {
@@ -343,11 +416,11 @@ namespace CentralServer.LobbyServer
                 WebSocket.Close();
                 return;
             }
-            
+
             try
             {
                 SessionManager.OnPlayerConnect(this, request);
-                
+
                 log.Info(string.Format(Messages.LoginSuccess, this.UserName));
                 LobbySessionInfo sessionInfo = SessionManager.GetSessionInfo(request.SessionInfo.AccountId);
                 RegisterGameClientResponse response = new RegisterGameClientResponse
@@ -372,7 +445,7 @@ namespace CentralServer.LobbyServer
                 SendLobbyServerReadyNotification();
 
                 GroupManager.CreateGroup(AccountId);
-                
+
                 // TODO fix ability select panel
 
                 // Send 'Connected to lobby server' notification to chat
@@ -446,22 +519,20 @@ namespace CentralServer.LobbyServer
         {
             LobbyPlayerInfoUpdate update = request.PlayerInfoUpdate;
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
-            LobbyServerPlayerInfo playerInfo = PlayerInfo;
-            bool updateSelectedCharacter = playerInfo == null;
+            LobbyServerPlayerInfo playerInfo = update.PlayerId == 0 ? PlayerInfo : CurrentServer?.GetPlayerById(update.PlayerId);
+            bool updateSelectedCharacter = playerInfo == null && update.PlayerId == 0;
             playerInfo ??= LobbyServerPlayerInfo.Of(account);
-            
+
             // TODO validate what player has purchased
 
             // building character info to validate it for current game
-            CharacterType characterType = update.CharacterType
-                                          ?? CurrentServer?.GetPlayerInfo(AccountId)?.CharacterType
-                                          ?? account.AccountComponent.LastCharacter;
-            
+            CharacterType characterType = update.CharacterType ?? playerInfo.CharacterType;
+
             log.Debug($"HandlePlayerInfoUpdateRequest characterType={characterType} " +
                      $"(update={update.CharacterType} " +
                      $"server={CurrentServer?.GetPlayerInfo(AccountId)?.CharacterType} " +
                      $"account={account.AccountComponent.LastCharacter})");
-            
+
             CharacterComponent characterComponent = (CharacterComponent)account.CharacterData[characterType].CharacterComponent.Clone();
             if (update.CharacterSkin.HasValue) characterComponent.LastSkin = update.CharacterSkin.Value;
             if (update.CharacterCards.HasValue) characterComponent.LastCards = update.CharacterCards.Value;
@@ -470,7 +541,7 @@ namespace CentralServer.LobbyServer
             if (update.CharacterLoadoutChanges.HasValue) characterComponent.CharacterLoadouts = update.CharacterLoadoutChanges.Value.CharacterLoadoutChanges;
             if (update.LastSelectedLoadout.HasValue) characterComponent.LastSelectedLoadout = update.LastSelectedLoadout.Value;
             LobbyCharacterInfo characterInfo = LobbyCharacterInfo.Of(account.CharacterData[characterType], characterComponent);
-            
+
             if (CurrentServer != null)
             {
                 if (!CurrentServer.UpdateCharacterInfo(AccountId, characterInfo, update))
@@ -495,19 +566,19 @@ namespace CentralServer.LobbyServer
             }
             account.CharacterData[characterType].CharacterComponent = characterComponent;
             DB.Get().AccountDao.UpdateAccount(account);
-            
+
             if (request.GameType != null && request.GameType.HasValue)
             {
                 SetGameType(request.GameType.Value);
             }
-            
+
             // without this client instantly resets character type back to what it was
             if (update.CharacterType != null && update.CharacterType.HasValue)
             {
-                PlayerAccountDataUpdateNotification updateNotification =new PlayerAccountDataUpdateNotification(account);
+                PlayerAccountDataUpdateNotification updateNotification = new PlayerAccountDataUpdateNotification(account);
                 Send(updateNotification);
             }
-            
+
             if (update.AllyDifficulty != null && update.AllyDifficulty.HasValue)
                 SetAllyDifficulty(update.AllyDifficulty.Value);
             if (update.ContextualReadyState != null && update.ContextualReadyState.HasValue)
@@ -603,7 +674,8 @@ namespace CentralServer.LobbyServer
 
         public void HandleLeaveGameRequest(LeaveGameRequest request)
         {
-            BridgeServerProtocol server = CurrentServer;
+            GameServerBase server = CurrentServer;
+            log.Info($"{AccountId} leaves game {server?.ProcessCode}");
             if (server != null)
             {
                 LeaveServer(server);
@@ -639,7 +711,7 @@ namespace CentralServer.LobbyServer
             }
             
             GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
-            IsReady = contextualReadyState.ReadyState == ReadyState.Ready;
+            IsReady = contextualReadyState.ReadyState == ReadyState.Ready;  // TODO can be Accepted and others
             if (group == null)
             {
                 MatchmakingManager.StartPractice(this);
@@ -648,9 +720,21 @@ namespace CentralServer.LobbyServer
             {
                 if (CurrentServer != null)
                 {
-                    if (contextualReadyState.ReadyState == ReadyState.Ready)
+                    if (CurrentServer.ProcessCode != contextualReadyState.GameProcessCode)
+                    {
+                        log.Error($"Received ready state {contextualReadyState.ReadyState} " +
+                                  $"from {LobbyServerUtils.GetHandle(AccountId)} " +
+                                  $"for game {contextualReadyState.GameProcessCode} " +
+                                  $"while they are in game {CurrentServer.ProcessCode}");
+                        return;
+                    }
+                    if (contextualReadyState.ReadyState == ReadyState.Ready)  // TODO can be Accepted and others
                     {
                         CurrentServer.SetPlayerReady(AccountId);
+                    }
+                    else
+                    {
+                        CurrentServer.SetPlayerUnReady(AccountId);
                     }
                 }
                 else
@@ -660,7 +744,7 @@ namespace CentralServer.LobbyServer
                 }
             }
         }
-        
+
         public void HandleJoinMatchmakingQueueRequest(JoinMatchmakingQueueRequest request)
         {
             try
@@ -749,7 +833,7 @@ namespace CentralServer.LobbyServer
                 });
                 return;
             }
-            
+
             GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
 
             if (group.Members.Count == LobbyConfiguration.GetMaxGroupSize())
@@ -783,7 +867,7 @@ namespace CentralServer.LobbyServer
 
             PersistedAccountData requester = DB.Get().AccountDao.GetAccount(AccountId);
             PersistedAccountData leader = DB.Get().AccountDao.GetAccount(group.Leader);
-            LobbyServerProtocol friend = SessionManager.GetClientConnection((long) friendAccountId);
+            LobbyServerProtocol friend = SessionManager.GetClientConnection((long)friendAccountId);
 
             if (friend == null)  // can be offline
             {
@@ -796,7 +880,7 @@ namespace CentralServer.LobbyServer
                 });
                 return;
             }
-            
+
             if (group.Leader == AccountId)
             {
                 friend.Send(new GroupConfirmationRequest
@@ -821,7 +905,7 @@ namespace CentralServer.LobbyServer
                         Text = "[Group request]"
                     });
                 }
-            
+
                 log.Info($"{AccountId}/{requester.Handle} invited {friend.AccountId}/{request.FriendHandle} to group {group.GroupId}");
                 Send(new GroupInviteResponse
                 {
@@ -829,7 +913,7 @@ namespace CentralServer.LobbyServer
                     ResponseId = request.RequestId,
                     Success = true
                 });
-            } 
+            }
             else
             {
                 LobbyServerProtocol leaderSession = SessionManager.GetClientConnection(leader.AccountId);
@@ -844,7 +928,7 @@ namespace CentralServer.LobbyServer
         }
 
         public void HandleGroupSuggestionResponse(GroupSuggestionResponse response)
-        { 
+        {
             //Is this needed? 
         }
 
@@ -870,7 +954,7 @@ namespace CentralServer.LobbyServer
                     break;
             }
         }
-        
+
         public void HandleGroupLeaveRequest(GroupLeaveRequest request)
         {
             GroupManager.CreateGroup(AccountId);
@@ -879,7 +963,6 @@ namespace CentralServer.LobbyServer
 
         private void OnAccountVisualsUpdated()
         {
-
             BroadcastRefreshFriendList();
             BroadcastRefreshGroup();
             CurrentServer?.OnAccountVisualsUpdated(AccountId);
@@ -896,14 +979,14 @@ namespace CentralServer.LobbyServer
             }
             else
             {
-                account.AccountComponent.SelectedBackgroundBannerID = request.BannerID; 
+                account.AccountComponent.SelectedBackgroundBannerID = request.BannerID;
             }
 
             // Update the account
             DB.Get().AccountDao.UpdateAccount(account);
 
             OnAccountVisualsUpdated();
-            
+
             // Send response
             Send(new SelectBannerResponse()
             {
@@ -924,7 +1007,7 @@ namespace CentralServer.LobbyServer
 
                 OnAccountVisualsUpdated();
             }
-            
+
             Send(new SelectTitleResponse
             {
                 CurrentTitleID = account.AccountComponent.SelectedTitleID,
@@ -990,7 +1073,7 @@ namespace CentralServer.LobbyServer
                         };
                         client.Send(useGGPackNotification);
                     }
-                    
+
                 }
             }
         }
@@ -1000,7 +1083,7 @@ namespace CentralServer.LobbyServer
         {
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
             log.Info($"Player {AccountId} requested UIState {request.UIState} {request.StateValue}");
-            account.AccountComponent.UIStates.Add(request.UIState,request.StateValue);
+            account.AccountComponent.UIStates.Add(request.UIState, request.StateValue);
             DB.Get().AccountDao.UpdateAccount(account);
         }
 
@@ -1122,8 +1205,8 @@ namespace CentralServer.LobbyServer
                 return;
             }
 
-            PlayerAbilityVfxSwapData abilityVfxSwapData = new PlayerAbilityVfxSwapData() 
-            { 
+            PlayerAbilityVfxSwapData abilityVfxSwapData = new PlayerAbilityVfxSwapData()
+            {
                 AbilityId = request.AbilityId,
                 AbilityVfxSwapID = request.VfxId
             };
@@ -1227,7 +1310,7 @@ namespace CentralServer.LobbyServer
                 $"Loadout {loadouts.Count}",
                 ModStrictness.AllModes));
             DB.Get().AccountDao.UpdateAccount(account);
-            
+
             Send(new PurchaseLoadoutSlotResponse
             {
                 Character = request.Character,
@@ -1270,10 +1353,12 @@ namespace CentralServer.LobbyServer
 
         private void HandleSubscribeToCustomGamesRequest(SubscribeToCustomGamesRequest request)
         {
+            CustomGameManager.Subscribe(this);
         }
 
         private void HandleUnsubscribeFromCustomGamesRequest(UnsubscribeFromCustomGamesRequest request)
         {
+            CustomGameManager.Unsubscribe(this);
         }
 
         private void HandleRankedLeaderboardOverviewRequest(RankedLeaderboardOverviewRequest request)
@@ -1341,7 +1426,7 @@ namespace CentralServer.LobbyServer
                 ResponseId = request.RequestId
             });
         }
-        
+
         public void HandleGroupChatRequest(GroupChatRequest request)
         {
             OnGroupChatRequest(this, request);
@@ -1366,7 +1451,7 @@ namespace CentralServer.LobbyServer
                 log.Info($"Game {request.PreviousGameInfo.GameServerProcessCode} not found");
                 return;
             }
-            
+
             LobbyServerPlayerInfo playerInfo = server.GetPlayerInfo(AccountId);
             if (playerInfo == null)
             {
@@ -1375,7 +1460,7 @@ namespace CentralServer.LobbyServer
                 log.Info($"{UserName} was not in game {request.PreviousGameInfo.GameServerProcessCode}");
                 return;
             }
-            
+
             Send(new RejoinGameResponse { ResponseId = request.RequestId, Success = true });
             log.Info($"Reconnecting {UserName} to game {server.GameInfo.GameServerProcessCode} ({server.ProcessCode})");
             JoinServer(server);
@@ -1443,7 +1528,7 @@ namespace CentralServer.LobbyServer
                 string context = failure != null ? "FriendList" : "Global";
                 failure ??= "FailedMessage";
                 Send(FriendUpdateResponse.of(
-                    request, 
+                    request,
                     LocalizationPayload.Create(failure, context,
                         LocalizationArg_LocalizationPayload.Create(
                             LocalizationPayload.Create("PlayerNotFound", "Invite",
@@ -1452,7 +1537,7 @@ namespace CentralServer.LobbyServer
                 log.Info($"Attempted to {request.FriendOperation} {request.FriendHandle}, but such a user was not found");
                 return;
             }
-            
+
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
             PersistedAccountData friendAccount = DB.Get().AccountDao.GetAccount(friendAccountId);
 

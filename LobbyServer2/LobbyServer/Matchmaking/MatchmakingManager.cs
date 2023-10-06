@@ -212,7 +212,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                     Observer = false,
                     PlayerInfo = LobbyPlayerInfo.FromServer(teamInfo.TeamPlayerInfo[0], 0, queueConfig),
                     Reconnection = false,
-                    GameplayOverrides = client.GetGameplayOverrides()
+                    GameplayOverrides = GameConfig.GetGameplayOverrides()
                 };
 
                 client.Send(notification1);

@@ -20,9 +20,10 @@ namespace EvoS.Framework
         public bool GameTypeCoopAvailable = false;
         public bool GameTypePvPAvailable = true;
         public bool GameTypeRankedAvailable = false;
-        public bool GameTypeCustomAvailable = false;
+        public bool GameTypeCustomAvailable = true;
         public int MaxGroupSize = 5;
         public bool MatchAbandoningPenalty = true;
+        public int ServerReserveSize = 0;
         public DiscordConfiguration Discord = new DiscordConfiguration();
 
         private static LobbyConfiguration GetInstance()
@@ -96,6 +97,11 @@ namespace EvoS.Framework
         public static int GetMaxGroupSize()
         {
             return GetInstance().MaxGroupSize > 5 ? 5 : GetInstance().MaxGroupSize;
+        }
+
+        public static int GetServerReserveSize()
+        {
+            return GetInstance().ServerReserveSize;
         }
 
         public static DiscordConfiguration GetDiscordConfiguration()
