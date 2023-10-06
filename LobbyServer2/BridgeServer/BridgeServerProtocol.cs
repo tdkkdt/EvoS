@@ -260,7 +260,7 @@ namespace CentralServer.BridgeServer
                 GameInfo = GameInfo,
                 TeamInfo = TeamInfo,
                 SessionInfo = sessionInfos,
-                GameplayOverrides = new LobbyGameplayOverrides()
+                GameplayOverrides = GameConfig.GetGameplayOverrides()
             });
         }
 
