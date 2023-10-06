@@ -141,7 +141,6 @@ namespace EvoS.DirectoryServer.Character
             {
                 if (DEFAULT_EQUIP.Value.TryGetValue(characterType, out CharacterModInfo info))
                 {
-                    log.Error($"Loading default loadout for {characterType}: {info.ToString()}");
                     return info;
                 }
                 else
