@@ -373,7 +373,7 @@ namespace CentralServer.LobbyServer.Discord
             string map = Maps.GetMapName[gameInfo.GameConfig.Map];
             EmbedBuilder eb = new EmbedBuilder
             {
-                Title = $"Game Result for {map ?? gameInfo.GameConfig.Map}",
+                Title = $"Game Result for {gameInfo.GameConfig.GameType} {map ?? gameInfo.GameConfig.Map}",
                 Description =
                     $"{(gameSummary.GameResult.ToString() == "TeamAWon" ? "Team A Won" : "Team B Won")} " +
                     $"{gameSummary.TeamAPoints}-{gameSummary.TeamBPoints} ({gameSummary.NumOfTurns} turns)",
