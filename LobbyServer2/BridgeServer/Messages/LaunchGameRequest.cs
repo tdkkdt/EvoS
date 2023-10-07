@@ -5,10 +5,10 @@ using EvoS.Framework.Network.Unity;
 
 public class LaunchGameRequest : AllianceMessageBase
 {
-	internal LobbyGameInfo GameInfo;
-	internal LobbyServerTeamInfo TeamInfo;
-	internal Dictionary<int, LobbySessionInfo> SessionInfo;
-	internal LobbyGameplayOverrides GameplayOverrides;
+	public LobbyGameInfo GameInfo;
+	public LobbyServerTeamInfo TeamInfo;
+	public Dictionary<int, LobbySessionInfo> SessionInfo;
+	public LobbyGameplayOverrides GameplayOverrides;
 
 	public override void Serialize(NetworkWriter writer)
 	{
