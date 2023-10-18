@@ -29,6 +29,7 @@ namespace EvoS.Framework
         public int AdminApiPort = 3001;
         public string TicketAuthKey = "";
         public bool AllowUsernamePasswordAuth = true;
+        public List<string> Proxies = new List<string>();
         
         public bool PingOnGroupRequest = true;
 
@@ -89,6 +90,8 @@ namespace EvoS.Framework
         public static bool GetAllowUsernamePasswordAuth() => Instance.AllowUsernamePasswordAuth;
 
         public static bool GetAllowTicketAuth() => !GetUserApiKey().IsNullOrEmpty() && !GetTicketAuthKey().IsNullOrEmpty();
+
+        public static List<string> GetProxies() => Instance.Proxies;
 
         public enum DBType
         {

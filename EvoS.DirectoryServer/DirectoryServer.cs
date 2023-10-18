@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using CentralServer.LobbyServer.Session;
+using CentralServer.LobbyServer.Utils;
 using EvoS.DirectoryServer.Account;
 using EvoS.DirectoryServer.Inventory;
 using EvoS.Framework;
@@ -51,9 +52,12 @@ namespace EvoS.DirectoryServer
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(DirectoryServer));
         private static long _nextTmpAccountId = 1;
+        private static HashSet<IPAddress> _proxies;
         
         public void Configure(IApplicationBuilder app)
         {
+            _proxies = EvosConfiguration.GetProxies().Select(IPAddress.Parse).ToHashSet();
+            log.Info($"Configured proxies: {string.Join(", ", _proxies)}");
             var serverAddressesFeature = app.ServerFeatures.Get<IServerAddressesFeature>();
             log.Info($"Started DirectoryServer on '0.0.0.0:{EvosConfiguration.GetDirectoryServerPort()}'");
 
@@ -238,7 +242,7 @@ namespace EvoS.DirectoryServer
             }
 
             response.SessionInfo = SessionManager.CreateSession(accountId, request.SessionInfo, context.Connection.RemoteIpAddress);
-            response.LobbyServerAddress = EvosConfiguration.GetLobbyServerAddress();
+            response.LobbyServerAddress = GetLobbyServerAddress(accountId, context);
 
             LobbyGameClientProxyInfo proxyInfo = new LobbyGameClientProxyInfo
             {
@@ -251,6 +255,18 @@ namespace EvoS.DirectoryServer
 
             response.ProxyInfo = proxyInfo;
             return response;
+        }
+
+        private static string GetLobbyServerAddress(long accountId, HttpContext context)
+        {
+            if (_proxies is not null
+                && context.Connection.RemoteIpAddress is not null
+                && _proxies.Contains(context.Connection.RemoteIpAddress))
+            {
+                log.Info($"{LobbyServerUtils.GetHandle(accountId)} is connecting via proxy {context.Connection.RemoteIpAddress}");
+                return context.Connection.RemoteIpAddress.ToString();
+            }
+            return EvosConfiguration.GetLobbyServerAddress();
         }
 
         private static AssignGameClientResponse HandleReconnection(AssignGameClientRequest request, HttpContext context)
@@ -281,7 +297,7 @@ namespace EvoS.DirectoryServer
             {
                 Success = true,
                 ResponseId = request.RequestId,
-                LobbyServerAddress = EvosConfiguration.GetLobbyServerAddress(),
+                LobbyServerAddress = GetLobbyServerAddress(session.AccountId, context),
                 SessionInfo = session,
                 ProxyInfo = new LobbyGameClientProxyInfo
                 {
