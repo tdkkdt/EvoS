@@ -76,8 +76,8 @@ namespace CentralServer.LobbyServer.Character
                 CharacterType.Cleric,
                 new CharacterConfig()
                 {
-                    AllowForBots = false,
-                    AllowForPlayers = false,
+                    AllowForBots = true,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Support,
                     CharacterType = CharacterType.Cleric,
                     Difficulty = 1,
