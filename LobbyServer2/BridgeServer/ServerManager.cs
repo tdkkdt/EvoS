@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using CentralServer.LobbyServer.Matchmaking;
@@ -42,7 +43,8 @@ namespace CentralServer.BridgeServer
             int num = 0;
             lock (ServerPool)
             {
-                foreach (BridgeServerProtocol server in ServerPool.Values)
+                Random rnd = new Random();
+                foreach (BridgeServerProtocol server in ServerPool.Values.OrderBy((item) => rnd.Next()))
                 {
                     if (server.IsAvailable())
                     {
