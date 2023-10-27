@@ -344,6 +344,54 @@ namespace CentralServer.LobbyServer.Discord
             }
         }
 
+        public async void SendAdminGameReport(LobbyGameInfo gameInfo, string serverName, string serverVersion, LobbyGameSummary gameSummary)
+        {
+            if (adminChannel == null || !conf.AdminEnableAdminAudit)
+            {
+                return;
+            }
+            
+            try
+            {
+                if (gameSummary.GameResult == GameResult.TeamAWon
+                    || gameSummary.GameResult == GameResult.TeamBWon)
+                {
+                    return;
+                }
+
+                PlayerGameSummary playerGameSummary = gameSummary.PlayerGameSummaryList
+                    .FirstOrDefault(x => x.MatchResults != null
+                                         && x.MatchResults.FriendlyStatlines != null
+                                         && x.MatchResults.EnemyStatlines != null);
+                string msg = null;
+                if (playerGameSummary != null)
+                {
+                    MatchResultsStats matchResultsStats = playerGameSummary.MatchResults;
+                    msg = string.Join("\n",
+                        matchResultsStats.FriendlyStatlines.Select(Format)
+                            .Concat(matchResultsStats.EnemyStatlines.Select(Format)));
+                }
+                await adminChannel.SendMessageAsync(
+                    msg,
+                    false,
+                    embeds: new[] {
+                        MakeGameReportEmbed(gameInfo, serverName, serverVersion, gameSummary)
+                    },
+                    "Atlas Reactor");
+            }
+            catch (Exception e)
+            {
+                log.Error("Failed to send admin game report to discord webhook", e);
+            }
+
+            return;
+
+            string Format(MatchResultsStatline x)
+            {
+                return $"{x.AccountID} \t{x.DisplayName} \tReplacedByBot={x.HumanReplacedByBot}";
+            }
+        }
+
         public async Task SendLogEvent(Level severity, string msg)
         {
             if (adminChannel == null || !conf.AdminEnableLog)

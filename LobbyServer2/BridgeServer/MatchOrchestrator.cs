@@ -259,6 +259,7 @@ namespace CentralServer.BridgeServer
 
             server.SendGameInfoNotifications();
             DiscordManager.Get().SendGameReport(server.GameInfo, server.Name, server.BuildVersion, gameSummary);
+            DiscordManager.Get().SendAdminGameReport(server.GameInfo, server.Name, server.BuildVersion, gameSummary);
 
             //Wait a bit so people can look at stuff but we do have to send it so server can restart
             await Task.Delay(60000);
