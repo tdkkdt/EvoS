@@ -354,7 +354,9 @@ namespace CentralServer.LobbyServer.Discord
             try
             {
                 if (gameSummary.GameResult == GameResult.TeamAWon
-                    || gameSummary.GameResult == GameResult.TeamBWon)
+                    || gameSummary.GameResult == GameResult.TeamBWon
+                    || gameInfo.GameConfig == null
+                    || gameInfo.GameConfig.GameType == GameType.Custom)
                 {
                     return;
                 }
