@@ -12,8 +12,6 @@ using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Store;
 using CentralServer.LobbyServer.Utils;
-using Discord;
-using Discord.Net;
 using EvoS.DirectoryServer.Inventory;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
@@ -23,9 +21,7 @@ using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using log4net;
 using Newtonsoft.Json;
-using Org.BouncyCastle.Asn1.Ocsp;
 using WebSocketSharp;
-using WebSocketSharp.Server;
 
 namespace CentralServer.LobbyServer
 {
