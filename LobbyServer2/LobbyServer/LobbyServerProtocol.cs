@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Character;
 using CentralServer.LobbyServer.Config;
@@ -11,6 +12,8 @@ using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Store;
 using CentralServer.LobbyServer.Utils;
+using Discord;
+using Discord.Net;
 using EvoS.DirectoryServer.Inventory;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
@@ -20,6 +23,7 @@ using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using log4net;
 using Newtonsoft.Json;
+using Org.BouncyCastle.Asn1.Ocsp;
 using WebSocketSharp;
 using WebSocketSharp.Server;
 
@@ -948,6 +952,36 @@ namespace CentralServer.LobbyServer
                 case GroupInviteResponseType.PlayerAccepted:
                     log.Info($"Player {AccountId} accepted request {response.ConfirmationNumber} " +
                              $"to join group {response.GroupId} by {response.JoinerAccountId}: {response.Acceptance}");
+
+                    // Check if the player is currently in a game.
+                    if (CurrentServer != null)
+                    {
+                        // Get the server associated with the inviting player.
+                        BridgeServerProtocol server = ServerManager.GetServerWithPlayer(response.JoinerAccountId);
+
+                        // Check if the inviting player is on the same server.
+                        if (server != null && server == CurrentServer)
+                        {
+                            // Find the player information for both the inviting player and the current player.
+                            LobbyServerPlayerInfo lobbyServerOtherPlayerInfo = server.TeamInfo.TeamPlayerInfo
+                                .FirstOrDefault(p => p.AccountId == response.JoinerAccountId);
+                            LobbyServerPlayerInfo lobbyServerPlayerInfo = server.TeamInfo.TeamPlayerInfo
+                                .FirstOrDefault(p => p.AccountId == AccountId);
+
+                            // Check if the players are on opposing teams.
+                            if (lobbyServerOtherPlayerInfo.TeamId != lobbyServerPlayerInfo.TeamId)
+                            {
+                                log.Info($"Player {AccountId} is trying to accept a group invite but is currently on the opposing team.");
+                                // Send an error message indicating that members of opposing teams cannot group.
+                                // Failed to join group: Members of opposing teams cannot group.
+                                SendSystemMessage(LocalizationPayload.Create("FailedToJoinGroupError", "GroupInvite",
+                                                                        LocalizationArg_LocalizationPayload.Create(
+                                                                            LocalizationPayload.Create("CantInviteActiveOpponent", "AddFollower"))));
+                                break;
+                            }
+                        }
+                    }
+
                     // TODO validation
                     GroupManager.JoinGroup(response.GroupId, AccountId);
                     BroadcastRefreshFriendList();
