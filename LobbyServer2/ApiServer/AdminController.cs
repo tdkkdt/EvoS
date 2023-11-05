@@ -8,6 +8,7 @@ using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Utils;
 using EvoS.DirectoryServer.Account;
+using EvoS.Framework;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.DataAccess.Daos;
 using EvoS.Framework.Network.Static;
@@ -272,7 +273,9 @@ namespace CentralServer.ApiServer
             {
                 Code = code,
                 IssuedAt = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddHours(48),
+                ExpiresAt = EvosConfiguration.GetRegistrationCodeLifetime().Ticks > 0
+                    ? DateTime.UtcNow.Add(EvosConfiguration.GetRegistrationCodeLifetime())
+                    : DateTime.MaxValue,
                 IssuedBy = adminAccountId,
                 IssuedTo = data.issueFor.Trim().ToLower(),
                 UsedBy = 0
