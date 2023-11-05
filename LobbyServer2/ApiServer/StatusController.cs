@@ -28,6 +28,8 @@ namespace CentralServer.ApiServer
             Status status = new Status
             {
                 players = SessionManager.GetOnlinePlayers()
+                    .Concat(games.SelectMany(g => g.GetPlayers()))
+                    .Distinct()
                     .Select(id => DB.Get().AccountDao.GetAccount(id))
                     .Select(Player.Of)
                     .ToList(),
@@ -58,6 +60,8 @@ namespace CentralServer.ApiServer
             Status status = new Status
             {
                 players = players
+                    .Concat(games.SelectMany(g => g.GetPlayers()))
+                    .Distinct()
                     .Select(id => DB.Get().AccountDao.GetAccount(id))
                     .Select(Player.Of)
                     .ToList(),
