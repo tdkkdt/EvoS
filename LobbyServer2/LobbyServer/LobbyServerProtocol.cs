@@ -1532,11 +1532,6 @@ namespace CentralServer.LobbyServer
             });
         }
 
-        public void CloseConnection()
-        {
-            this.WebSocket.Close();
-        }
-
         private void HandleClientFeedbackReport(ClientFeedbackReport message)
         {
             DiscordManager.Get().SendPlayerFeedback(AccountId, message);

@@ -8,6 +8,7 @@ using CentralServer.LobbyServer.Discord;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Utils;
+using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.DataAccess.Daos;
@@ -34,15 +35,27 @@ public abstract class Game
     public string ProcessCode => GameInfo?.GameServerProcessCode;
     public GameStatus GameStatus => GameInfo?.GameStatus ?? GameStatus.None;
 
-    protected void AssignServer(BridgeServerProtocol server)
+    public void AssignServer(BridgeServerProtocol server)
     {
+        if (Server is not null)
+        {
+            Server.OnGameEnded -= OnGameEnded;
+            Server.OnStatusUpdate -= OnStatusUpdate;
+            Server.OnGameMetricsUpdate -= OnGameMetricsUpdate;
+            Server.OnPlayerDisconnect -= OnPlayerDisconnect;
+            Server.OnServerDisconnect -= OnServerDisconnect;
+        }
+        
         Server = server;
         // TODO clear on destroy
-        server.OnGameEnded += OnGameEnded;
-        server.OnStatusUpdate += OnStatusUpdate;
-        server.OnGameMetricsUpdate += OnGameMetricsUpdate;
-        server.OnPlayerDisconnect += OnPlayerDisconnect;
-        server.OnServerDisconnect += OnServerDisconnect;
+        if (Server is not null)
+        {
+            Server.OnGameEnded += OnGameEnded;
+            Server.OnStatusUpdate += OnStatusUpdate;
+            Server.OnGameMetricsUpdate += OnGameMetricsUpdate;
+            Server.OnPlayerDisconnect += OnPlayerDisconnect;
+            Server.OnServerDisconnect += OnServerDisconnect;
+        }
     }
 
     public virtual void DisconnectPlayer(long accountId)
@@ -50,7 +63,7 @@ public abstract class Game
         Server?.DisconnectPlayer(GetPlayerInfo(accountId));
     }
     
-    protected void OnGameEnded(LobbyGameSummary summary, LobbyGameSummaryOverrides overrides)
+    protected void OnGameEnded(BridgeServerProtocol server, LobbyGameSummary summary, LobbyGameSummaryOverrides overrides)
     {
         LobbyGameSummary gameSummary = summary;
         if (gameSummary == null)
@@ -85,7 +98,7 @@ public abstract class Game
         _ = FinalizeGame(GameSummary);
     }
     
-    protected void OnStatusUpdate(GameStatus newStatus)
+    protected void OnStatusUpdate(BridgeServerProtocol server, GameStatus newStatus)
     {
         log.Info($"Game {GameInfo?.Name} {newStatus}");
 
@@ -115,7 +128,7 @@ public abstract class Game
         }
     }
 
-    private void OnGameMetricsUpdate(ServerGameMetrics gameMetrics)
+    private void OnGameMetricsUpdate(BridgeServerProtocol server, ServerGameMetrics gameMetrics)
     {
         GameMetrics = gameMetrics;
         log.Info($"Game {GameInfo?.Name} Turn {GameMetrics.CurrentTurn}, " +
@@ -123,7 +136,7 @@ public abstract class Game
                  $"frame time: {GameMetrics.AverageFrameTime}");
     }
 
-    protected void OnPlayerDisconnect(LobbyServerPlayerInfo playerInfo, LobbySessionInfo sessionInfo)
+    protected void OnPlayerDisconnect(BridgeServerProtocol server, LobbyServerPlayerInfo playerInfo, LobbySessionInfo sessionInfo)
     {
         log.Info($"{LobbyServerUtils.GetHandle(playerInfo.AccountId)} left game {GameInfo?.GameServerProcessCode}");
 
@@ -145,7 +158,7 @@ public abstract class Game
         QueuePenaltyManager.IssueQueuePenalties(playerInfo.AccountId, this);
     }
 
-    protected void OnServerDisconnect()
+    protected void OnServerDisconnect(BridgeServerProtocol server)
     {
         QueuePenaltyManager.CapQueuePenalties(this);
     }
@@ -420,7 +433,7 @@ public abstract class Game
     public async Task FinalizeGame(LobbyGameSummary gameSummary)
     {
         //Wait 5 seconds for gg Usages
-        await Task.Delay(5000);
+        await Task.Delay(LobbyConfiguration.GetServerGGTime());
 
         foreach (LobbyServerProtocol client in GetClients())
         {
@@ -439,7 +452,7 @@ public abstract class Game
         DiscordManager.Get().SendAdminGameReport(GameInfo, Server?.Name, Server?.BuildVersion, gameSummary);
         
         //Wait a bit so people can look at stuff but we do have to send it so server can restart
-        await Task.Delay(60000);
+        await Task.Delay(LobbyConfiguration.GetServerShutdownTime());
         SendGameInfoNotifications(); // sending GameStatus.Stopped to the client triggers leaving the game
         Terminate();
     }

@@ -14,11 +14,11 @@ namespace CentralServer.BridgeServer
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(BridgeServerProtocol));
         
-        public event Action<LobbyGameSummary, LobbyGameSummaryOverrides> OnGameEnded = delegate {};
-        public event Action<GameStatus> OnStatusUpdate = delegate {};
-        public event Action<ServerGameMetrics> OnGameMetricsUpdate = delegate {};
-        public event Action<LobbyServerPlayerInfo, LobbySessionInfo> OnPlayerDisconnect = delegate {};
-        public event Action OnServerDisconnect = delegate {};
+        public event Action<BridgeServerProtocol, LobbyGameSummary, LobbyGameSummaryOverrides> OnGameEnded = delegate {};
+        public event Action<BridgeServerProtocol, GameStatus> OnStatusUpdate = delegate {};
+        public event Action<BridgeServerProtocol, ServerGameMetrics> OnGameMetricsUpdate = delegate {};
+        public event Action<BridgeServerProtocol, LobbyServerPlayerInfo, LobbySessionInfo> OnPlayerDisconnect = delegate {};
+        public event Action<BridgeServerProtocol> OnServerDisconnect = delegate {};
 
         public string Address;
         public int Port;
@@ -91,12 +91,12 @@ namespace CentralServer.BridgeServer
 
         private void HandleServerGameSummaryNotification(ServerGameSummaryNotification notify)
         {
-            OnGameEnded(notify.GameSummary, notify.GameSummaryOverrides);
+            OnGameEnded(this, notify.GameSummary, notify.GameSummaryOverrides);
         }
 
         private void HandlePlayerDisconnectedNotification(PlayerDisconnectedNotification request)
         {
-            OnPlayerDisconnect(request.PlayerInfo, request.SessionInfo);
+            OnPlayerDisconnect(this, request.PlayerInfo, request.SessionInfo);
         }
 
         private void HandleServerGameMetricsNotification(ServerGameMetricsNotification request)
@@ -106,12 +106,12 @@ namespace CentralServer.BridgeServer
                 log.Error("Invalid game metrics notification");
                 return;
             }
-            OnGameMetricsUpdate(request.GameMetrics);
+            OnGameMetricsUpdate(this, request.GameMetrics);
         }
 
         private void HandleServerGameStatusNotification(ServerGameStatusNotification request)
         {
-            OnStatusUpdate(request.GameStatus);
+            OnStatusUpdate(this, request.GameStatus);
         }
 
         private void HandleMonitorHeartbeatNotification(MonitorHeartbeatNotification notify)
@@ -145,7 +145,7 @@ namespace CentralServer.BridgeServer
         {
             UnregisterAllHandlers();
             ServerManager.RemoveServer(ProcessCode);
-            OnServerDisconnect();
+            OnServerDisconnect(this);
         }
 
         public bool IsAvailable()

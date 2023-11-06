@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using CentralServer.LobbyServer.Discord;
 using YamlDotNet.Serialization;
 
@@ -24,6 +25,8 @@ namespace EvoS.Framework
         public int MaxGroupSize = 5;
         public bool MatchAbandoningPenalty = true;
         public int ServerReserveSize = 0;
+        public TimeSpan ServerGGTime = TimeSpan.FromSeconds(5);
+        public TimeSpan ServerShutdownTime = TimeSpan.FromMinutes(1);
         public DiscordConfiguration Discord = new DiscordConfiguration();
 
         private static LobbyConfiguration GetInstance()
@@ -102,6 +105,16 @@ namespace EvoS.Framework
         public static int GetServerReserveSize()
         {
             return GetInstance().ServerReserveSize;
+        }
+
+        public static TimeSpan GetServerGGTime()
+        {
+            return GetInstance().ServerGGTime;
+        }
+
+        public static TimeSpan GetServerShutdownTime()
+        {
+            return GetInstance().ServerShutdownTime;
         }
 
         public static DiscordConfiguration GetDiscordConfiguration()

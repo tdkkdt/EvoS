@@ -71,6 +71,18 @@ public class GameManager
         return null;
     }
 
+    public static void ReconnectServer(BridgeServerProtocol server)
+    {
+        if (Games.TryGetValue(server.ProcessCode, out Game game))
+        {
+            game.AssignServer(server);
+        }
+        else if (server.IsPrivate)
+        {
+            log.Warn($"Server {server.ProcessCode} reconnected, but we can't find its game");
+        }
+    }
+
     public static List<Game> GetGames()
     {
         return Games.Values.ToList();

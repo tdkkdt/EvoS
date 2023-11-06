@@ -51,6 +51,11 @@ namespace CentralServer
         {
         }
 
+        public void CloseConnection()
+        {
+            WebSocket.Close();
+        }
+
         protected sealed override void OnError(ErrorEventArgs e)
         {
             if (!IsMinorError(e))

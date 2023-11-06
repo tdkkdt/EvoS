@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using CentralServer.LobbyServer.Matchmaking;
 using EvoS.Framework;
 using log4net;
@@ -17,10 +18,21 @@ namespace CentralServer.BridgeServer
         {
             lock (ServerPool)
             {
-                bool newServer = ServerPool.TryAdd(gameServer.ProcessCode, gameServer);
+                bool isReconnection = ServerPool.Remove(gameServer.ProcessCode, out BridgeServerProtocol oldServer);
+                ServerPool.TryAdd(gameServer.ProcessCode, gameServer);
 
-                log.Info($"{(newServer ? "New game server connected" : "A server reconnected")} with address {gameServer.Address}:{gameServer.Port}");
-                MatchmakingManager.Update();
+                log.Info($"{(isReconnection ? "A server reconnected" : "New game server connected")} " +
+                         $"with address {gameServer.Address}:{gameServer.Port} (IsPrivate={gameServer.IsPrivate})");
+
+                gameServer.OnGameEnded += async (server, _, _) => await DisconnectServer(server);
+                if (isReconnection)
+                {
+                    GameManager.ReconnectServer(gameServer);
+                }
+                else
+                {
+                    MatchmakingManager.Update();
+                }
             }
         }
 
@@ -73,6 +85,24 @@ namespace CentralServer.BridgeServer
                 }
 
                 return false;
+            }
+        }
+        
+        private static async Task DisconnectServer(BridgeServerProtocol server)
+        {
+            await Task.Delay(
+                LobbyConfiguration.GetServerGGTime()
+                + LobbyConfiguration.GetServerShutdownTime()
+                + TimeSpan.FromSeconds(15));
+
+            if (server.IsConnected)
+            {
+                server.Shutdown();
+                await Task.Delay(TimeSpan.FromSeconds(10));
+            }
+            if (server.IsConnected)
+            {
+                server.CloseConnection();
             }
         }
 

@@ -24,8 +24,6 @@ public class CustomGame : Game
     
     public readonly long Owner;
     
-    private static readonly object characterSelectionLock = new object();
-    
     public CustomGame(long accountId, LobbyGameConfig gameConfig)
     {
         Owner = accountId;
@@ -533,7 +531,7 @@ public class CustomGame : Game
         log.Info($"Game Custom started");
     }
 
-    // TODO merge with match orchestrator
+    // TODO merge with Game/PvpGame
     private void CheckIfAllSelected()
     {
         bool changed = false;
@@ -581,13 +579,13 @@ public class CustomGame : Game
         }
     }
 
-    // TODO merge with match orchestrator
+    // TODO merge with Game/PvpGame
     private IEnumerable<LobbyServerPlayerInfo> GetDuplicateCharacters(ILookup<CharacterType, LobbyServerPlayerInfo> characters)
     {
         return characters.Where(c => c.Count() > 1).SelectMany(c => c);
     }
 
-    // TODO merge with match orchestrator
+    // TODO merge with Game/PvpGame
     private bool IsCharacterUnavailable(LobbyServerPlayerInfo playerInfo, IEnumerable<LobbyServerPlayerInfo> duplicateCharsA, IEnumerable<LobbyServerPlayerInfo> duplicateCharsB)
     {
         if (!playerInfo.IsRemoteControlled && !playerInfo.IsAIControlled) // for custom games only
@@ -602,7 +600,7 @@ public class CustomGame : Game
                || !characterConfig.AllowForPlayers;
     }
 
-    // TODO merge with match orchestrator
+    // TODO merge with Game/PvpGame
     private CharacterType AssignRandomCharacter(
         LobbyServerPlayerInfo playerInfo,
         ILookup<CharacterType, LobbyServerPlayerInfo> teammates,
