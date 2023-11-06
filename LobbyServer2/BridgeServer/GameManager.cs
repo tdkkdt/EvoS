@@ -55,7 +55,8 @@ public class GameManager
     {
         foreach (Game game in Games.Values)
         {
-            if (game.GameStatus is >= GameStatus.Launched and < GameStatus.Stopped)
+            if (game.GameStatus is >= GameStatus.Launched and < GameStatus.Stopped
+                && game.Server is { IsConnected: true })
             {
                 foreach (long player in game.GetPlayers())
                 {
