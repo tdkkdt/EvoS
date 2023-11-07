@@ -6,6 +6,7 @@ using CentralServer.LobbyServer.Utils;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using log4net;
+using ILog = log4net.ILog;
 
 namespace CentralServer.LobbyServer.CustomGames
 {
@@ -40,7 +41,7 @@ namespace CentralServer.LobbyServer.CustomGames
                     return null;
                 }
             }
-            log.Info($"{LobbyServerUtils.GetHandle(accountId)} created a custom game {game.GameInfo.GameServerProcessCode}");
+            log.Info($"{LobbyServerUtils.GetHandle(accountId)} created a custom game {game.ProcessCode}");
             NotifyUpdate();
             return game;
         }
@@ -51,7 +52,8 @@ namespace CentralServer.LobbyServer.CustomGames
             {
                 if (Games.Remove(accountId, out CustomGame oldGame))
                 {
-                    GamesByCode.Remove(oldGame.GameInfo.GameServerProcessCode);
+                    GamesByCode.Remove(oldGame.ProcessCode);
+                    log.Info($"Removing {oldGame.ProcessCode}");
                     oldGame.Terminate();
                 }
             }

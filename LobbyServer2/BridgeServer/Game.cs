@@ -426,6 +426,7 @@ public abstract class Game
 
     public virtual void Terminate()
     {
+        log.Info($"Terminating {ProcessCode}");
         Server?.Shutdown();
         GameManager.UnregisterGame(ProcessCode);
     }
