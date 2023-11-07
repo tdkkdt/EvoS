@@ -385,6 +385,11 @@ public class CustomGame : Game
 
     public override void DisconnectPlayer(long accountId)
     {
+        base.DisconnectPlayer(accountId);
+        if (GameStatus > GameStatus.Launching)
+        {
+            return;
+        }
         if (accountId == Owner)
         {
             log.Info($"Owner Left Game kicking all players");
