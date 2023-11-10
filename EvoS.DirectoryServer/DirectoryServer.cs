@@ -271,7 +271,8 @@ namespace EvoS.DirectoryServer
 
         private static AssignGameClientResponse HandleReconnection(AssignGameClientRequest request, HttpContext context)
         {
-            LobbySessionInfo session = SessionManager.GetDisconnectedSessionInfo(request.SessionInfo.AccountId);
+            LobbySessionInfo session = SessionManager.GetDisconnectedSessionInfo(request.SessionInfo.AccountId)
+                                       ?? SessionManager.GetSessionInfo(request.SessionInfo.AccountId);
 
             if (session == null)
             {
