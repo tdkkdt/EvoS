@@ -396,6 +396,7 @@ public class CustomGame : Game
             DisperseCustomGame(GameResult.OwnerLeft, accountId);
 
             CustomGameManager.DeleteGame(Owner);
+            Terminate();
 
             return;
         }
