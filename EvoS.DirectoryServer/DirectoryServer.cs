@@ -57,7 +57,7 @@ namespace EvoS.DirectoryServer
         public void Configure(IApplicationBuilder app)
         {
             _proxies = EvosConfiguration.GetProxies().Select(IPAddress.Parse).ToHashSet();
-            log.Info($"Configured proxies: {string.Join(", ", _proxies)}");
+            log.Info($"Configured proxies: {(_proxies.Count > 0 ? string.Join(", ", _proxies) : "none")}");
             var serverAddressesFeature = app.ServerFeatures.Get<IServerAddressesFeature>();
             log.Info($"Started DirectoryServer on '0.0.0.0:{EvosConfiguration.GetDirectoryServerPort()}'");
 
