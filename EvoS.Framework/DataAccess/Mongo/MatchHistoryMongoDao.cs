@@ -8,7 +8,11 @@ namespace EvoS.Framework.DataAccess.Mongo
 {
     public class MatchHistoryMongoDao : MongoDao<long, MatchHistoryDao.MatchEntry>, MatchHistoryDao
     {
-        public MatchHistoryMongoDao() : base("match_history")
+        public MatchHistoryMongoDao() : base(
+            "match_history", 
+            new CreateIndexModel<MatchHistoryDao.MatchEntry>(Builders<MatchHistoryDao.MatchEntry>.IndexKeys
+                .Ascending(entry => entry.AccountId)
+                .Descending(entry => entry.Data.CreateDate)))
         {
         }
 

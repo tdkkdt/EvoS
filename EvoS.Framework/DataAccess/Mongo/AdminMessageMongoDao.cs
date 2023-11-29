@@ -7,7 +7,12 @@ namespace EvoS.Framework.DataAccess.Mongo
 {
     public class AdminMessageMongoDao : MongoDao<ObjectId, AdminMessageDao.AdminMessage>, AdminMessageDao
     {
-        public AdminMessageMongoDao() : base("admin_messages")
+        public AdminMessageMongoDao() : base(
+            "admin_messages", 
+            new CreateIndexModel<AdminMessageDao.AdminMessage>(Builders<AdminMessageDao.AdminMessage>.IndexKeys
+                .Ascending(msg => msg.accountId)
+                .Ascending(msg => msg.viewed)
+                .Ascending(msg => msg.createdAt)))
         {
         }
 

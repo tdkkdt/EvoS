@@ -12,7 +12,10 @@ namespace EvoS.Framework.DataAccess.Mongo
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(AccountMongoDao));
         
-        public LoginMongoDao() : base("logins")
+        public LoginMongoDao() : base(
+            "logins", 
+            new CreateIndexModel<LoginDao.LoginEntry>(Builders<LoginDao.LoginEntry>.IndexKeys
+                .Ascending(entry => entry.Username)))
         {
         }
 

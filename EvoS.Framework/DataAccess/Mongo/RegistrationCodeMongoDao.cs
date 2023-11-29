@@ -7,7 +7,10 @@ namespace EvoS.Framework.DataAccess.Mongo
 {
     public class RegistrationCodeMongoDao : MongoDao<string, RegistrationCodeDao.RegistrationCodeEntry>, RegistrationCodeDao
     {
-        public RegistrationCodeMongoDao() : base("registration_codes")
+        public RegistrationCodeMongoDao() : base(
+            "registration_codes", 
+            new CreateIndexModel<RegistrationCodeDao.RegistrationCodeEntry>(Builders<RegistrationCodeDao.RegistrationCodeEntry>.IndexKeys
+                .Descending(entry => entry.IssuedAt)))
         {
         }
 
