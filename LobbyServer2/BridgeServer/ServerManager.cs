@@ -25,7 +25,7 @@ namespace CentralServer.BridgeServer
                          $"with address {gameServer.Address}:{gameServer.Port} (IsPrivate={gameServer.IsPrivate})");
 
                 gameServer.OnGameEnded += async (server, _, _) => await DisconnectServer(server);
-                if (isReconnection)
+                if (isReconnection || gameServer.IsPrivate)
                 {
                     GameManager.ReconnectServer(gameServer);
                 }
