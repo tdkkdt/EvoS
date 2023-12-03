@@ -86,7 +86,7 @@ namespace CentralServer.LobbyServer.Group
             JoinGroup(groupId, leader);
         }
 
-        public static void LeaveGroup(long accountId, bool warnIfNotInAGroup = true)
+        public static bool LeaveGroup(long accountId, bool warnIfNotInAGroup = true)
         {
             GroupInfo leftGroup = null;
             lock (_lock)
@@ -115,6 +115,8 @@ namespace CentralServer.LobbyServer.Group
                 OnLeaveGroup(accountId);
                 OnGroupMembersUpdated(leftGroup);
             }
+
+            return leftGroup != null;
         }
 
         public static void JoinGroup(long groupId, long accountId)

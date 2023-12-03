@@ -402,10 +402,53 @@ namespace CentralServer.LobbyServer
             }
         }
 
-        private void HandleGroupKickRequest(GroupKickRequest message)
+        private void HandleGroupKickRequest(GroupKickRequest request)
         {
             LobbyPlayerGroupInfo info = GroupManager.GetGroupInfo(AccountId);
-            GroupManager.LeaveGroup(info.Members.Find(m => m.MemberDisplayName == message.MemberName).AccountID, false);
+            GroupKickResponse response = new GroupKickResponse
+            {
+                ResponseId = request.RequestId,
+                MemberName = request.MemberName,
+            };
+            if (!info.InAGroup)
+            {
+                response.LocalizedFailure = LocalizationPayload.Create("NotInGroupMember@GroupManager");
+                response.Success = false;
+            }
+            else if (!info.IsLeader)
+            {
+                response.LocalizedFailure = LocalizationPayload.Create("NotTheLeader@GroupManager");
+                response.Success = false;
+            }
+            else
+            {
+                UpdateGroupMemberData memberData = info.Members.Find(m => m.MemberDisplayName == request.MemberName);
+                if (memberData is null)
+                {
+                    response.Success = false;
+                }
+                else
+                {
+                    long accountId = memberData.AccountID;
+                    response.Success = GroupManager.LeaveGroup(accountId, false);
+                }
+                if (!response.Success)
+                {
+                    response.LocalizedFailure = LocalizationPayload.Create(
+                        "PlayerIsNotInGroup",
+                        "GroupManager",
+                        LocalizationArg_Handle.Create(request.MemberName));
+                }
+                foreach (UpdateGroupMemberData groupMember in info.Members)
+                {
+                    LobbyServerProtocol conn = SessionManager.GetClientConnection(groupMember.AccountID);
+                    conn?.SendSystemMessage(LocalizationPayload.Create(
+                        "MemberKickedFromGroup", 
+                        "Group",
+                        LocalizationArg_Handle.Create(request.MemberName)));
+                }
+            }
+            Send(response);
         }
 
         public void HandleRegisterGame(RegisterGameClientRequest request)
