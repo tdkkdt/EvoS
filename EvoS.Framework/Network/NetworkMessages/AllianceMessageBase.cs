@@ -74,15 +74,14 @@ public class AllianceMessageBase : MessageBase
 		}
 		else
 		{
-			String jsonStr;
 			try
 			{
-				jsonStr = reader.ReadString();
+				string jsonStr = reader.ReadString();
 				o = JsonConvert.DeserializeObject<T>(jsonStr);
 			}
-			catch
+			catch (Exception e)
 			{
-				log.Error($"Deserialize Error: Couldn't find method {name} of {o.GetType().Name}");
+				log.Error($"Deserialize Error: Couldn't find method {name} of {o.GetType().Name}", e);
 			}
 			
 		}
