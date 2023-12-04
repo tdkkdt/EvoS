@@ -83,6 +83,7 @@ function StatusPage() {
             {status && players && games
                 && status.servers
                     .sort((s1, s2) => s1.name.localeCompare(s2.name))
+                    .filter(s => games.get(s.id))
                     .map(s => <Server key={s.id} info={s} game={games.get(s.id)} playerData={players}/>)}
             {status && groups && players
                 && status.queues.map(q => <Queue key={q.type} info={q} groupData={groups} playerData={players} />)}
@@ -94,6 +95,11 @@ function StatusPage() {
                     playerData={players}
                     hidePlayers={inGame}
                 />}
+            {status && players && games
+                && status.servers
+                    .sort((s1, s2) => s1.name.localeCompare(s2.name))
+                    .filter(s => !games.get(s.id))
+                    .map(s => <Server key={s.id} info={s} game={games.get(s.id)} playerData={players}/>)}
         </>
     );
 }
