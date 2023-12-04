@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.Misc;
+using Newtonsoft.Json;
 
 namespace EvoS.Framework.Network.Static
 {
@@ -37,7 +38,7 @@ namespace EvoS.Framework.Network.Static
         [EvosMessage(154)]
         public List<SubTypeMods> Mods;
         public GameLoadScreenInstructions InstructionsToDisplay;
-        public RequirementCollection Requirements;
+        [JsonIgnore] public RequirementCollection Requirements;  // TODO RequirementCollection is broken on lobby server side
         public Rate MaxMatchesGrantingXP;
         public TeamCompositionRules TeamComposition;
         public GameValueOverrides GameOverrides;
