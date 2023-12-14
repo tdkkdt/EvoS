@@ -11,6 +11,7 @@ using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Store;
+using CentralServer.LobbyServer.TrustWar;
 using CentralServer.LobbyServer.Utils;
 using EvoS.DirectoryServer.Inventory;
 using EvoS.Framework;
@@ -102,6 +103,7 @@ namespace CentralServer.LobbyServer
             RegisterHandler<BalancedTeamRequest>(HandleBalancedTeamRequest);
             RegisterHandler<SetDevTagRequest>(HandleSetDevTagRequest);
             RegisterHandler<DEBUG_AdminSlashCommandNotification>(HandleDEBUG_AdminSlashCommandNotification);
+            RegisterHandler<SelectRibbonRequest>(HandleSelectRibbonRequest);
 
             RegisterHandler<PurchaseModRequest>(HandlePurchaseModRequest);
             RegisterHandler<PurchaseTauntRequest>(HandlePurchaseTauntRequest);
@@ -131,6 +133,33 @@ namespace CentralServer.LobbyServer
 
 
             RegisterHandler<FriendUpdateRequest>(HandleFriendUpdate);
+        }
+
+        private void HandleSelectRibbonRequest(SelectRibbonRequest request)
+        {
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+
+            if (account == null || !(account.AccountComponent.UnlockedRibbonIDs.Contains(request.RibbonID) || request.RibbonID == -1))
+            { 
+                Send(new SelectRibbonResponse()
+                {
+                    Success = false,
+                    ResponseId = request.RequestId,
+                });
+                return;
+            }
+
+            account.AccountComponent.SelectedRibbonID = request.RibbonID;
+            DB.Get().AccountDao.UpdateAccount(account);
+
+            OnAccountVisualsUpdated();
+
+            Send(new SelectRibbonResponse()
+            {
+                CurrentRibbonID = request.RibbonID,
+                Success = true,
+                ResponseId = request.RequestId,
+            });
         }
 
         private void HandleDEBUG_AdminSlashCommandNotification(DEBUG_AdminSlashCommandNotification notification)
@@ -169,7 +198,6 @@ namespace CentralServer.LobbyServer
                 }
             }
         }
-
 
         private void HandleSetDevTagRequest(SetDevTagRequest request)
         {
@@ -685,6 +713,23 @@ namespace CentralServer.LobbyServer
                 ResponseId = request.RequestId
             };
             Send(response);
+            
+            if (LobbyConfiguration.IsTrustWarEnabled())
+            {
+                PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+
+                for (int i = 0; i < 3; i++)
+                {
+                    Send(new PlayerFactionContributionChangeNotification()
+                    {
+                        CompetitionId = 1,
+                        FactionId = i,
+                        AmountChanged = 0,
+                        TotalXP = TrustWarManager.GetTotalXPByFactionID(account, i),
+                        AccountID = account.AccountId,
+                    });
+                }
+            }
         }
 
         public void HandleCheckRAFStatusRequest(CheckRAFStatusRequest request)

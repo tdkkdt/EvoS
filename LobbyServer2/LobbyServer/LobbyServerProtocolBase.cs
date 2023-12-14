@@ -4,12 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
-using CentralServer.LobbyServer.Character;
 using CentralServer.LobbyServer.Chat;
 using CentralServer.LobbyServer.Friend;
 using CentralServer.LobbyServer.Gamemode;
 using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Quest;
+using CentralServer.LobbyServer.TrustWar;
 using CentralServer.LobbyServer.Utils;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
@@ -20,6 +20,7 @@ using EvoS.Framework.Network.Static;
 using EvoS.Framework.Network.WebSocket;
 using log4net;
 using Newtonsoft.Json.Linq;
+using static EvoS.Framework.DataAccess.Daos.MiscDao;
 
 namespace CentralServer.LobbyServer
 {
@@ -98,6 +99,24 @@ namespace CentralServer.LobbyServer
         public void SendLobbyServerReadyNotification()
         {
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+
+            FactionCompetitionNotification factionCompetitionNotification = new();
+
+            if (LobbyConfiguration.IsTrustWarEnabled())
+            {
+                TrustWarEntry trustWar = TrustWarManager.getTrustWarEntry();
+                factionCompetitionNotification = new FactionCompetitionNotification()
+                {
+                    ActiveIndex = 1,
+                    Scores = new Dictionary<int, long>() {
+                        { 0, trustWar.Points[0] },
+                        { 1, trustWar.Points[1] },
+                        { 2, trustWar.Points[2] }
+                    }
+                };
+            }
+            
+
             LobbyServerReadyNotification notification = new LobbyServerReadyNotification
             {
                 AccountData = account.CloneForClient(),
@@ -105,7 +124,7 @@ namespace CentralServer.LobbyServer
                 CharacterDataList = account.CharacterData.Values.ToList(),
                 CommerceURL = "http://127.0.0.1/AtlasCommerce",
                 EnvironmentType = EnvironmentType.External,
-                FactionCompetitionStatus = new FactionCompetitionNotification(),
+                FactionCompetitionStatus = factionCompetitionNotification,
                 FriendStatus = FriendManager.GetFriendStatusNotification(AccountId),
                 GroupInfo = GroupManager.GetGroupInfo(AccountId),
                 SeasonChapterQuests = QuestManager.GetSeasonQuestDataNotification(),
