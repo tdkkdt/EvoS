@@ -97,6 +97,11 @@ public class CustomGame : Game
         }
     }
 
+    protected override TimeSpan GetFinalizeGameDelay()
+    {
+        return TimeSpan.Zero;
+    }
+
     // TODO merge with MatchOrchestrator
     public override bool UpdateCharacterInfo(long accountId, LobbyCharacterInfo characterInfo, LobbyPlayerInfoUpdate update)
     {

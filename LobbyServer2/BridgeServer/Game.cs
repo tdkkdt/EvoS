@@ -434,10 +434,15 @@ public abstract class Game
         GameManager.UnregisterGame(ProcessCode);
     }
 
+    protected virtual TimeSpan GetFinalizeGameDelay()
+    {
+        return LobbyConfiguration.GetServerGGTime();
+    }
+
     public async Task FinalizeGame(LobbyGameSummary gameSummary)
     {
         //Wait 5 seconds for gg Usages
-        await Task.Delay(LobbyConfiguration.GetServerGGTime());
+        await Task.Delay(GetFinalizeGameDelay());
 
         foreach (LobbyServerProtocol client in GetClients())
         {
