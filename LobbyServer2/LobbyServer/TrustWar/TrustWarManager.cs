@@ -12,6 +12,13 @@ namespace CentralServer.LobbyServer.TrustWar
 {
     public class TrustWarManager
     {
+        private static readonly Dictionary<int, int> RibbonToFaction = new()
+        {
+            {1, 1},
+            {2, 0},
+            {3, 2},
+        };
+        
         private static readonly object _lock = new object();
 
         public static int GetTotalXPByFactionID(PersistedAccountData account, int factionID)
@@ -54,15 +61,14 @@ namespace CentralServer.LobbyServer.TrustWar
                 foreach (long accountId in game.GetPlayers())
                 {
                     PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
-                    if (account.AccountComponent.SelectedRibbonID >= 1 && account.AccountComponent.SelectedRibbonID <= 3)
+                    if (RibbonToFaction.TryGetValue(account.AccountComponent.SelectedRibbonID, out int factionId))
                     {
                         LobbyServerPlayerInfo player = game.GetPlayerInfo(accountId);
 
                         bool isTeamAWinner = (gameSummary.GameResult == GameResult.TeamAWon && player.TeamId == Team.TeamA);
                         bool isTeamBWinner = (gameSummary.GameResult == GameResult.TeamBWon && player.TeamId == Team.TeamB);
 
-                        int trustWarPoints = isTeamAWinner || isTeamBWinner ? LobbyConfiguration.GetTrustWarGameWonPoints() : LobbyConfiguration.GetTrustWarGamePlayedPoints();                        
-                        int factionId = account.AccountComponent.SelectedRibbonID - 1;
+                        int trustWarPoints = isTeamAWinner || isTeamBWinner ? LobbyConfiguration.GetTrustWarGameWonPoints() : LobbyConfiguration.GetTrustWarGamePlayedPoints();
 
                         trustWar.Points[factionId] += trustWarPoints;
 
