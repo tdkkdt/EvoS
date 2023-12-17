@@ -12,6 +12,7 @@ namespace EvoS.Framework
         public int DirectoryServerPort = 6050;
         public string LobbyServerAddress = "127.0.0.1";
         public int LobbyServerPort = 6060;
+        public TimeSpan LobbyServerTimeOut = TimeSpan.FromSeconds(20);
         public string GameServerExecutable = "";
         public string GameServerExecutableArgs = "";
         public string SteamWebApiKey = "";
@@ -44,6 +45,8 @@ namespace EvoS.Framework
         public static string GetLobbyServerAddress() => Instance.LobbyServerAddress;
 
         public static int GetLobbyServerPort() => Instance.LobbyServerPort;
+
+        public static TimeSpan GetLobbyServerTimeOut() => Instance.LobbyServerTimeOut;
 
         /// <summary>
         /// Full path to server's "AtlasReactor.exe"

@@ -26,7 +26,7 @@ namespace CentralServer
             server.AddWebSocketService<LobbyServerProtocol>("/LobbyGameClientSessionManager");
             server.AddWebSocketService<BridgeServerProtocol>("/BridgeServer");
             server.Log.Level = LogLevel.Debug;
-            server.WaitTime = TimeSpan.FromSeconds(10);  // game server default
+            server.WaitTime = EvosConfiguration.GetLobbyServerTimeOut();
 
             ChatManager.Get(); // TODO Dependency injection
             await DiscordManager.Get().Start();
