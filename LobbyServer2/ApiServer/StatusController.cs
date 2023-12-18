@@ -6,6 +6,8 @@ using CentralServer.LobbyServer.Friend;
 using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
+using CentralServer.LobbyServer.TrustWar;
+using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.Static;
@@ -57,6 +59,12 @@ namespace CentralServer.ApiServer
             List<BridgeServerProtocol> servers = ServerManager.GetServers();
             List<BridgeServer.Game> games = GameManager.GetGames();
             HashSet<long> players = SessionManager.GetOnlinePlayers();
+            long[] factionsData = Array.Empty<long>();
+            if (LobbyConfiguration.IsTrustWarEnabled())
+            {
+                factionsData = TrustWarManager.getTrustWarEntry().Points;
+            }
+
             Status status = new Status
             {
                 players = players
@@ -80,7 +88,9 @@ namespace CentralServer.ApiServer
                     .ToList(),
                 games = games
                     .Select(g => Game.Of(g, true))
-                    .ToList()
+                    .ToList(),
+                factionsEnabled = LobbyConfiguration.IsTrustWarEnabled(),
+                factionsData = factionsData
             };
             return Results.Json(status);
         }
@@ -92,6 +102,8 @@ namespace CentralServer.ApiServer
             public List<Queue> queues { get; set; }
             public List<Server> servers { get; set; }
             public List<Game> games { get; set; }
+            public bool factionsEnabled { get; set; }
+            public long[] factionsData { get; set; }
         }
 
         public struct Player
@@ -101,6 +113,7 @@ namespace CentralServer.ApiServer
             public int bannerBg { get; set; }
             public int bannerFg { get; set; }
             public string status { get; set; }
+            public TrustWarManager.PlayerTrustWarDetails factionData { get; set; }
 
             public static Player Of(PersistedAccountData acc)
             {
@@ -111,6 +124,7 @@ namespace CentralServer.ApiServer
                     bannerBg = acc.AccountComponent.SelectedBackgroundBannerID == -1  ? 95 : acc.AccountComponent.SelectedBackgroundBannerID, // if no Banner is set default to 95
                     bannerFg = acc.AccountComponent.SelectedForegroundBannerID == -1  ? 65 : acc.AccountComponent.SelectedForegroundBannerID, // if no Foreground Banner is set default to 65
                     status = FriendManager.GetStatusString(SessionManager.GetClientConnection(acc.AccountId)),
+                    factionData = TrustWarManager.PlayerTrustWarDetails.Of(acc)
                 };
             }
         }

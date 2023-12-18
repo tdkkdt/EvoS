@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using CentralServer.LobbyServer.Session;
+using CentralServer.LobbyServer.Utils;
 using EvoS.DirectoryServer;
 using EvoS.DirectoryServer.Account;
 using EvoS.Framework;
 using EvoS.Framework.Auth;
 using EvoS.Framework.DataAccess;
+using EvoS.Framework.DataAccess.Daos;
 using EvoS.Framework.Network.Static;
 using log4net;
 using Microsoft.AspNetCore.Builder;
@@ -31,6 +33,7 @@ public class UserApiServer : ApiServer
         app.MapPost("/api/login", Login).AllowAnonymous();
         app.MapPost("/api/register", Register).AllowAnonymous();
         app.MapGet("/api/lobby/status", StatusController.GetSimpleStatus).AllowAnonymous();
+        app.MapGet("/api/lobby/playerInfo", PlayerInfo).RequireAuthorization();
         // app.MapGet("/api/account/linkedAccountSupport", GetThirdPartyAccountTypes).RequireAuthorization();
         // app.MapGet("/api/account/linkAccount", LinkAccount).RequireAuthorization();
         // app.MapGet("/api/account/unlinkAccount", UnlinkAccount).RequireAuthorization();
@@ -39,7 +42,19 @@ public class UserApiServer : ApiServer
         app.MapGet("/api/logout", LogOutEverywhere).RequireAuthorization();
         app.UseAuthorization();
     }
-    
+
+    protected IResult PlayerInfo(string handle)
+    {
+        long AccountId = LobbyServerUtils.ResolveAccountId(0, handle);
+        PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+        if (account == null)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.Json(StatusController.Player.Of(account));
+    }
+
     protected IResult Register(HttpContext httpContext, [FromBody] LoginModel authInfo)
     {
         log.Info($"Registering via api: {authInfo.UserName}");
