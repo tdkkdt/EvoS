@@ -32,6 +32,7 @@ namespace EvoS.Framework
         public string TicketAuthKey = "";
         public bool AllowUsernamePasswordAuth = true;
         public List<string> Proxies = new List<string>();
+        public List<string> LightProxies = new List<string>();
         
         public bool PingOnGroupRequest = true;
 
@@ -98,6 +99,7 @@ namespace EvoS.Framework
         public static bool GetAllowTicketAuth() => !GetUserApiKey().IsNullOrEmpty() && !GetTicketAuthKey().IsNullOrEmpty();
 
         public static List<string> GetProxies() => Instance.Proxies;
+        public static List<string> GetLightProxies() => Instance.LightProxies;
 
         public enum DBType
         {

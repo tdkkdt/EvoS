@@ -22,9 +22,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace EvoS.DirectoryServer
 {
@@ -52,12 +52,19 @@ namespace EvoS.DirectoryServer
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(DirectoryServer));
         private static long _nextTmpAccountId = 1;
-        private static HashSet<IPAddress> _proxies;
+        private static HashSet<IPAddress> _fullProxies;
+        private static HashSet<IPAddress> _allProxies;
         
         public void Configure(IApplicationBuilder app)
         {
-            _proxies = EvosConfiguration.GetProxies().Select(IPAddress.Parse).ToHashSet();
-            log.Info($"Configured proxies: {(_proxies.Count > 0 ? string.Join(", ", _proxies) : "none")}");
+            _fullProxies = EvosConfiguration.GetProxies().Select(IPAddress.Parse).ToHashSet();
+            _allProxies = _fullProxies.Concat(EvosConfiguration.GetLightProxies().Select(IPAddress.Parse)).ToHashSet();
+            log.Info($"Configured proxies: {(_allProxies.Count > 0
+                ? string.Join(", ", _allProxies.Select(
+                    p => _fullProxies.Contains(p)
+                        ? p.ToString()
+                        : $"{p}*"))
+                : "none")}");
             var serverAddressesFeature = app.ServerFeatures.Get<IServerAddressesFeature>();
             log.Info($"Started DirectoryServer on '0.0.0.0:{EvosConfiguration.GetDirectoryServerPort()}'");
 
@@ -241,7 +248,7 @@ namespace EvoS.DirectoryServer
                 DB.Get().AccountDao.UpdateAccount(account);
             }
 
-            response.SessionInfo = SessionManager.CreateSession(accountId, request.SessionInfo, context.Connection.RemoteIpAddress);
+            response.SessionInfo = SessionManager.CreateSession(accountId, request.SessionInfo, GetIpAddress(context));
             response.LobbyServerAddress = GetLobbyServerAddress(accountId, context);
 
             LobbyGameClientProxyInfo proxyInfo = new LobbyGameClientProxyInfo
@@ -259,9 +266,9 @@ namespace EvoS.DirectoryServer
 
         private static string GetLobbyServerAddress(long accountId, HttpContext context)
         {
-            if (_proxies is not null
+            if (_fullProxies is not null
                 && context.Connection.RemoteIpAddress is not null
-                && _proxies.Contains(context.Connection.RemoteIpAddress))
+                && _fullProxies.Contains(context.Connection.RemoteIpAddress))
             {
                 log.Info($"{LobbyServerUtils.GetHandle(accountId)} is connecting via proxy {context.Connection.RemoteIpAddress}");
                 return context.Connection.RemoteIpAddress.ToString();
@@ -292,7 +299,7 @@ namespace EvoS.DirectoryServer
             // TODO extra security? Reconnect tokens are possible to hijack
 
             // SessionManager.CleanSessionAfterReconnect(request.SessionInfo.AccountId);
-            session = SessionManager.CreateSession(request.SessionInfo.AccountId, request.SessionInfo, context.Connection.RemoteIpAddress);
+            session = SessionManager.CreateSession(request.SessionInfo.AccountId, request.SessionInfo, GetIpAddress(context));
             
             return new AssignGameClientResponse
             {
@@ -414,6 +421,38 @@ namespace EvoS.DirectoryServer
                 Success = false,
                 ErrorMessage = reason
             };
+        }
+
+        private static IPAddress GetIpAddress(HttpContext context)
+        {
+            IPAddress ipAddress = context.Connection.RemoteIpAddress;
+                
+            if (_allProxies.Contains(ipAddress))
+            {
+                if (!context.Request.Headers.TryGetValue("X-Forwarded-For", out StringValues forwardedFor))
+                {
+                    log.Error($"Proxy {ipAddress} has not set forwarded-for header!");
+                    return ipAddress;
+                }
+                string forwardedForString = forwardedFor.ToString();
+                if (string.IsNullOrWhiteSpace(forwardedForString))
+                {
+                    log.Error($"Proxy {ipAddress} has not set forwarded-for header!");
+                    return ipAddress;
+                }
+                log.Debug($"Proxy {ipAddress} has set forwarded-for header to {forwardedForString}");
+
+                string clientIpString = forwardedForString
+                    .Split(',')
+                    .Select(s => s.Trim())
+                    .LastOrDefault();
+                if (!IPAddress.TryParse(clientIpString, out ipAddress))
+                {
+                    log.Error($"Proxy {ipAddress} has set invalid forwarded-for header: {forwardedForString}");
+                }
+            }
+
+            return ipAddress;
         }
     }
 }
