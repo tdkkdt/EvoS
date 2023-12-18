@@ -1239,7 +1239,7 @@ namespace CentralServer.LobbyServer
         {
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
             log.Info($"Player {AccountId} requested UIState {request.UIState} {request.StateValue}");
-            account.AccountComponent.UIStates.Add(request.UIState, request.StateValue);
+            account.AccountComponent.UIStates[request.UIState] = request.StateValue;
             DB.Get().AccountDao.UpdateAccount(account);
         }
 
