@@ -235,6 +235,7 @@ namespace CentralServer.LobbyServer
 
         private void HandleJoinGameRequest(JoinGameRequest joinGameRequest)
         {
+            ResetReadyState();
             Game game = CustomGameManager.JoinGame(
                 AccountId,
                 joinGameRequest.GameServerProcessCode,
@@ -274,6 +275,7 @@ namespace CentralServer.LobbyServer
         
         private void HandleCreateGameRequest(CreateGameRequest createGameRequest)
         {
+            ResetReadyState();
             Game game = CustomGameManager.CreateGame(AccountId, createGameRequest.GameConfig);
             if (game == null)
             {
@@ -832,6 +834,7 @@ namespace CentralServer.LobbyServer
             LocalizationPayload failure = QueuePenaltyManager.CheckQueuePenalties(AccountId, SelectedGameType);
             if (failure is not null)
             {
+                ResetReadyState();
                 SendSystemMessage(failure);
                 return;
             }
@@ -840,35 +843,40 @@ namespace CentralServer.LobbyServer
             IsReady = contextualReadyState.ReadyState == ReadyState.Ready;  // TODO can be Accepted and others
             if (group == null)
             {
-                MatchmakingManager.StartPractice(this);
+                log.Error($"{LobbyServerUtils.GetHandle(AccountId)} is not in a group when setting contextual ready state");
+                return;
             }
-            else
+            if (CurrentGame != null)
             {
-                if (CurrentGame != null)
+                if (CurrentGame.ProcessCode != contextualReadyState.GameProcessCode)
                 {
-                    if (CurrentGame.ProcessCode != contextualReadyState.GameProcessCode)
-                    {
-                        log.Error($"Received ready state {contextualReadyState.ReadyState} " +
-                                  $"from {LobbyServerUtils.GetHandle(AccountId)} " +
-                                  $"for game {contextualReadyState.GameProcessCode} " +
-                                  $"while they are in game {CurrentGame.ProcessCode}");
-                        return;
-                    }
-                    if (contextualReadyState.ReadyState == ReadyState.Ready)  // TODO can be Accepted and others
-                    {
-                        CurrentGame.SetPlayerReady(AccountId);
-                    }
-                    else
-                    {
-                        CurrentGame.SetPlayerUnReady(AccountId);
-                    }
+                    log.Error($"Received ready state {contextualReadyState.ReadyState} " +
+                              $"from {LobbyServerUtils.GetHandle(AccountId)} " +
+                              $"for game {contextualReadyState.GameProcessCode} " +
+                              $"while they are in game {CurrentGame.ProcessCode}");
+                    return;
+                }
+
+                if (contextualReadyState.ReadyState == ReadyState.Ready) // TODO can be Accepted and others
+                {
+                    CurrentGame.SetPlayerReady(AccountId);
                 }
                 else
                 {
-                    UpdateGroupReadyState();
-                    BroadcastRefreshGroup();
+                    CurrentGame.SetPlayerUnReady(AccountId);
                 }
             }
+            else
+            {
+                UpdateGroupReadyState();
+                BroadcastRefreshGroup();
+            }
+        }
+
+        private void ResetReadyState()
+        {
+            IsReady = false;
+            UpdateGroupReadyState();
         }
 
         public void HandleJoinMatchmakingQueueRequest(JoinMatchmakingQueueRequest request)
@@ -1619,6 +1627,7 @@ namespace CentralServer.LobbyServer
 
             Send(new RejoinGameResponse { ResponseId = request.RequestId, Success = true });
             log.Info($"Reconnecting {UserName} to game {game.GameInfo.GameServerProcessCode} ({game.ProcessCode})");
+            ResetReadyState();
             game.ReconnectPlayer(this);
         }
 
