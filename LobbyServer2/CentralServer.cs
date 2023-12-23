@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using CentralServer.ApiServer;
 using CentralServer.BridgeServer;
 using CentralServer.LobbyServer;
 using CentralServer.LobbyServer.Chat;
+using CentralServer.LobbyServer.CustomGames;
 using CentralServer.LobbyServer.Discord;
 using CentralServer.LobbyServer.Friend;
+using CentralServer.LobbyServer.Matchmaking;
+using CentralServer.LobbyServer.Session;
 using EvoS.Framework;
 using log4net;
 using WebSocketSharp;
@@ -17,16 +21,50 @@ namespace CentralServer
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(CentralServer));
 
-        private static WebSocketServer server;
+        private static WebSocketServer _server;
 
-        public static async Task Init(string[] args)
+        private static Action _stopDirectoryServer;
+        private static PendingShutdownType _pendingShutdown;
+        public static PendingShutdownType PendingShutdown
         {
+            get => _pendingShutdown;
+            set
+            {
+                log.Info($"Pending shutdown state is now {value}");
+                switch (value)
+                {
+                    case PendingShutdownType.None:
+                        if (_pendingShutdown == PendingShutdownType.WaitForGamesToEnd)
+                        {
+                            MatchmakingManager.Enabled = true;
+                            CustomGameManager.Enabled = true;
+                        }
+
+                        break;
+                    case PendingShutdownType.Now:
+                        Stop();
+                        break;
+                    case PendingShutdownType.WaitForGamesToEnd:
+                        MatchmakingManager.Enabled = false;
+                        CustomGameManager.Enabled = false;
+                        break;
+                    case PendingShutdownType.WaitForPlayersToLeave:
+                        break;
+                }
+
+                _pendingShutdown = value;
+            }
+        }
+
+        public static async Task Init(string[] args, Action stopDirectoryServer)
+        {
+            _stopDirectoryServer = stopDirectoryServer;
             int port = EvosConfiguration.GetLobbyServerPort();
-            server = new WebSocketServer(port);
-            server.AddWebSocketService<LobbyServerProtocol>("/LobbyGameClientSessionManager");
-            server.AddWebSocketService<BridgeServerProtocol>("/BridgeServer");
-            server.Log.Level = LogLevel.Debug;
-            server.WaitTime = EvosConfiguration.GetLobbyServerTimeOut();
+            _server = new WebSocketServer(port);
+            _server.AddWebSocketService<LobbyServerProtocol>("/LobbyGameClientSessionManager");
+            _server.AddWebSocketService<BridgeServerProtocol>("/BridgeServer");
+            _server.Log.Level = LogLevel.Debug;
+            _server.WaitTime = EvosConfiguration.GetLobbyServerTimeOut();
 
             ChatManager.Get(); // TODO Dependency injection
             await DiscordManager.Get().Start();
@@ -35,22 +73,27 @@ namespace CentralServer
             FriendsTask friendsTask = new FriendsTask(CancellationToken.None);
             _ = Task.Run(friendsTask.Run, CancellationToken.None);
             
-            server.Start();
+            _server.Start();
             log.Info($"Started lobby server on port {port}");
 
-            var adminApi = new ApiServer.AdminApiServer().Init();
-            var userApi = new ApiServer.UserApiServer().Init();
+            var adminApi = new AdminApiServer().Init();
+            var userApi = new UserApiServer().Init();
 
             if (EvosConfiguration.GetGameServerExecutable().IsNullOrEmpty())
             {
                 log.Warn("GameServerExecutable not set in settings.yaml. " +
                          "Automatic game server launch is disabled. Game servers can still connect to this lobby");
             }
+
+            if (EvosConfiguration.GetDevMode())
+            {
+                log.Warn("Dev mode is enabled. Proceed with caution.");
+            }
         }
 
         public static void MainLoop()
         {
-            while (server.IsListening)
+            while (_server.IsListening)
             {
                 Thread.Sleep(5000);
             }
@@ -58,7 +101,21 @@ namespace CentralServer
             DiscordManager.Get().Shutdown();
             
             log.Info("Lobby server is not listening, exiting...");
-            throw new ApplicationException("Lobby is down");
+        }
+
+        private static void Stop()
+        {
+            _stopDirectoryServer();
+            SessionManager.OnServerShutdown();
+            _server.Stop();
+        }
+
+        public enum PendingShutdownType
+        {
+            None,
+            Now,
+            WaitForGamesToEnd,
+            WaitForPlayersToLeave,
         }
     }
 }

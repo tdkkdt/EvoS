@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
+using CentralServer.ApiServer;
 using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Utils;
 using EvoS.DirectoryServer.Account;
@@ -29,11 +31,13 @@ using Newtonsoft.Json;
 
 namespace EvoS.DirectoryServer
 {
-    public class Program
+    public static class Program
     {
+        private static IWebHost host;
+        
         public static void Main(string[] args = null)
         {
-            var host = WebHost.CreateDefaultBuilder()
+            host = WebHost.CreateDefaultBuilder()
                 .SuppressStatusMessages(true)
                 .UseKestrel(koptions => koptions.Listen(IPAddress.Parse("0.0.0.0"), EvosConfiguration.GetDirectoryServerPort()))
                 .UseStartup<DirectoryServer>()           
@@ -47,13 +51,15 @@ namespace EvoS.DirectoryServer
                 })
                 .Build();
 
-            Console.CancelKeyPress += async (sender, @event) =>
-            {
-                await host.StopAsync();
-                host.Dispose();
-            };
+            Console.CancelKeyPress += async (_, _) => { await Stop(); };
 
             host.Run();
+        }
+
+        public static async Task Stop()
+        {
+            await host.StopAsync();
+            host.Dispose();
         }
     }
 

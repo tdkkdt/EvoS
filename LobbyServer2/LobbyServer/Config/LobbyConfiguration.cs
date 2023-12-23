@@ -27,6 +27,7 @@ namespace EvoS.Framework
         public int ServerReserveSize = 0;
         public TimeSpan ServerGGTime = TimeSpan.FromSeconds(5);
         public TimeSpan ServerShutdownTime = TimeSpan.FromMinutes(1);
+        public TimeSpan ServerReconnectionTimeout = TimeSpan.FromSeconds(10);
         public DiscordConfiguration Discord = new DiscordConfiguration();
         public bool EnableTrustWar = true;
         public int TrustWarGamePlayedPoints = 5;
@@ -118,6 +119,11 @@ namespace EvoS.Framework
         public static TimeSpan GetServerShutdownTime()
         {
             return GetInstance().ServerShutdownTime;
+        }
+
+        public static TimeSpan GetServerReconnectionTimeout()
+        {
+            return GetInstance().ServerReconnectionTimeout;
         }
 
         public static DiscordConfiguration GetDiscordConfiguration()

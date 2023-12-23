@@ -9,6 +9,7 @@ namespace EvoS.Framework
 {
     public class EvosConfiguration
     {
+        public bool DevMode = false;
         public int DirectoryServerPort = 6050;
         public string LobbyServerAddress = "127.0.0.1";
         public int LobbyServerPort = 6060;
@@ -40,6 +41,8 @@ namespace EvoS.Framework
             new DeserializerBuilder().Build().Deserialize<EvosConfiguration>(File.ReadAllText("settings.yaml")));
 
         private static EvosConfiguration Instance => _instance.Value;
+
+        public static bool GetDevMode() => Instance.DevMode;
 
         public static int GetDirectoryServerPort() => Instance.DirectoryServerPort;
 

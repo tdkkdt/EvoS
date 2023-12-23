@@ -1,7 +1,11 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
+using CentralServer.LobbyServer.Discord;
+using CentralServer.LobbyServer.Session;
 using EvoS.Framework.DataAccess;
+using log4net;
 using log4net.Config;
 using McMaster.Extensions.CommandLineUtils;
 
@@ -9,6 +13,8 @@ namespace EvoS.Sandbox
 {
     class Program
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(Program));
+        
         public static int Main(string[] args)
         {
             XmlConfigurator.Configure(new FileInfo("log4net.xml"));
@@ -22,12 +28,16 @@ namespace EvoS.Sandbox
             DB.Get();
 
             // Start Central Server
-            await CentralServer.CentralServer.Init(new string[] { });
+            await CentralServer.CentralServer.Init(new string[] { }, StopDirServer);
 
             // Start Directory Server
-            new Thread(StartDirServer).Start();
+            Thread thread = new Thread(StartDirServer);
+            thread.Start();
 
             CentralServer.CentralServer.MainLoop();
+            
+            thread.Interrupt();
+            log.Info("Shutting down");
         }
 
         /// <summary>
@@ -37,6 +47,11 @@ namespace EvoS.Sandbox
         static void StartDirServer()
         {
             DirectoryServer.Program.Main();
+        }
+        
+        public static void StopDirServer()
+        {
+            DirectoryServer.Program.Stop().Wait();
         }
     }
 }

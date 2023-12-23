@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using CentralServer.LobbyServer;
 using EvoS.Framework.Constants.Enums;
 using log4net;
 
@@ -43,12 +44,23 @@ public class GameManager
 
     public static bool UnregisterGame(string processCode)
     {
+        bool success = false;
         if (processCode is null)
         {
             log.Error("Attempting to unregister game with no process code");
-            return false;
         }
-        return Games.TryRemove(processCode, out var game);
+        else
+        {
+            success = Games.TryRemove(processCode, out var game);
+        }
+        
+        if (CentralServer.PendingShutdown == CentralServer.PendingShutdownType.WaitForGamesToEnd
+            && !Games.Values.Any(g => g.GameStatus is > GameStatus.Assembling and < GameStatus.Stopped))
+        {
+            CentralServer.PendingShutdown = CentralServer.PendingShutdownType.Now;
+        }
+
+        return success;
     }
 
     public static Game GetGameWithPlayer(long accountId)
@@ -86,5 +98,22 @@ public class GameManager
     public static List<Game> GetGames()
     {
         return Games.Values.ToList();
+    }
+
+    public static void StopAllGames()
+    {
+        foreach (Game game in Games.Values)
+        {
+            if (game.GameInfo is not null)
+            {
+                game.GameInfo.GameStatus = GameStatus.Stopped;
+                game.SendGameInfoNotifications();
+                foreach (LobbyServerProtocol conn in game.GetClients())
+                {
+                    conn?.SendGameUnassignmentNotification();
+                }
+            }
+            game.Terminate();
+        }
     }
 }

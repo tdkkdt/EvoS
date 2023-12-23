@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using CentralServer.LobbyServer;
 using CentralServer.LobbyServer.Chat;
+using CentralServer.LobbyServer.CustomGames;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Utils;
@@ -24,6 +26,7 @@ namespace CentralServer.ApiServer
         private static readonly ILog log = LogManager.GetLogger(typeof(AdminController));
         
         public static event Action<long, PauseQueueModel> OnAdminPauseQueue = delegate {};
+        public static event Action<long, PendingShutdownModel> OnAdminScheduleShutdown = delegate {};
         
         public class PauseQueueModel
         {
@@ -37,7 +40,27 @@ namespace CentralServer.ApiServer
                 return error;
             }
             MatchmakingManager.Enabled = !data.Paused;
+            CustomGameManager.Enabled = !data.Paused;
             OnAdminPauseQueue(adminAccountId, data);
+            return Results.Ok();
+        }
+        
+        public class PendingShutdownModel
+        {
+            [JsonConverter(typeof(JsonStringEnumConverter))]
+            public CentralServer.PendingShutdownType Type { get; set; }
+        }
+        
+        public static IResult ScheduleShutdown([FromBody] PendingShutdownModel data, ClaimsPrincipal user)
+        {
+            if (!ValidateAdmin(user, out IResult error, out long adminAccountId, out string adminHandle))
+            {
+                return error;
+            }
+
+            log.Info($"{adminHandle} updated pending shutdown state: {data.Type}");
+            CentralServer.PendingShutdown = data.Type;
+            OnAdminScheduleShutdown(adminAccountId, data);
             return Results.Ok();
         }
 

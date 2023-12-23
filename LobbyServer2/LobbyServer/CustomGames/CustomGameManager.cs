@@ -18,12 +18,21 @@ namespace CentralServer.LobbyServer.CustomGames
         private static readonly Dictionary<string, CustomGame> GamesByCode = new Dictionary<string, CustomGame>();
         private static readonly Dictionary<long, LobbyServerProtocol> Subscribers = new Dictionary<long, LobbyServerProtocol>();
 
-        public static Game CreateGame(long accountId, LobbyGameConfig gameConfig)
+        public static bool Enabled { get; set; } = true;
+
+        public static Game CreateGame(long accountId, LobbyGameConfig gameConfig, out LocalizationPayload error)
         {
+            error = LocalizationPayload.Create("UnknownErrorTryAgain@Frontend");
             CustomGame game;
             lock (Games)
             {
                 DeleteGame(accountId);
+                if (!Enabled)
+                {
+                    log.Info("Custom games are currently disabled");
+                    error = LocalizationPayload.Create("DisabledByAdmin@Matchmaking");
+                    return null;
+                }
                 try
                 {
                     game = new CustomGame(accountId, gameConfig);

@@ -115,6 +115,12 @@ namespace CentralServer.LobbyServer.Session
                 }
 
                 OnPlayerDisconnected(client);
+
+                if (CentralServer.PendingShutdown == CentralServer.PendingShutdownType.WaitForPlayersToLeave
+                    && SessionInfos.IsEmpty)
+                {
+                    CentralServer.PendingShutdown = CentralServer.PendingShutdownType.Now;
+                }
             }
         }
 
@@ -138,6 +144,20 @@ namespace CentralServer.LobbyServer.Session
         public static HashSet<long> GetOnlinePlayers()
         {
             return new HashSet<long>(SessionInfos.Keys);
+        }
+
+        public static void OnServerShutdown()
+        {
+            GameManager.StopAllGames();
+            LobbyStatusNotification notify = new LobbyStatusNotification
+            {
+                LocalizedFailure = LocalizationPayload.Create("ServerShutdown@KickSession"),
+                AllowRelogin = false,
+            };
+            foreach (SessionInfo session in SessionInfos.Values)
+            {
+                session.conn?.Send(notify);
+            }
         }
 
         public static LobbySessionInfo CreateSession(long accountId, LobbySessionInfo connectingSessionInfo, IPAddress ipAddress)

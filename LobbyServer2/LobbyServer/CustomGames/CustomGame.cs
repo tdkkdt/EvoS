@@ -464,6 +464,13 @@ public class CustomGame : Game
 
     private void StartCustomGame()
     {
+        if (!CustomGameManager.Enabled)
+        {
+            log.Info("Custom games are currently disabled");
+            OnFailedToStart(LocalizationPayload.Create("DisabledByAdmin@Matchmaking"));
+            return;
+        }
+        
         log.Info($"Starting Custom game...");
 
         // Get a server
@@ -471,10 +478,7 @@ public class CustomGame : Game
         if (server == null)
         {
             log.Info($"No available server for Custom game mode");
-            LocalizationPayload msg = LocalizationPayload.Create("FailedStartGameServer@Frontend");
-            GetClients().ForEach(c => c?.SendSystemMessage(msg));
-            ForceUnReady();
-            SendGameInfoNotifications();
+            OnFailedToStart(LocalizationPayload.Create("FailedStartGameServer@Frontend"));
             return;
         }
         
@@ -490,6 +494,13 @@ public class CustomGame : Game
             return;
         }
         _ = StartCustomGameAsync();
+    }
+
+    private void OnFailedToStart(LocalizationPayload msg)
+    {
+        GetClients().ForEach(c => c?.SendSystemMessage(msg));
+        ForceUnReady();
+        SendGameInfoNotifications();
     }
 
     public async Task StartCustomGameAsync()

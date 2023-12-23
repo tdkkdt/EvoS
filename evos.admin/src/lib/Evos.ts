@@ -166,6 +166,13 @@ export enum MapType {
     Skyway_Deathmatch = 'Skyway_Deathmatch',
 }
 
+export enum PendingShutdownType {
+    None = 'None',
+    Now = 'Now',
+    WaitForGamesToEnd = 'WaitForGamesToEnd',
+    WaitForPlayersToLeave = 'WaitForPlayersToLeave',
+}
+
 export function asDate(date?: string) : Date | undefined {
     return date ? new Date(date) : undefined;
 }
@@ -209,6 +216,13 @@ export function pauseQueue(abort: AbortController, authHeader: string, paused: b
     return axios.put(
         baseUrl + "/api/admin/queue/paused",
         { Paused: paused },
+        { headers: {'Authorization': authHeader}, signal: abort.signal });
+}
+
+export function scheduleShutdown(abort: AbortController, authHeader: string, type: PendingShutdownType) {
+    return axios.put(
+        baseUrl + "/api/admin/server/shutdown",
+        { Type: type },
         { headers: {'Authorization': authHeader}, signal: abort.signal });
 }
 

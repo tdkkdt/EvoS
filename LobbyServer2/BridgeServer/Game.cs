@@ -68,37 +68,33 @@ public abstract class Game
     
     protected void OnGameEnded(BridgeServerProtocol server, LobbyGameSummary summary, LobbyGameSummaryOverrides overrides)
     {
-        LobbyGameSummary gameSummary = summary;
-        if (gameSummary == null)
+        GameInfo.GameResult = summary?.GameResult ?? GameResult.TieGame;
+        GameSummary = summary;
+
+        if (GameSummary != null)
         {
-            GameInfo.GameResult = GameResult.TieGame;
-            gameSummary = new LobbyGameSummary();
+            log.Info($"Game {GameInfo?.Name} at {GameSummary.GameServerAddress} finished " +
+                     $"({GameSummary.NumOfTurns} turns), " +
+                     $"{GameSummary.GameResult} {GameSummary.TeamAPoints}-{GameSummary.TeamBPoints}");
+            try
+            {
+                GameSummary.BadgeAndParticipantsInfo = AccoladeUtils.ProcessGameSummary(GameSummary);
+            }
+            catch (Exception ex)
+            {
+                log.Error("Failed to process game summary", ex);
+            }
+            DB.Get().MatchHistoryDao.Save(MatchHistoryDao.MatchEntry.Cons(GameInfo, GameSummary));
         }
         else
         {
-            GameInfo.GameResult = gameSummary.GameResult;
+            log.Info($"Game {GameInfo?.Name} at {server.Name} ({server.URI}) finished abruptly");
         }
-
-        GameSummary = gameSummary;
-        log.Info($"Game {GameInfo?.Name} at {GameSummary.GameServerAddress} finished " +
-                 $"({GameSummary.NumOfTurns} turns), " +
-                 $"{GameSummary.GameResult} {GameSummary.TeamAPoints}-{GameSummary.TeamBPoints}");
-
-        try
-        {
-            GameSummary.BadgeAndParticipantsInfo = AccoladeUtils.ProcessGameSummary(GameSummary);
-        }
-        catch (Exception ex)
-        {
-            log.Error("Failed to process game summary", ex);
-        }
-
-        DB.Get().MatchHistoryDao.Save(MatchHistoryDao.MatchEntry.Cons(GameInfo, GameSummary));
 
         GameInfo.GameStatus = GameStatus.Stopped;
         StopTime = DateTime.UtcNow.Add(TimeSpan.FromSeconds(8));
 
-        _ = FinalizeGame(GameSummary);
+        _ = FinalizeGame();
     }
     
     protected void OnStatusUpdate(BridgeServerProtocol server, GameStatus newStatus)
@@ -161,9 +157,15 @@ public abstract class Game
         QueuePenaltyManager.IssueQueuePenalties(playerInfo.AccountId, this);
     }
 
-    protected void OnServerDisconnect(BridgeServerProtocol server)
+    protected async void OnServerDisconnect(BridgeServerProtocol server)
     {
         QueuePenaltyManager.CapQueuePenalties(this);
+        
+        await Task.Delay(LobbyConfiguration.GetServerReconnectionTimeout());
+        if (Server == server && GameStatus != GameStatus.Stopped)
+        {
+            OnGameEnded(server, null, null);
+        }
     }
     
     protected void StartGame()
@@ -439,32 +441,35 @@ public abstract class Game
         return LobbyConfiguration.GetServerGGTime();
     }
 
-    public async Task FinalizeGame(LobbyGameSummary gameSummary)
+    public async Task FinalizeGame()
     {
-        //Wait 5 seconds for gg Usages
-        await Task.Delay(GetFinalizeGameDelay());
-
-        foreach (LobbyServerProtocol client in GetClients())
+        if (GameSummary != null)
         {
-            MatchResultsNotification response = new MatchResultsNotification
+            //Wait 5 seconds for gg Usages
+            await Task.Delay(GetFinalizeGameDelay());
+
+            foreach (LobbyServerProtocol client in GetClients())
             {
-                BadgeAndParticipantsInfo = gameSummary.BadgeAndParticipantsInfo,
-                //Todo xp and stuff
-                BaseXpGained = 0,
-                CurrencyRewards = new List<MatchResultsNotification.CurrencyReward>()
-            };
-            client?.Send(response);
-        }
+                MatchResultsNotification response = new MatchResultsNotification
+                {
+                    BadgeAndParticipantsInfo = GameSummary.BadgeAndParticipantsInfo,
+                    //Todo xp and stuff
+                    BaseXpGained = 0,
+                    CurrencyRewards = new List<MatchResultsNotification.CurrencyReward>()
+                };
+                client?.Send(response);
+            }
 
-        // TrustWar
-        TrustWarManager.CalculateTrustWar(this, gameSummary);
+            // TrustWar
+            TrustWarManager.CalculateTrustWar(this, GameSummary);
 
-        // SendGameInfoNotifications(); // moved down
-        DiscordManager.Get().SendGameReport(GameInfo, Server?.Name, Server?.BuildVersion, gameSummary);
-        DiscordManager.Get().SendAdminGameReport(GameInfo, Server?.Name, Server?.BuildVersion, gameSummary);
+            // SendGameInfoNotifications(); // moved down
+            DiscordManager.Get().SendGameReport(GameInfo, Server?.Name, Server?.BuildVersion, GameSummary);
+            DiscordManager.Get().SendAdminGameReport(GameInfo, Server?.Name, Server?.BuildVersion, GameSummary);
         
-        //Wait a bit so people can look at stuff but we do have to send it so server can restart
-        await Task.Delay(LobbyConfiguration.GetServerShutdownTime());
+            //Wait a bit so people can look at stuff but we do have to send it so server can restart
+            await Task.Delay(LobbyConfiguration.GetServerShutdownTime());
+        }
         SendGameInfoNotifications(); // sending GameStatus.Stopped to the client triggers leaving the game
         Terminate();
     }

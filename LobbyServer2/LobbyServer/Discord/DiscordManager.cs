@@ -89,6 +89,7 @@ namespace CentralServer.LobbyServer.Discord
                 AdminManager.Get().OnAdminAction += SendAdminActionAuditAsync;
                 AdminManager.Get().OnAdminMessage += SendAdminMessageAuditAsync;
                 AdminController.OnAdminPauseQueue += SendAdminPauseQueueAuditAsync;
+                AdminController.OnAdminScheduleShutdown += SendAdminScheduleShutdownAuditAsync;
             }
 
             await StartBot();
@@ -130,6 +131,7 @@ namespace CentralServer.LobbyServer.Discord
                 AdminManager.Get().OnAdminAction -= SendAdminActionAuditAsync;
                 AdminManager.Get().OnAdminMessage -= SendAdminMessageAuditAsync;
                 AdminController.OnAdminPauseQueue -= SendAdminPauseQueueAuditAsync;
+                AdminController.OnAdminScheduleShutdown -= SendAdminScheduleShutdownAuditAsync;
             }
             cancelTokenSource.Cancel();
             cancelTokenSource.Dispose();
@@ -342,6 +344,33 @@ namespace CentralServer.LobbyServer.Discord
             catch (Exception e)
             {
                 log.Error("Failed to send admin pause queue audit message to discord webhook", e);
+            }
+        }
+
+        private void SendAdminScheduleShutdownAuditAsync(long adminAccountId, AdminController.PendingShutdownModel action)
+        {
+            _ = SendAdminScheduleShutdownAudit(adminAccountId, action);
+        }
+
+        private async Task SendAdminScheduleShutdownAudit(long adminAccountId, AdminController.PendingShutdownModel action)
+        {
+            if (adminChannel == null || !conf.AdminEnableAdminAudit)
+            {
+                return;
+            }
+            try
+            {
+                await adminChannel.SendMessageAsync(
+                    username: LobbyServerUtils.GetHandle(adminAccountId),
+                    embeds: new[] { new EmbedBuilder
+                    {
+                        Title = action.Type.ToString(),
+                        Color = DiscordUtils.GetLogColor(Level.Warn),
+                    }.Build() });
+            }
+            catch (Exception e)
+            {
+                log.Error("Failed to send admin schedule shutdown audit message to discord webhook", e);
             }
         }
 

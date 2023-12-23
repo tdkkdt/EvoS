@@ -276,12 +276,13 @@ namespace CentralServer.LobbyServer
         private void HandleCreateGameRequest(CreateGameRequest createGameRequest)
         {
             ResetReadyState();
-            Game game = CustomGameManager.CreateGame(AccountId, createGameRequest.GameConfig);
+            Game game = CustomGameManager.CreateGame(AccountId, createGameRequest.GameConfig, out LocalizationPayload error);
             if (game == null)
             {
                 Send(new CreateGameResponse
                 {
                     ResponseId = createGameRequest.RequestId,
+                    LocalizedFailure = error,
                     Success = false,
                     AllowRetry = true,
                 });
@@ -819,6 +820,11 @@ namespace CentralServer.LobbyServer
                 GameServerProcessCode = game?.ProcessCode,
                 GameStatus = GameStatus.Stopped
             });
+            SendGameUnassignmentNotification();
+        }
+
+        public void SendGameUnassignmentNotification()
+        {
             Send(new GameAssignmentNotification
             {
                 GameInfo = null,
