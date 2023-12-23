@@ -22,6 +22,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
@@ -35,7 +36,15 @@ namespace EvoS.DirectoryServer
             var host = WebHost.CreateDefaultBuilder()
                 .SuppressStatusMessages(true)
                 .UseKestrel(koptions => koptions.Listen(IPAddress.Parse("0.0.0.0"), EvosConfiguration.GetDirectoryServerPort()))
-                .UseStartup<DirectoryServer>()
+                .UseStartup<DirectoryServer>()           
+                .ConfigureLogging((hostingContext, logging) =>
+                {
+                    logging.ClearProviders();
+                    logging.AddProvider(new Log4NetProvider(new Log4NetProviderOptions("log4net.xml")
+                    { 
+                        LogLevelTranslator = new ApiServer.CustomLogLevelTranslator(),
+                    }));                   
+                })
                 .Build();
 
             Console.CancelKeyPress += async (sender, @event) =>
