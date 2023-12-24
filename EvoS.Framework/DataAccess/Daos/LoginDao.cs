@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using EvoS.Framework.Auth;
@@ -22,6 +23,8 @@ namespace EvoS.Framework.DataAccess.Daos
             public required string Username;
             public required string Salt;
             public required string Hash;
+            public string TempPassword = string.Empty;
+            public DateTime TempPasswordTimeout;
             public List<LinkedAccount> LinkedAccounts = new();
 
             public LinkedAccount? GetLinkedAccount(LinkedAccount template)

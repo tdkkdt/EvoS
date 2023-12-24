@@ -24,6 +24,7 @@ namespace EvoS.Framework
         public HashSet<LinkedAccount.AccountType> LinkedAccountsForPasswordReset = new HashSet<LinkedAccount.AccountType>();
         public bool RequireRegistrationCode = false;
         public TimeSpan RegistrationCodeLifetime = TimeSpan.Zero;
+        public TimeSpan TempPasswordLifetime = TimeSpan.FromHours(12);
         public int MaxLinkedAccounts = 6;
         public DBConfig Database = new DBConfig();
         public string UserApiKey = "";
@@ -80,6 +81,8 @@ namespace EvoS.Framework
         public static bool GetRequireRegistrationCode() => Instance.RequireRegistrationCode;
         
         public static TimeSpan GetRegistrationCodeLifetime() => Instance.RegistrationCodeLifetime;
+        
+        public static TimeSpan GetTempPasswordLifetime() => Instance.TempPasswordLifetime;
 
         public static int GetMaxLinkedAccounts() => Instance.MaxLinkedAccounts;
         

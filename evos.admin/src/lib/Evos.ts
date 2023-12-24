@@ -272,3 +272,10 @@ export function getRegistrationCodes(abort: AbortController, authHeader: string,
         baseUrl + "/api/admin/player/registrationCode",
         { params: { before: Math.floor(before.getTime() / 1000) }, headers: {'Authorization': authHeader}, signal: abort.signal });
 }
+
+export function generateTempPassword(abort: AbortController, authHeader: string, accountId: number) {
+    return axios.post<RegistrationCodeResponse>(
+        baseUrl + "/api/admin/player/generateTempPassword",
+        { accountId: accountId },
+        { headers: {'Authorization': authHeader}, signal: abort.signal });
+}

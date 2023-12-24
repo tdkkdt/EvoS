@@ -9,6 +9,8 @@ import ErrorDialog from "../generic/ErrorDialog";
 import MuteBanPlayer from "../controls/MuteBanPlayer";
 import {EvosCard, StackWrapper} from "../generic/BasicComponents";
 import AdminMessages from "../controls/AdminMessages";
+import Broadcast from "../controls/Broadcast";
+import TempPassword from "../controls/TempPassword";
 
 
 export default function ProfilePage() {
@@ -71,6 +73,9 @@ export default function ProfilePage() {
                     onCommit={handleCommit}
                 />
                 <AdminMessages accountId={playerDetails?.player.accountId ?? 0} />
+                <EvosCard variant="outlined">
+                    <TempPassword accountId={playerDetails?.player.accountId ?? 0}/>
+                </EvosCard>
             </StackWrapper>
         </Paper>
     );

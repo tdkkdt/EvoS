@@ -263,6 +263,25 @@ namespace CentralServer.ApiServer
             });
         }
         
+        public class AccountIdModel
+        {
+            public long accountId { get; set; }
+        }
+        
+        public static IResult GenerateTempPassword([FromBody] AccountIdModel data, ClaimsPrincipal user)
+        {
+            if (!ValidateAdmin(user, out IResult error, out long adminAccountId, out string adminHandle))
+            {
+                return error;
+            }
+            log.Info($"API ADMIN GEN TEMP PW by {adminHandle} ({adminAccountId}) " +
+                     $"to {LobbyServerUtils.GetHandle(data.accountId)} ({data.accountId})");
+            string tempPassword = LoginManager.GenerateTempPassword(data.accountId);
+            return tempPassword.IsNullOrEmpty()
+                ? Results.Problem()
+                : Results.Ok(new RegistrationCodeResponseModel { code = tempPassword });
+        }
+        
         public class RegistrationCodeRequestModel
         {
             public string issueFor { get; set; }

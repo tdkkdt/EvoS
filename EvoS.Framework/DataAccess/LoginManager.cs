@@ -282,8 +282,16 @@ namespace EvoS.DirectoryServer.Account
             string hash = Hash(entry.Salt, password);
             if (!entry.Hash.Equals(hash))
             {
-                log.Warn($"Failed attempt to log is as {entry.AccountId}/{entry.Username}");
-                throw new ArgumentException(PasswordIsIncorrect);
+                if (entry.TempPassword.Equals(hash) && entry.TempPasswordTimeout > DateTime.UtcNow)
+                {
+                    log.Warn($"{entry.AccountId}/{entry.Username} logged in using temporary password");
+                    ClearTempPassword(entry.AccountId);
+                }
+                else
+                {
+                    log.Warn($"Failed attempt to log is as {entry.AccountId}/{entry.Username}");
+                    throw new ArgumentException(PasswordIsIncorrect);
+                }
             }
 
             List<LinkedAccount> linkedAccounts = CheckLinkedAccountLevels(entry.LinkedAccounts);
@@ -428,6 +436,46 @@ namespace EvoS.DirectoryServer.Account
         public static string GenerateApiKey()
         {
             return GenerateSalt();
+        }
+
+        private static string GeneratePassword()
+        {
+            string rnd = Convert.ToBase64String(RandomNumberGenerator.GetBytes(8));
+            return rnd.Substring(0, rnd.Length - 1);
+        }
+
+        public static string GenerateTempPassword(long accountId)
+        {
+            LoginDao loginDao = DB.Get().LoginDao;
+            LoginDao.LoginEntry loginEntry = loginDao.Find(accountId);
+            if (loginEntry is null)
+            {
+                return string.Empty;
+            }
+
+            string tempPassword = GeneratePassword();
+            string hash = Hash(loginEntry.Salt, tempPassword);
+            loginEntry.TempPassword = hash;
+            loginEntry.TempPasswordTimeout = DateTime.UtcNow + EvosConfiguration.GetTempPasswordLifetime();
+            loginDao.Save(loginEntry);
+            log.Info($"Successfully generated temporary password hash for {accountId}");
+            return tempPassword;
+        }
+
+        public static bool ClearTempPassword(long accountId)
+        {
+            LoginDao loginDao = DB.Get().LoginDao;
+            LoginDao.LoginEntry loginEntry = loginDao.Find(accountId);
+            if (loginEntry is null)
+            {
+                return false;
+            }
+            
+            loginEntry.TempPassword = string.Empty;
+            loginEntry.TempPasswordTimeout = DateTime.MinValue;
+            loginDao.Save(loginEntry);
+            log.Info($"Successfully cleared temporary password for {accountId}");
+            return true;
         }
 
         public static void RevokeActiveTickets(long accountId)
