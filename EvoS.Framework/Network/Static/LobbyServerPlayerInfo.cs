@@ -30,7 +30,11 @@ namespace EvoS.Framework.Network.Static
             return (LobbyServerPlayerInfo)MemberwiseClone();
         }
         
-        public static LobbyServerPlayerInfo Of(PersistedAccountData account) {
+        public static LobbyServerPlayerInfo Of(PersistedAccountData account, CharacterType characterType = CharacterType.None) {
+            if (characterType == CharacterType.None)
+            {
+                characterType = account.AccountComponent.LastCharacter;
+            }
             return new LobbyServerPlayerInfo
             {
                 AccountId = account.AccountId,
@@ -38,7 +42,7 @@ namespace EvoS.Framework.Network.Static
                     ? 95
                     : account.AccountComponent.SelectedBackgroundBannerID, // patch for existing users: default is 95  TODO patch account itself
                 BotCanTaunt = false,
-                CharacterInfo = LobbyCharacterInfo.Of(account.CharacterData[account.AccountComponent.LastCharacter]),
+                CharacterInfo = LobbyCharacterInfo.Of(account.CharacterData[characterType]),
                 ControllingPlayerId = 0,
                 EffectiveClientAccessLevel = account.AccountComponent.AppliedEntitlements.ContainsKey("DEVELOPER_ACCESS")
                     ? ClientAccessLevel.Admin

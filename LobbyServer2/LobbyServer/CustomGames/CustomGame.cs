@@ -145,7 +145,7 @@ public class CustomGame : Game
             }
             else if (update.CharacterType.HasValue)
             {
-                SetSecondaryCharacter(accountId, update.PlayerId, update.CharacterType.Value);
+                SetSecondaryCharacter(accountId, update.PlayerId, characterInfo);
             }
 
             CheckIfAllSelected();
@@ -170,7 +170,7 @@ public class CustomGame : Game
     }
 
     // TODO merge with MatchOrchestrator
-    private ILookup<CharacterType, LobbyServerPlayerInfo> GetCharactersByTeam(Team team, long? excludeAccountId = null)
+    private ILookup<CharacterType, LobbyServerPlayerInfo> GetCharactersByTeam(Team team, long? excludeAccountId = null) // TODO we can have multiple characters with same account id
     {
         return TeamInfo.TeamPlayerInfo
             .Where(p => p.TeamId == team && p.AccountId != excludeAccountId)
@@ -320,8 +320,8 @@ public class CustomGame : Game
         }
         return teamInfo;
     }
-    
-    public override void SetSecondaryCharacter(long accountId, int playerId, CharacterType characterType)
+
+    protected override void SetSecondaryCharacter(long accountId, int playerId, LobbyCharacterInfo characterInfo)
     {
         LobbyServerPlayerInfo lobbyServerPlayerInfo = TeamInfo.TeamPlayerInfo.Find(p => p.PlayerId == playerId);
         if (lobbyServerPlayerInfo is null)
@@ -335,7 +335,7 @@ public class CustomGame : Game
             return;
         }
         // TODO validate there is no duplicates/duplicates are allowed
-        lobbyServerPlayerInfo.CharacterInfo = new LobbyCharacterInfo() { CharacterType = characterType };
+        lobbyServerPlayerInfo.CharacterInfo = characterInfo;
     }
 
     public bool Join(long accountId, bool asSpectator)

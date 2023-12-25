@@ -185,7 +185,7 @@ public abstract class Game
         GameInfo.GameStatus = status;
     }
 
-    public virtual void SetSecondaryCharacter(long accountId, int playerId, CharacterType characterType)
+    protected virtual void SetSecondaryCharacter(long accountId, int playerId, LobbyCharacterInfo characterInfo)
     {
         LobbyServerPlayerInfo lobbyServerPlayerInfo = TeamInfo.TeamPlayerInfo.Find(p => p.PlayerId == playerId);
         if (lobbyServerPlayerInfo is null)
@@ -198,7 +198,7 @@ public abstract class Game
             log.Error($"Failed to set secondary character: {playerId} does not belong to {LobbyServerUtils.GetHandle(accountId)}");
             return;
         }
-        lobbyServerPlayerInfo.CharacterInfo = new LobbyCharacterInfo() { CharacterType = characterType };
+        lobbyServerPlayerInfo.CharacterInfo = characterInfo;
     }
     
     // TODO there can be multiple
@@ -304,7 +304,7 @@ public abstract class Game
     {
         GameInfo.ActivePlayers = TeamInfo.TeamPlayerInfo.Count;
         GameInfo.UpdateTimestamp = DateTime.UtcNow.Ticks;
-        foreach (long player in GetPlayers())
+        foreach (long player in GetPlayers())  // TODO distinct!!
         {
             LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(player);
             if (playerConnection != null)
@@ -540,7 +540,7 @@ public abstract class Game
             }
             else if (update.CharacterType.HasValue)
             {
-                SetSecondaryCharacter(accountId, update.PlayerId, update.CharacterType.Value);
+                SetSecondaryCharacter(accountId, update.PlayerId, characterInfo);
             }
 
             SendGameInfoNotifications();

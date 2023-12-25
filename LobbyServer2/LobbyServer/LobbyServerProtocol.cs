@@ -170,7 +170,7 @@ namespace CentralServer.LobbyServer
             {
                 return;
             }
-            if (account.AccountComponent.AppliedEntitlements.ContainsKey("DEVELOPER_ACCESS"))
+            if (account.AccountComponent.AppliedEntitlements.ContainsKey("DEVELOPER_ACCESS") || EvosConfiguration.GetDevMode())
             {
                 Game game = GameManager.GetGameWithPlayer(AccountId);
                 if (game != null)
@@ -630,11 +630,20 @@ namespace CentralServer.LobbyServer
         public void HandlePlayerInfoUpdateRequest(PlayerInfoUpdateRequest request)
         {
             LobbyPlayerInfoUpdate update = request.PlayerInfoUpdate;
-            PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
             LobbyServerPlayerInfo playerInfo = update.PlayerId == 0 ? PlayerInfo : CurrentGame?.GetPlayerById(update.PlayerId);
             bool updateSelectedCharacter = playerInfo == null && update.PlayerId == 0;
-            playerInfo ??= LobbyServerPlayerInfo.Of(account);
 
+            PersistedAccountData account;
+            if (playerInfo is not null)
+            {
+                account = DB.Get().AccountDao.GetAccount(playerInfo.AccountId);
+            }
+            else
+            {
+                account = DB.Get().AccountDao.GetAccount(AccountId);
+                playerInfo = LobbyServerPlayerInfo.Of(account);
+            }
+            
             // TODO validate what player has purchased
 
             // building character info to validate it for current game
@@ -672,36 +681,39 @@ namespace CentralServer.LobbyServer
             }
 
             // persisting changes
-            if (updateSelectedCharacter && update.CharacterType.HasValue)
+            if (account.AccountId == AccountId)
             {
-                account.AccountComponent.LastCharacter = update.CharacterType.Value;
-            }
-            account.CharacterData[characterType].CharacterComponent = characterComponent;
-            DB.Get().AccountDao.UpdateAccount(account);
+                if (updateSelectedCharacter && update.CharacterType.HasValue)
+                {
+                    account.AccountComponent.LastCharacter = update.CharacterType.Value;
+                }
+                account.CharacterData[characterType].CharacterComponent = characterComponent;
+                DB.Get().AccountDao.UpdateAccount(account); 
 
-            if (request.GameType != null && request.GameType.HasValue)
-            {
-                SetGameType(request.GameType.Value);
-            }
+                if (request.GameType != null && request.GameType.HasValue)
+                {
+                    SetGameType(request.GameType.Value);
+                }
 
-            // without this client instantly resets character type back to what it was
-            if (update.CharacterType != null && update.CharacterType.HasValue)
-            {
-                PlayerAccountDataUpdateNotification updateNotification = new PlayerAccountDataUpdateNotification(account);
-                Send(updateNotification);
-            }
+                // without this client instantly resets character type back to what it was
+                if (update.CharacterType != null && update.CharacterType.HasValue)
+                {
+                    PlayerAccountDataUpdateNotification updateNotification = new PlayerAccountDataUpdateNotification(account);
+                    Send(updateNotification);
+                }
 
-            if (update.AllyDifficulty != null && update.AllyDifficulty.HasValue)
-                SetAllyDifficulty(update.AllyDifficulty.Value);
-            if (update.ContextualReadyState != null && update.ContextualReadyState.HasValue)
-                SetContextualReadyState(update.ContextualReadyState.Value);
-            if (update.EnemyDifficulty != null && update.EnemyDifficulty.HasValue)
-                SetEnemyDifficulty(update.EnemyDifficulty.Value);
+                if (update.AllyDifficulty != null && update.AllyDifficulty.HasValue)
+                    SetAllyDifficulty(update.AllyDifficulty.Value);
+                if (update.ContextualReadyState != null && update.ContextualReadyState.HasValue)
+                    SetContextualReadyState(update.ContextualReadyState.Value);
+                if (update.EnemyDifficulty != null && update.EnemyDifficulty.HasValue)
+                    SetEnemyDifficulty(update.EnemyDifficulty.Value);
+            }
 
             Send(new PlayerInfoUpdateResponse
             {
                 PlayerInfo = LobbyPlayerInfo.FromServer(playerInfo, 0, new MatchmakingQueueConfig()),
-                CharacterInfo = playerInfo.CharacterInfo,
+                CharacterInfo = account.AccountId == AccountId ? playerInfo.CharacterInfo : null,
                 OriginalPlayerInfoUpdate = update,
                 ResponseId = request.RequestId
             });
