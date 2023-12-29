@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using EvoS.Framework.Network.Static;
+using Microsoft.IdentityModel.Tokens;
 
 namespace EvoS.Framework.DataAccess.Daos
 {
@@ -10,6 +11,8 @@ namespace EvoS.Framework.DataAccess.Daos
         private readonly MatchHistoryDao dao;
         private readonly ConcurrentDictionary<long, ConcurrentQueue<PersistedCharacterMatchData>> cache =
             new ConcurrentDictionary<long, ConcurrentQueue<PersistedCharacterMatchData>>();
+
+        private readonly ConcurrentDictionary<long, bool> cachedAccounts = new();
 
         public MatchHistoryDaoCached(MatchHistoryDao dao)
         {
@@ -41,15 +44,24 @@ namespace EvoS.Framework.DataAccess.Daos
 
         public List<PersistedCharacterMatchData> Find(long accountId)
         {
-            if (cache.TryGetValue(accountId, out var cachedMatches))
+            bool hasCachedValue = cache.TryGetValue(accountId, out var cachedMatches);
+            if (cachedAccounts.ContainsKey(accountId))
             {
-                return cachedMatches.ToList();
+                return hasCachedValue ? cachedMatches.ToList() : new();
             }
 
             List<PersistedCharacterMatchData> dbMatches = dao.Find(accountId);
-            Cache(dbMatches
-                .Select(d => new MatchHistoryDao.MatchEntry { AccountId = accountId, Data = d})
-                .ToList());
+            if (!dbMatches.IsNullOrEmpty())
+            {
+                if (hasCachedValue)
+                {
+                    cachedMatches.Clear();
+                }
+                Cache(dbMatches
+                    .Select(d => new MatchHistoryDao.MatchEntry { AccountId = accountId, Data = d})
+                    .ToList());
+            }
+            cachedAccounts[accountId] = true;
             return dbMatches;
         }
         
