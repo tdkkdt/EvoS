@@ -106,6 +106,7 @@ namespace CentralServer.LobbyServer
             RegisterHandler<SelectRibbonRequest>(HandleSelectRibbonRequest);
 
             RegisterHandler<PurchaseModRequest>(HandlePurchaseModRequest);
+            RegisterHandler<PurchaseTitleRequest>(HandlePurchaseTitleRequest);
             RegisterHandler<PurchaseTauntRequest>(HandlePurchaseTauntRequest);
             RegisterHandler<PurchaseChatEmojiRequest>(HandlePurchaseChatEmojiRequest);
             RegisterHandler<PurchaseLoadoutSlotRequest>(HandlePurchaseLoadoutSlotRequest);
@@ -1439,6 +1440,18 @@ namespace CentralServer.LobbyServer
             {
                 Character = request.Character,
                 UnlockData = request.UnlockData,
+                Success = false,
+                ResponseId = request.RequestId
+            });
+        }
+
+        private void HandlePurchaseTitleRequest(PurchaseTitleRequest request)
+        {
+            Send(new PurchaseTitleResponse
+            {
+                Result = PurchaseResult.Failed,
+                CurrencyType = request.CurrencyType,
+                TitleId = request.TitleId,
                 Success = false,
                 ResponseId = request.RequestId
             });
