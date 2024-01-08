@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using CentralServer.LobbyServer.Utils;
 using EvoS.DirectoryServer;
 using EvoS.DirectoryServer.Account;
 using EvoS.Framework;
@@ -163,7 +164,7 @@ public abstract class ApiServer
         }
         catch (Exception _)
         {
-            log.Info($"Failed to authorize {authInfo.UserName} for {authContext} access");
+            log.Info($"Failed to authorize {authInfo.UserName} from {LobbyServerUtils.GetIpAddress(httpContext)} for {authContext} access");
             return Results.Unauthorized();
         }
         PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);

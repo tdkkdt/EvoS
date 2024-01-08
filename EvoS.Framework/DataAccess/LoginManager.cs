@@ -289,7 +289,7 @@ namespace EvoS.DirectoryServer.Account
                 }
                 else
                 {
-                    log.Warn($"Failed attempt to log is as {entry.AccountId}/{entry.Username}");
+                    log.Warn($"Failed attempt to log in as {entry.AccountId}/{entry.Username}");
                     throw new ArgumentException(PasswordIsIncorrect);
                 }
             }

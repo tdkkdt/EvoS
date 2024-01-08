@@ -214,6 +214,7 @@ namespace EvoS.DirectoryServer
             }
             catch (Exception e) when (e is ArgumentException or ApplicationException or EvosException or ConflictException)
             {
+                log.Warn($"Failed login attempt from {GetIpAddress(context)}");
                 return Fail(request, e.Message);
             }
 
@@ -438,36 +439,9 @@ namespace EvoS.DirectoryServer
             };
         }
 
-        private static IPAddress GetIpAddress(HttpContext context)
+        public static IPAddress GetIpAddress(HttpContext context)
         {
-            IPAddress ipAddress = context.Connection.RemoteIpAddress;
-                
-            if (_allProxies.Contains(ipAddress))
-            {
-                if (!context.Request.Headers.TryGetValue("X-Forwarded-For", out StringValues forwardedFor))
-                {
-                    log.Error($"Proxy {ipAddress} has not set forwarded-for header!");
-                    return ipAddress;
-                }
-                string forwardedForString = forwardedFor.ToString();
-                if (string.IsNullOrWhiteSpace(forwardedForString))
-                {
-                    log.Error($"Proxy {ipAddress} has not set forwarded-for header!");
-                    return ipAddress;
-                }
-                log.Debug($"Proxy {ipAddress} has set forwarded-for header to {forwardedForString}");
-
-                string clientIpString = forwardedForString
-                    .Split(',')
-                    .Select(s => s.Trim())
-                    .LastOrDefault();
-                if (!IPAddress.TryParse(clientIpString, out ipAddress))
-                {
-                    log.Error($"Proxy {ipAddress} has set invalid forwarded-for header: {forwardedForString}");
-                }
-            }
-
-            return ipAddress;
+            return LobbyServerUtils.GetIpAddress(context, _allProxies);
         }
     }
 }
