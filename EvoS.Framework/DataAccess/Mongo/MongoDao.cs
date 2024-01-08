@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using EvoS.Framework.Misc;
 using log4net;
 using MongoDB.Driver;
@@ -59,15 +60,34 @@ namespace EvoS.Framework.DataAccess.Mongo
                 options: new ReplaceOptions { IsUpsert = true },
                 replacement: entry);
         }
+
+        protected UpdateResult UpdateField<TField>(TKey id, TEntry entry, FieldDefinition<TField> field)
+        {
+            return c.UpdateOne(
+                    Key(id), 
+                    u.Set(field._expr, field._compiled.Invoke(entry)));
+        }
         
         protected FilterDefinitionBuilder<TEntry> f => Builders<TEntry>.Filter;
         protected UpdateDefinitionBuilder<TEntry> u => Builders<TEntry>.Update;
         protected SortDefinitionBuilder<TEntry> s => Builders<TEntry>.Sort;
         protected ProjectionDefinitionBuilder<TEntry> p => Builders<TEntry>.Projection;
 
-        private FilterDefinition<TEntry> Key(TKey id)
+        protected FilterDefinition<TEntry> Key(TKey id)
         {
             return f.Eq("_id", id);
+        }
+
+        protected class FieldDefinition<TField>
+        {
+            public readonly Expression<Func<TEntry, TField>> _expr;
+            public readonly Func<TEntry, TField> _compiled;
+            
+            public FieldDefinition(Expression<Func<TEntry, TField>> field)
+            {
+                _expr = field;
+                _compiled = _expr.Compile();
+            }
         }
     }
 }

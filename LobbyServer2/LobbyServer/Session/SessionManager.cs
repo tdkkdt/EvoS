@@ -111,7 +111,7 @@ namespace CentralServer.LobbyServer.Session
                     PersistedAccountData account = DB.Get().AccountDao.GetAccount(client.AccountId);
                     account.AdminComponent.LastLogout = DateTime.UtcNow;
                     account.AdminComponent.LastLogoutSessionToken = $"{sessionInfo.session.SessionToken}";
-                    DB.Get().AccountDao.UpdateAccount(account);
+                    DB.Get().AccountDao.UpdateAdminComponent(account);
                 }
 
                 OnPlayerDisconnected(client);
@@ -202,7 +202,7 @@ namespace CentralServer.LobbyServer.Session
                 ConnectingSessions[accountId] = sessionInfo;
 
                 account.AdminComponent.RecordLogin(ipAddress);
-                DB.Get().AccountDao.UpdateAccount(account);
+                DB.Get().AccountDao.UpdateAdminComponent(account);
                 
                 return sessionInfo;
             }

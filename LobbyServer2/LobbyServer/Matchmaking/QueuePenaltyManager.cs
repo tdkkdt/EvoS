@@ -103,7 +103,7 @@ public static class QueuePenaltyManager
                  + (oldTimeout > referenceDateTime ? $" (was {oldTimeout.Subtract(referenceDateTime)})" : ""));
 
         account.AdminComponent.ActiveQueuePenalties[gameType] = penalties;
-        DB.Get().AccountDao.UpdateAccount(account);
+        DB.Get().AccountDao.UpdateAdminComponent(account);
 
         GroupInfo playerGroup = GroupManager.GetPlayerGroup(accountId);
         if (playerGroup is not null)

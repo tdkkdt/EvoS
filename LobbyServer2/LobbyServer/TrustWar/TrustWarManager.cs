@@ -109,7 +109,7 @@ namespace CentralServer.LobbyServer.TrustWar
                             AccountID = account.AccountId,
                         });
 
-                        DB.Get().AccountDao.UpdateAccount(account);
+                        DB.Get().AccountDao.UpdateAccountComponent(account);
                     }
                 }
 

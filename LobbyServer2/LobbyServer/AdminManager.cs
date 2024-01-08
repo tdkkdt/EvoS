@@ -67,7 +67,7 @@ namespace CentralServer.LobbyServer
             {
                 log.Info($"UNMUTE {account.Handle}: time out");
                 account.AdminComponent.Muted = false;
-                DB.Get().AccountDao.UpdateAccount(account);
+                DB.Get().AccountDao.UpdateAdminComponent(account);
             }
         }
 
@@ -93,7 +93,7 @@ namespace CentralServer.LobbyServer
             account.AdminComponent.AdminActions.Add(record);
             account.AdminComponent.MutedUntil = time + duration;
             account.AdminComponent.Muted = muted;
-            DB.Get().AccountDao.UpdateAccount(account);
+            DB.Get().AccountDao.UpdateAdminComponent(account);
             
             string logString = muted
                 ? $"MUTE {account.Handle} for {duration}"
@@ -116,7 +116,7 @@ namespace CentralServer.LobbyServer
             {
                 log.Info($"UNBAN {account.Handle}: time out");
                 account.AdminComponent.Locked = false;
-                DB.Get().AccountDao.UpdateAccount(account);
+                DB.Get().AccountDao.UpdateAdminComponent(account);
             }
         }
         
@@ -142,7 +142,7 @@ namespace CentralServer.LobbyServer
             account.AdminComponent.AdminActions.Add(record);
             account.AdminComponent.LockedUntil = time + duration;
             account.AdminComponent.Locked = banned;
-            DB.Get().AccountDao.UpdateAccount(account);
+            DB.Get().AccountDao.UpdateAdminComponent(account);
             
             string logString = banned
                 ? $"BAN {account.Handle} for {duration}"

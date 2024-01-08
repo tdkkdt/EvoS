@@ -151,7 +151,7 @@ namespace CentralServer.LobbyServer
             }
 
             account.AccountComponent.SelectedRibbonID = request.RibbonID;
-            DB.Get().AccountDao.UpdateAccount(account);
+            DB.Get().AccountDao.UpdateAccountComponent(account);
 
             OnAccountVisualsUpdated();
 
@@ -663,13 +663,7 @@ namespace CentralServer.LobbyServer
                      $"server={CurrentGame?.GetPlayerInfo(AccountId)?.CharacterType} " +
                      $"account={account.AccountComponent.LastCharacter})");
 
-            CharacterComponent characterComponent = (CharacterComponent)account.CharacterData[characterType].CharacterComponent.Clone();
-            if (update.CharacterSkin.HasValue) characterComponent.LastSkin = update.CharacterSkin.Value;
-            if (update.CharacterCards.HasValue) characterComponent.LastCards = update.CharacterCards.Value;
-            if (update.CharacterMods.HasValue) characterComponent.LastMods = update.CharacterMods.Value;
-            if (update.CharacterAbilityVfxSwaps.HasValue) characterComponent.LastAbilityVfxSwaps = update.CharacterAbilityVfxSwaps.Value;
-            if (update.CharacterLoadoutChanges.HasValue) characterComponent.CharacterLoadouts = update.CharacterLoadoutChanges.Value.CharacterLoadoutChanges;
-            if (update.LastSelectedLoadout.HasValue) characterComponent.LastSelectedLoadout = update.LastSelectedLoadout.Value;
+            bool characterDataUpdate = ApplyCharacterDataUpdate(account, characterType, update, out CharacterComponent characterComponent);
             LobbyCharacterInfo characterInfo = LobbyCharacterInfo.Of(account.CharacterData[characterType], characterComponent);
 
             if (CurrentGame != null)
@@ -695,9 +689,14 @@ namespace CentralServer.LobbyServer
                 if (updateSelectedCharacter && update.CharacterType.HasValue)
                 {
                     account.AccountComponent.LastCharacter = update.CharacterType.Value;
+                    DB.Get().AccountDao.UpdateLastCharacter(account);
                 }
-                account.CharacterData[characterType].CharacterComponent = characterComponent;
-                DB.Get().AccountDao.UpdateAccount(account); 
+
+                if (characterDataUpdate)
+                {
+                    account.CharacterData[characterType].CharacterComponent = characterComponent;
+                    DB.Get().AccountDao.UpdateCharacterComponent(account, characterType); 
+                }
 
                 if (request.GameType != null && request.GameType.HasValue)
                 {
@@ -727,6 +726,49 @@ namespace CentralServer.LobbyServer
                 ResponseId = request.RequestId
             });
             BroadcastRefreshGroup();
+        }
+
+        private static bool ApplyCharacterDataUpdate(
+            PersistedAccountData account,
+            CharacterType characterType,
+            LobbyPlayerInfoUpdate update,
+            out CharacterComponent characterComponent)
+        {
+            bool characterDataUpdate = false;
+            characterComponent = (CharacterComponent)account.CharacterData[characterType].CharacterComponent.Clone();
+            
+            if (update.CharacterSkin.HasValue)
+            {
+                characterComponent.LastSkin = update.CharacterSkin.Value;
+                characterDataUpdate = true;
+            }
+            if (update.CharacterCards.HasValue)
+            {
+                characterComponent.LastCards = update.CharacterCards.Value;
+                characterDataUpdate = true;
+            }
+            if (update.CharacterMods.HasValue)
+            {
+                characterComponent.LastMods = update.CharacterMods.Value;
+                characterDataUpdate = true;
+            }
+            if (update.CharacterAbilityVfxSwaps.HasValue)
+            {
+                characterComponent.LastAbilityVfxSwaps = update.CharacterAbilityVfxSwaps.Value;
+                characterDataUpdate = true;
+            }
+            if (update.CharacterLoadoutChanges.HasValue)
+            {
+                characterComponent.CharacterLoadouts = update.CharacterLoadoutChanges.Value.CharacterLoadoutChanges;
+                characterDataUpdate = true;
+            }
+            if (update.LastSelectedLoadout.HasValue)
+            {
+                characterComponent.LastSelectedLoadout = update.LastSelectedLoadout.Value;
+                characterDataUpdate = true;
+            }
+
+            return characterDataUpdate;
         }
 
         public void HandleCheckAccountStatusRequest(CheckAccountStatusRequest request)
@@ -1174,7 +1216,7 @@ namespace CentralServer.LobbyServer
             }
 
             // Update the account
-            DB.Get().AccountDao.UpdateAccount(account);
+            DB.Get().AccountDao.UpdateAccountComponent(account);
 
             OnAccountVisualsUpdated();
 
@@ -1194,7 +1236,7 @@ namespace CentralServer.LobbyServer
             if (account.AccountComponent.UnlockedTitleIDs.Contains(request.TitleID) || request.TitleID == -1)
             {
                 account.AccountComponent.SelectedTitleID = request.TitleID;
-                DB.Get().AccountDao.UpdateAccount(account);
+                DB.Get().AccountDao.UpdateAccountComponent(account);
 
                 OnAccountVisualsUpdated();
             }
@@ -1275,7 +1317,7 @@ namespace CentralServer.LobbyServer
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
             log.Info($"Player {AccountId} requested UIState {request.UIState} {request.StateValue}");
             account.AccountComponent.UIStates[request.UIState] = request.StateValue;
-            DB.Get().AccountDao.UpdateAccount(account);
+            DB.Get().AccountDao.UpdateAccountComponent(account);
         }
 
         private void HandlePurchaseEmblemRequest(PurchaseBannerForegroundRequest request)
@@ -1307,7 +1349,8 @@ namespace CentralServer.LobbyServer
 
             account.BankComponent.ChangeValue(request.CurrencyType, -cost, $"Purchase emblem");
 
-            DB.Get().AccountDao.UpdateAccount(account);
+            DB.Get().AccountDao.UpdateBankComponent(account);
+            DB.Get().AccountDao.UpdateAccountComponent(account);
 
             PurchaseBannerForegroundResponse response = new PurchaseBannerForegroundResponse()
             {
@@ -1350,10 +1393,10 @@ namespace CentralServer.LobbyServer
             }
 
             account.AccountComponent.UnlockedBannerIDs.Add(request.BannerBackgroundId);
-
             account.BankComponent.ChangeValue(request.CurrencyType, -cost, $"Purchase banner");
 
-            DB.Get().AccountDao.UpdateAccount(account);
+            DB.Get().AccountDao.UpdateBankComponent(account);
+            DB.Get().AccountDao.UpdateAccountComponent(account);
 
             PurchaseBannerBackgroundResponse response = new PurchaseBannerBackgroundResponse()
             {
@@ -1403,10 +1446,10 @@ namespace CentralServer.LobbyServer
             };
 
             account.CharacterData[request.CharacterType].CharacterComponent.AbilityVfxSwaps.Add(abilityVfxSwapData);
-
             account.BankComponent.ChangeValue(request.CurrencyType, -cost, $"Purchase vfx");
 
-            DB.Get().AccountDao.UpdateAccount(account);
+            DB.Get().AccountDao.UpdateBankComponent(account);
+            DB.Get().AccountDao.UpdateCharacterComponent(account, request.CharacterType);
 
             PurchaseAbilityVfxResponse response = new PurchaseAbilityVfxResponse()
             {
@@ -1512,7 +1555,9 @@ namespace CentralServer.LobbyServer
                 new CharacterAbilityVfxSwapInfo(),
                 $"Loadout {loadouts.Count}",
                 ModStrictness.AllModes));
-            DB.Get().AccountDao.UpdateAccount(account);
+
+            // DB.Get().AccountDao.UpdateBankComponent(account);
+            DB.Get().AccountDao.UpdateCharacterComponent(account, request.Character);
 
             Send(new PurchaseLoadoutSlotResponse
             {
@@ -1601,7 +1646,7 @@ namespace CentralServer.LobbyServer
             if (bgs.ContainsKey(request.LoadingScreenId))
             {
                 bgs[request.LoadingScreenId] = request.NewState;
-                DB.Get().AccountDao.UpdateAccount(account);
+                DB.Get().AccountDao.UpdateAccountComponent(account);
                 Send(new LoadingScreenToggleResponse
                 {
                     LoadingScreenId = request.LoadingScreenId,
@@ -1750,7 +1795,7 @@ namespace CentralServer.LobbyServer
                     log.Info($"{account.Handle} blocked {friendAccount.Handle}{(updated ? "" : ", but they were already blocked")}");
                     if (updated)
                     {
-                        DB.Get().AccountDao.UpdateAccount(account);
+                        DB.Get().AccountDao.UpdateSocialComponent(account);
                         Send(FriendUpdateResponse.of(request));
                         RefreshFriendList();
                     }
@@ -1772,7 +1817,7 @@ namespace CentralServer.LobbyServer
                     log.Info($"{account.Handle} unblocked {friendAccount.Handle}{(updated ? "" : ", but they weren't blocked")}");
                     if (updated)
                     {
-                        DB.Get().AccountDao.UpdateAccount(account);
+                        DB.Get().AccountDao.UpdateSocialComponent(account);
                     }
 
                     Send(FriendUpdateResponse.of(request));
