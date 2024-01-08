@@ -364,7 +364,7 @@ namespace CentralServer.LobbyServer.Discord
                     username: LobbyServerUtils.GetHandle(adminAccountId),
                     embeds: new[] { new EmbedBuilder
                     {
-                        Title = action.Type.ToString(),
+                        Title = $"Shutdown: {action.Type}",
                         Color = DiscordUtils.GetLogColor(Level.Warn),
                     }.Build() });
             }
