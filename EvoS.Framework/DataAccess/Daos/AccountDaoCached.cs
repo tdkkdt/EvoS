@@ -46,5 +46,47 @@ namespace EvoS.Framework.DataAccess.Daos
             dao.UpdateAccount(data);
             Cache(data);
         }
+
+        public void UpdateAccountComponent(PersistedAccountData data)
+        {
+            data.UpdateDate = DateTime.UtcNow;
+            dao.UpdateAccountComponent(data);
+            Cache(data);
+        }
+
+        public void UpdateAdminComponent(PersistedAccountData data)
+        {
+            data.UpdateDate = DateTime.UtcNow;
+            dao.UpdateAdminComponent(data);
+            Cache(data);
+        }
+
+        public void UpdateBankComponent(PersistedAccountData data)
+        {
+            data.UpdateDate = DateTime.UtcNow;
+            dao.UpdateBankComponent(data);
+            Cache(data);
+        }
+
+        public void UpdateSocialComponent(PersistedAccountData data)
+        {
+            data.UpdateDate = DateTime.UtcNow;
+            dao.UpdateSocialComponent(data);
+            Cache(data);
+        }
+
+        public void UpdateLastCharacter(PersistedAccountData data)
+        {
+            data.UpdateDate = DateTime.UtcNow;
+            dao.UpdateLastCharacter(data);
+            Cache(data);
+        }
+
+        public void UpdateCharacterComponent(PersistedAccountData data, CharacterType characterType)
+        {
+            data.UpdateDate = DateTime.UtcNow;
+            dao.UpdateCharacterComponent(data, characterType);
+            Cache(data);
+        }
     }
 }
