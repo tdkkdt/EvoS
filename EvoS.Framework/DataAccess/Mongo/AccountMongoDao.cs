@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using EvoS.Framework.DataAccess.Daos;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
@@ -73,13 +74,10 @@ namespace EvoS.Framework.DataAccess.Mongo
             UpdateUpdateTime(data);
         }
         
+        private static readonly FieldDefinition<Dictionary<CharacterType, PersistedCharacterData>> FCharacterData = new(x => x.CharacterData);
         public void UpdateCharacterComponent(PersistedAccountData data, CharacterType characterType)
         {
-            c.UpdateOne(
-                Key(data.AccountId), 
-                u.Set(
-                    account => account.CharacterData[characterType].CharacterComponent, 
-                    data.CharacterData[characterType].CharacterComponent));
+            UpdateField(data.AccountId, data, FCharacterData);
             UpdateUpdateTime(data);
         }
     }
