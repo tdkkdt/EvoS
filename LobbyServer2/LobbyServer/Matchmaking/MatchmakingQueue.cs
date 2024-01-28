@@ -6,9 +6,11 @@ using System.Linq;
 using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Gamemode;
 using CentralServer.LobbyServer.Group;
+using CentralServer.LobbyServer.Session;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
+using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using log4net;
 using Newtonsoft.Json;
@@ -58,7 +60,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 QueueStatus = QueueStatus.Idle,
                 QueuedPlayers = 0,
                 ShowQueueSize = true,
-                AverageWaitTime = TimeSpan.FromSeconds(60),
+                AverageWaitTime = TimeSpan.FromSeconds(0),
                 GameConfig = new LobbyGameConfig()
                 {
                     GameType = gameType,
@@ -102,9 +104,7 @@ namespace CentralServer.LobbyServer.Matchmaking
         public LobbyMatchmakingQueueInfo AddGroup(long groupId, out bool added)
         {
             added = QueuedGroups.TryAdd(groupId, DateTime.UtcNow);
-            MatchmakingQueueInfo.QueuedPlayers = GetPlayerCount();
-            MatchmakingQueueInfo.AverageWaitTime = TimeSpan.FromSeconds(0);
-            MatchmakingQueueInfo.QueueStatus = ServerManager.IsAnyServerAvailable() ? QueueStatus.WaitingForHumans : QueueStatus.AllServersBusy;
+            UpdateQueueInfo();
             log.Info($"Added group {groupId} to {GameType} queue");
             log.Info($"{GetPlayerCount()} players in {GameType} queue ({QueuedGroups.Count} groups)");
 
@@ -116,6 +116,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             bool removed = QueuedGroups.TryRemove(groupId, out _);
             if (removed)
             {
+                UpdateQueueInfo();
                 log.Info($"Removed group {groupId} from {GameType} queue");
                 log.Info($"{GetPlayerCount()} players in {GameType} queue ({QueuedGroups.Count} groups)");
             }
@@ -143,8 +144,11 @@ namespace CentralServer.LobbyServer.Matchmaking
 
             if (MatchmakingManager.Enabled)
             {
+                UpdateQueueInfo();
                 TryMatch();
             }
+
+            SendQueueStatusNotifications();
         }
 
         private void TryMatch()
@@ -280,6 +284,27 @@ namespace CentralServer.LobbyServer.Matchmaking
                 DateTime.UtcNow,
                 DB.Get().AccountDao.GetAccount,
                 DB.Get().MatchHistoryDao.Find);
+        }
+
+        private void UpdateQueueInfo()
+        {
+            MatchmakingQueueInfo.QueuedPlayers = GetPlayerCount();
+            MatchmakingQueueInfo.QueueStatus = ServerManager.IsAnyServerAvailable()
+                ? QueueStatus.WaitingForHumans
+                : QueueStatus.AllServersBusy;
+        }
+
+        private void SendQueueStatusNotifications()
+        {
+            List<long> queuedAccountIds = QueuedGroups.Keys.SelectMany(g => GroupManager.GetGroup(g).Members).ToList();
+            var notify = new MatchmakingQueueStatusNotification
+            {
+                MatchmakingQueueInfo = MatchmakingQueueInfo
+            };
+            foreach (long accountId in queuedAccountIds)
+            {
+                SessionManager.GetClientConnection(accountId)?.Send(notify);
+            }
         }
     }
 }
