@@ -188,7 +188,7 @@ namespace EvoS.DirectoryServer
                  || !IPAddress.IsLoopback(tokenData.IpAddress)
                  || !IPAddress.IsLoopback(context.Connection.RemoteIpAddress)))
             {
-                log.Info($"IP address mismatch on auth: {context.Connection.RemoteIpAddress} vs {tokenData.IpAddress}");
+                log.Info($"IP address mismatch on auth {accountId}: {context.Connection.RemoteIpAddress} vs {tokenData.IpAddress}");
                 return Fail(request, AuthTicket.INVALID_IP_ADDRESS);
             }
 
