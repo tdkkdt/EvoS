@@ -171,6 +171,26 @@ namespace EvoS.Framework.Network.Static
             };
             overrides.Add(CharacterType.Spark, SparkAbilityConfigOverride);
 
+            // Disable Elle's "Long Barrel" mod
+            CharacterAbilityConfigOverride BlasterAbilityConfigOverride = new CharacterAbilityConfigOverride(CharacterType.Blaster);
+            BlasterAbilityConfigOverride.AbilityConfigs[0] = new AbilityConfigOverride(CharacterType.Blaster, 0)
+            {
+                AbilityModConfigs = new Dictionary<int, AbilityModConfigOverride>()
+                {
+                    {
+                        5,
+                        new AbilityModConfigOverride
+                        {
+                            AbilityIndex = 0,
+                            AbilityModIndex = 5,
+                            Allowed = false,
+                            CharacterType = CharacterType.Blaster
+                        }
+                    }
+                }
+            };
+            overrides.Add(CharacterType.Blaster, BlasterAbilityConfigOverride);
+
 
             return overrides;
         }
