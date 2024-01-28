@@ -76,15 +76,19 @@ public abstract class Game
             log.Info($"Game {GameInfo?.Name} at {GameSummary.GameServerAddress} finished " +
                      $"({GameSummary.NumOfTurns} turns), " +
                      $"{GameSummary.GameResult} {GameSummary.TeamAPoints}-{GameSummary.TeamBPoints}");
-            try
+
+            if (GameSummary.GameResult is >= GameResult.TieGame and <= GameResult.TeamBWon)
             {
-                GameSummary.BadgeAndParticipantsInfo = AccoladeUtils.ProcessGameSummary(GameSummary);
+                try
+                {
+                    GameSummary.BadgeAndParticipantsInfo = AccoladeUtils.ProcessGameSummary(GameSummary);
+                }
+                catch (Exception ex)
+                {
+                    log.Error("Failed to process game summary", ex);
+                }
+                DB.Get().MatchHistoryDao.Save(MatchHistoryDao.MatchEntry.Cons(GameInfo, GameSummary));
             }
-            catch (Exception ex)
-            {
-                log.Error("Failed to process game summary", ex);
-            }
-            DB.Get().MatchHistoryDao.Save(MatchHistoryDao.MatchEntry.Cons(GameInfo, GameSummary));
         }
         else
         {
@@ -454,6 +458,7 @@ public abstract class Game
         if (GameSummary != null)
         {
             //Wait 5 seconds for gg Usages
+            // TODO game server is supposed to send game summary after GGs (see ObjectivePoints.EndGame)
             await Task.Delay(GetFinalizeGameDelay());
 
             foreach (LobbyServerProtocol client in GetClients())
