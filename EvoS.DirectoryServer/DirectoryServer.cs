@@ -65,6 +65,9 @@ namespace EvoS.DirectoryServer
 
     public class DirectoryServer
     {
+        public const string SUPPORTED_PROTO_VERSION = "STABLE-122-100";
+        public const string ERROR_INVALID_PROTOCOL_VERSION = "INVALID_PROTOCOL_VERSION";
+        
         private static readonly ILog log = LogManager.GetLogger(typeof(DirectoryServer));
         private static long _nextTmpAccountId = 1;
         private static HashSet<IPAddress> _fullProxies;
@@ -108,6 +111,11 @@ namespace EvoS.DirectoryServer
 
         private static AssignGameClientResponse ProcessRequest(AssignGameClientRequest request, HttpContext context)
         {
+            if (request.SessionInfo.BuildVersion != SUPPORTED_PROTO_VERSION)
+            {
+                return Fail(request, ERROR_INVALID_PROTOCOL_VERSION);
+            }
+            
             string ticket = request.AuthInfo.GetTicket();
 
             if (!ticket.IsNullOrEmpty())
