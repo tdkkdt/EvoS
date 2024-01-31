@@ -506,7 +506,7 @@ namespace CentralServer.LobbyServer.Discord
                 Game game = SessionManager.GetClientConnection(accountId)?.CurrentGame;
                 if (game != null)
                 {
-                    eb.AddField("Game", $"{game.Server?.Name} {LobbyServerUtils.GameIdString(game.GameInfo)}", true);
+                    eb.AddField("Game", $"{game.Server?.Name} {LobbyServerUtils.GameIdString(game.GameInfo)} Turn {game.GameMetrics.CurrentTurn}", true);
                 }
                 await adminChannel.SendMessageAsync(
                     null,
