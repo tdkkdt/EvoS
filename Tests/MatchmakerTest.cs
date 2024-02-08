@@ -116,6 +116,7 @@ public class MatchmakerTest : EvosTest
             MaxTeamEloDifferenceStart = 20,
             MaxTeamEloDifference = 20,
             MaxTeamEloDifferenceWaitTime = TimeSpan.FromMinutes(10),
+            FallbackTime = TimeSpan.FromMinutes(60),
         });
 
         DateTime now = DateTime.UtcNow;
@@ -130,6 +131,29 @@ public class MatchmakerTest : EvosTest
         
         List<Matchmaker.Match> matchesRanked = matchmaker.GetMatchesRanked(queuedGroups, now);
         Assert.Empty(matchesRanked);
+    }
+    
+    [Theory]
+    [InlineData(8, 35)]  // = 8!/(4!*4!) / 2
+    [InlineData(12, 17325)] // = 12!/(8!*4!) * 8!/(4!*4!) / 2
+    // combinations = C^{n}_{4} * C^{n-4}_{4} / 2 (combinations for 1st team * combinations for 2nd team * half for symmetry)
+    public void TestCombinations(int players, int combinations)
+    {
+        Matchmaker matchmaker = MakeMatchmaker(new MatchmakingConfiguration
+        {
+            MaxTeamEloDifferenceStart = 2000,
+            MaxTeamEloDifference = 2000,
+        });
+
+        DateTime now = DateTime.UtcNow;
+        List<Matchmaker.MatchmakingGroup> queuedGroups = new List<Matchmaker.MatchmakingGroup>();
+        for (int i = 1; i <= players; i++)
+        {
+            queuedGroups.Add( new(i, new List<long> {i}, now));
+        }
+        
+        List<Matchmaker.Match> matchesRanked = matchmaker.GetMatchesRanked(queuedGroups, now);
+        Assert.Equal(combinations, matchesRanked.Count);
     }
 
     private static Matchmaker MakeMatchmaker(MatchmakingConfiguration conf)

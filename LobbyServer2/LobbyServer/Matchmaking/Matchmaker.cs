@@ -72,8 +72,9 @@ public class Matchmaker
             {
                 return _groups
                     .SelectMany(g => g.Members)
+                    .Order()
                     .Select(accountId => accountId.GetHashCode())
-                    .Aggregate(1, (a, b) => a * b);
+                    .Aggregate(17, (a, b) => a * 31 + b);
             }
 
             public bool Push(MatchmakingGroup groupInfo)
@@ -154,7 +155,7 @@ public class Matchmaker
 
         public void Pop()
         {
-            if (_teamA.Pop(out long groupId) || _teamB.Pop(out groupId))
+            if (_teamB.Pop(out long groupId) || _teamA.Pop(out groupId))
             {
                 _usedGroupIds.Remove(groupId);
                 return;
