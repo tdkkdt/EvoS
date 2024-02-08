@@ -68,10 +68,10 @@ namespace EvoS.Framework.DataAccess.Mongo
                     u.Set(field._expr, field._compiled.Invoke(entry)));
         }
         
-        protected FilterDefinitionBuilder<TEntry> f => Builders<TEntry>.Filter;
-        protected UpdateDefinitionBuilder<TEntry> u => Builders<TEntry>.Update;
-        protected SortDefinitionBuilder<TEntry> s => Builders<TEntry>.Sort;
-        protected ProjectionDefinitionBuilder<TEntry> p => Builders<TEntry>.Projection;
+        protected static FilterDefinitionBuilder<TEntry> f => Builders<TEntry>.Filter;
+        protected static UpdateDefinitionBuilder<TEntry> u => Builders<TEntry>.Update;
+        protected static SortDefinitionBuilder<TEntry> s => Builders<TEntry>.Sort;
+        protected static ProjectionDefinitionBuilder<TEntry> p => Builders<TEntry>.Projection;
 
         protected FilterDefinition<TEntry> Key(TKey id)
         {

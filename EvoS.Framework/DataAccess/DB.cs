@@ -17,6 +17,7 @@ namespace EvoS.Framework.DataAccess
         public readonly AdminMessageDao AdminMessageDao;
         public readonly MiscDao MiscDao;
         public readonly UserFeedbackDao UserFeedbackDao;
+        public readonly ChatHistoryDao ChatHistoryDao;
 
         private DB()
         {
@@ -31,6 +32,7 @@ namespace EvoS.Framework.DataAccess
                     AdminMessageDao = new AdminMessageMongoDao();
                     MiscDao = new MiscMongoDao();
                     UserFeedbackDao = new UserFeedbackMongoDao();
+                    ChatHistoryDao = new ChatHistoryMongoDao();
                     break;
                 case EvosConfiguration.DBType.None:
                     log.Info("Not using any database, no data will be persisted");
@@ -41,6 +43,7 @@ namespace EvoS.Framework.DataAccess
                     AdminMessageDao = new AdminMessageDaoCached(new AdminMessageMockDao());
                     MiscDao = new MiscDaoCached(new MiscMockDao());
                     UserFeedbackDao = new UserFeedbackMockDao();
+                    ChatHistoryDao = new ChatHistoryMockDao();
                     break;
             }
         }

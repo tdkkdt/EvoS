@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Session;
+using CentralServer.LobbyServer.Utils;
 using EvoS.DirectoryServer.Inventory;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
+using EvoS.Framework.DataAccess.Daos;
 using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
@@ -82,6 +86,9 @@ namespace CentralServer.LobbyServer.Chat
                               $"but they are not in the game they are supposed to be in");
                 }
             }
+
+            HashSet<long> recipients = new HashSet<long>();
+            HashSet<long> blockedRecipients = new HashSet<long>();
             
             switch (notification.ConsoleMessageType)
             {
@@ -91,24 +98,25 @@ namespace CentralServer.LobbyServer.Chat
                     {
                         foreach (long player in SessionManager.GetOnlinePlayers())
                         {
-                            SendMessageToPlayer(player, message);
+                            SendMessageToPlayer(player, message, out _);
                         }
                         OnGlobalChatMessage(message);
                     }
                     else
                     {
-                        SendMessageToPlayer(conn.AccountId, message);
+                        SendMessageToPlayer(conn.AccountId, message, out _);
                     }
                     break;
                 }
                 case ConsoleMessageType.WhisperChat:
                 {
                     long? accountId = SessionManager.GetOnlinePlayerByHandle(notification.RecipientHandle);
-                    if (accountId.HasValue)
+                    if (accountId.HasValue && accountId.Value != conn.AccountId)
                     {
                         message.RecipientHandle = notification.RecipientHandle;
-                        SendMessageToPlayer((long)accountId, message);
+                        SendMessageToPlayer(accountId.Value, message, out bool isBlocked);
                         conn.Send(message);
+                        (isBlocked ? blockedRecipients : recipients).Add(accountId.Value);
                     }
                     else
                     {
@@ -127,12 +135,17 @@ namespace CentralServer.LobbyServer.Chat
                     {
                         foreach (long accountId in conn.CurrentGame.GetPlayers())
                         {
-                            SendMessageToPlayer(accountId, message);
+                            SendMessageToPlayer(accountId, message, out bool isBlocked);
+                            if (accountId != conn.AccountId)
+                            {
+                                (isBlocked ? blockedRecipients : recipients).Add(accountId);
+                            }
                         }
                     }
                     else
                     {
-                        SendMessageToPlayer(conn.AccountId, message);
+                        SendMessageToPlayer(conn.AccountId, message, out _);
+                        blockedRecipients.UnionWith(conn.CurrentGame.GetPlayers());
                     }
                     break;
                 }
@@ -146,7 +159,11 @@ namespace CentralServer.LobbyServer.Chat
                     }
                     foreach (long member in group.Members)
                     {
-                        SendMessageToPlayer(member, message);
+                        SendMessageToPlayer(member, message, out bool isBlocked);
+                        if (member != conn.AccountId)
+                        {
+                            (isBlocked ? blockedRecipients : recipients).Add(member);
+                        }
                     }
                     break;
                 }
@@ -164,16 +181,22 @@ namespace CentralServer.LobbyServer.Chat
                         break;
                     }
 
+                    List<long> teammateAccountIds = conn.CurrentGame.GetPlayers(lobbyServerPlayerInfo.TeamId).ToList();
                     if (!isMuted)
                     {
-                        foreach (long teammateAccountId in conn.CurrentGame.GetPlayers(lobbyServerPlayerInfo.TeamId))
+                        foreach (long teammateAccountId in teammateAccountIds)
                         {
-                            SendMessageToPlayer(teammateAccountId, message);
+                            SendMessageToPlayer(teammateAccountId, message, out bool isBlocked);
+                            if (teammateAccountId != conn.AccountId)
+                            {
+                                (isBlocked ? blockedRecipients : recipients).Add(teammateAccountId);
+                            }
                         }
                     }
                     else
                     {
-                        SendMessageToPlayer(conn.AccountId, message);
+                        SendMessageToPlayer(conn.AccountId, message, out _);
+                        blockedRecipients.UnionWith(teammateAccountIds);
                     }
                     break;
                 }
@@ -184,6 +207,14 @@ namespace CentralServer.LobbyServer.Chat
                     break;
                 }
             }
+            
+            DB.Get().ChatHistoryDao.Save(new ChatHistoryDao.Entry(
+                message,
+                DateTime.UtcNow,
+                conn.CurrentGame?.GameInfo?.GameServerProcessCode,
+                recipients,
+                blockedRecipients,
+                account.AdminComponent.Muted));
 
             OnChatMessage(message, isMuted);
         }
@@ -208,19 +239,32 @@ namespace CentralServer.LobbyServer.Chat
                 SenderHandle = account.Handle,
                 Text = request.Text
             };
+            
+            HashSet<long> recipients = new HashSet<long>();
+            HashSet<long> blockedRecipients = new HashSet<long>();
 
             foreach (long accountID in GroupManager.GetPlayerGroup(conn.AccountId).Members)
             {
-                SendMessageToPlayer(accountID, message);
+                SendMessageToPlayer(accountID, message, out bool isBlocked);
+                (isBlocked ? blockedRecipients : recipients).Add(accountID);
             }
+            
+            DB.Get().ChatHistoryDao.Save(new ChatHistoryDao.Entry(
+                message,
+                DateTime.UtcNow,
+                conn.CurrentGame?.GameInfo?.GameServerProcessCode,
+                recipients,
+                blockedRecipients,
+                account.AdminComponent.Muted));
 
             OnChatMessage(message, false);
         }
 
-        private void SendMessageToPlayer(long player, ChatNotification message)
+        private void SendMessageToPlayer(long player, ChatNotification message, out bool isBlocked)
         {
             SocialComponent socialComponent = DB.Get().AccountDao.GetAccount(player)?.SocialComponent;
-            if (socialComponent?.IsBlocked(message.SenderAccountId) != true)
+            isBlocked = socialComponent?.IsBlocked(message.SenderAccountId) == true;
+            if (!isBlocked)
             {
                 SessionManager.GetClientConnection(player)?.Send(message);
             }
