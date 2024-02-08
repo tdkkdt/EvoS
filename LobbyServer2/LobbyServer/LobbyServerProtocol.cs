@@ -17,6 +17,7 @@ using EvoS.DirectoryServer.Inventory;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
+using EvoS.Framework.DataAccess.Daos;
 using EvoS.Framework.Exceptions;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
@@ -1755,6 +1756,8 @@ namespace CentralServer.LobbyServer
 
         private void HandleClientFeedbackReport(ClientFeedbackReport message)
         {
+            string context = CurrentGame is not null ? LobbyServerUtils.GameIdString(CurrentGame.GameInfo) : "";
+            DB.Get().UserFeedbackDao.Save(new UserFeedbackDao.UserFeedback(AccountId, message, context));
             DiscordManager.Get().SendPlayerFeedback(AccountId, message);
         }
 
