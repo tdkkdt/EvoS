@@ -527,7 +527,7 @@ namespace CentralServer.LobbyServer.Discord
             {
                 Title = $"Game Result for {gameInfo.GameConfig.GameType} {map ?? gameInfo.GameConfig.Map}",
                 Description =
-                    $"{(gameSummary.GameResult.ToString() == "TeamAWon" ? "Team A Won" : "Team B Won")} " +
+                    $"{RenderGameResult(gameSummary.GameResult)} " +
                     $"{gameSummary.TeamAPoints}-{gameSummary.TeamBPoints} ({gameSummary.NumOfTurns} turns)",
                 Color = gameSummary.GameResult.ToString() == "TeamAWon" ? Color.Green : Color.Red
             };
@@ -553,7 +553,18 @@ namespace CentralServer.LobbyServer.Discord
             eb.Footer = footer;
             return eb.Build();
         }
-        
+
+        private static string RenderGameResult(GameResult gameResult)
+        {
+            return gameResult switch
+            {
+                GameResult.TeamAWon => "Team A Won",
+                GameResult.TeamBWon => "Team B Won",
+                GameResult.TieGame => "Draw",
+                _ => gameResult.ToString()
+            };
+        }
+
         public async void SendPlayerFeedback(long accountId, ClientFeedbackReport message)
         {
             if (adminUserReportChannel == null || !conf.AdminEnableUserReports)
