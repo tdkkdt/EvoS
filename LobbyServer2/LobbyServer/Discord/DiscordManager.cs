@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CentralServer.ApiServer;
-using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Chat;
 using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Utils;
@@ -35,6 +34,11 @@ namespace CentralServer.LobbyServer.Discord
         private readonly DiscordClientWrapper gameLogChannel;
         private readonly DiscordClientWrapper adminChannel;
         private readonly DiscordClientWrapper lobbyChannel;
+        private readonly DiscordClientWrapper adminSystemReportChannel;
+        private readonly DiscordClientWrapper adminUserReportChannel;
+        private readonly DiscordClientWrapper adminChatLogChannel;
+        private readonly DiscordClientWrapper adminActionLogChannel;
+        private readonly DiscordClientWrapper adminErrorLogChannel;
         private DiscordBotWrapper discordBot;
 
         private readonly CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
@@ -63,6 +67,56 @@ namespace CentralServer.LobbyServer.Discord
                 log.Info("Discord admin is enabled");
                 adminChannel = new DiscordClientWrapper(conf.AdminChannel);
             }
+
+            if (conf.AdminSystemReportChannel.IsChannel())
+            {
+                log.Info("Discord admin system report channel is enabled");
+                adminSystemReportChannel = new DiscordClientWrapper(conf.AdminSystemReportChannel);
+            }
+            else if (adminChannel is not null)
+            {
+                adminSystemReportChannel = adminChannel;
+            }
+
+            if (conf.AdminUserReportChannel.IsChannel())
+            {
+                log.Info("Discord admin user report channel is enabled");
+                adminUserReportChannel = new DiscordClientWrapper(conf.AdminUserReportChannel);
+            }
+            else if (adminChannel is not null)
+            {
+                adminUserReportChannel = adminChannel;
+            }
+
+            if (conf.AdminChatLogChannel.IsChannel())
+            {
+                log.Info("Discord admin chat log channel is enabled");
+                adminChatLogChannel = new DiscordClientWrapper(conf.AdminChatLogChannel);
+            }
+            else if (adminChannel is not null)
+            {
+                adminChatLogChannel = adminChannel;
+            }
+
+            if (conf.AdminActionLogChannel.IsChannel())
+            {
+                log.Info("Discord admin action log channel is enabled");
+                adminActionLogChannel = new DiscordClientWrapper(conf.AdminActionLogChannel);
+            }
+            else if (adminChannel is not null)
+            {
+                adminActionLogChannel = adminChannel;
+            }
+
+            if (conf.AdminErrorLogChannel.IsChannel())
+            {
+                log.Info("Discord admin error log channel is enabled");
+                adminErrorLogChannel = new DiscordClientWrapper(conf.AdminErrorLogChannel);
+            }
+            else if (adminChannel is not null)
+            {
+                adminErrorLogChannel = adminChannel;
+            }
             
             if (conf.LobbyChannel.IsChannel())
             {
@@ -83,12 +137,21 @@ namespace CentralServer.LobbyServer.Discord
                 _ = SendServerStatusLoop(cancelTokenSource.Token);
                 ChatManager.Get().OnGlobalChatMessage += SendGlobalChatMessageAsync;
             }
-            if (adminChannel != null)
+            
+            if (adminChatLogChannel is not null)
             {
                 ChatManager.Get().OnChatMessage += SendChatMessageAuditAsync;
+            }
+
+            if (adminActionLogChannel is not null)
+            {
                 AdminManager.Get().OnAdminAction += SendAdminActionAuditAsync;
                 AdminManager.Get().OnAdminMessage += SendAdminMessageAuditAsync;
                 AdminController.OnAdminPauseQueue += SendAdminPauseQueueAuditAsync;
+            }
+
+            if (adminSystemReportChannel is not null)
+            {
                 AdminController.OnAdminScheduleShutdown += SendAdminScheduleShutdownAuditAsync;
             }
 
@@ -125,12 +188,21 @@ namespace CentralServer.LobbyServer.Discord
             {
                 ChatManager.Get().OnGlobalChatMessage -= SendGlobalChatMessageAsync;
             }
-            if (adminChannel != null)
+            
+            if (adminChatLogChannel is not null)
             {
                 ChatManager.Get().OnChatMessage -= SendChatMessageAuditAsync;
+            }
+
+            if (adminActionLogChannel is not null)
+            {
                 AdminManager.Get().OnAdminAction -= SendAdminActionAuditAsync;
                 AdminManager.Get().OnAdminMessage -= SendAdminMessageAuditAsync;
                 AdminController.OnAdminPauseQueue -= SendAdminPauseQueueAuditAsync;
+            }
+
+            if (adminSystemReportChannel is not null)
+            {
                 AdminController.OnAdminScheduleShutdown -= SendAdminScheduleShutdownAuditAsync;
             }
             cancelTokenSource.Cancel();
@@ -235,14 +307,14 @@ namespace CentralServer.LobbyServer.Discord
 
         private async Task SendChatMessageAudit(ChatNotification notification, bool isMuted)
         {
-            if (adminChannel == null || !conf.AdminEnableChatAudit)
+            if (adminChatLogChannel == null || !conf.AdminEnableChatAudit)
             {
                 return;
             }
             try
             {
                 List<long> recipients = DiscordLobbyUtils.GetMessageRecipients(notification, out string fallback, out string context);
-                await adminChannel.SendMessageAsync(
+                await adminChatLogChannel.SendMessageAsync(
                     username: notification.SenderHandle,
                     embeds: new[] { new EmbedBuilder
                     {
@@ -268,14 +340,14 @@ namespace CentralServer.LobbyServer.Discord
 
         private async Task SendAdminActionAudit(long accountId, AdminComponent.AdminActionRecord record)
         {
-            if (adminChannel == null || !conf.AdminEnableAdminAudit)
+            if (adminActionLogChannel == null || !conf.AdminEnableAdminAudit)
             {
                 return;
             }
             try
             {
                 PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
-                await adminChannel.SendMessageAsync(
+                await adminActionLogChannel.SendMessageAsync(
                     username: record.AdminUsername,
                     embeds: new[] { new EmbedBuilder
                     {
@@ -297,14 +369,14 @@ namespace CentralServer.LobbyServer.Discord
 
         private async Task SendAdminMessageAudit(long accountId, long adminAccountId, string msg)
         {
-            if (adminChannel == null || !conf.AdminEnableAdminAudit)
+            if (adminActionLogChannel == null || !conf.AdminEnableAdminAudit)
             {
                 return;
             }
             try
             {
                 PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
-                await adminChannel.SendMessageAsync(
+                await adminActionLogChannel.SendMessageAsync(
                     username: LobbyServerUtils.GetHandle(adminAccountId),
                     embeds: new[] { new EmbedBuilder
                     {
@@ -326,14 +398,14 @@ namespace CentralServer.LobbyServer.Discord
 
         private async Task SendAdminPauseQueueAudit(long adminAccountId, AdminController.PauseQueueModel action)
         {
-            if (adminChannel == null || !conf.AdminEnableAdminAudit)
+            if (adminActionLogChannel == null || !conf.AdminEnableAdminAudit)
             {
                 return;
             }
             try
             {
                 PersistedAccountData account = DB.Get().AccountDao.GetAccount(adminAccountId);
-                await adminChannel.SendMessageAsync(
+                await adminActionLogChannel.SendMessageAsync(
                     username: account?.Handle,
                     embeds: new[] { new EmbedBuilder
                     {
@@ -354,13 +426,13 @@ namespace CentralServer.LobbyServer.Discord
 
         private async Task SendAdminScheduleShutdownAudit(long adminAccountId, AdminController.PendingShutdownModel action)
         {
-            if (adminChannel == null || !conf.AdminEnableAdminAudit)
+            if (adminSystemReportChannel == null || !conf.AdminEnableAdminAudit)
             {
                 return;
             }
             try
             {
-                await adminChannel.SendMessageAsync(
+                await adminSystemReportChannel.SendMessageAsync(
                     username: LobbyServerUtils.GetHandle(adminAccountId),
                     embeds: new[] { new EmbedBuilder
                     {
@@ -376,7 +448,7 @@ namespace CentralServer.LobbyServer.Discord
 
         public async void SendAdminGameReport(LobbyGameInfo gameInfo, string serverName, string serverVersion, LobbyGameSummary gameSummary)
         {
-            if (adminChannel == null || !conf.AdminEnableAdminAudit)
+            if (adminSystemReportChannel == null || !conf.AdminEnableAdminAudit)
             {
                 return;
             }
@@ -403,7 +475,7 @@ namespace CentralServer.LobbyServer.Discord
                         matchResultsStats.FriendlyStatlines.Select(Format)
                             .Concat(matchResultsStats.EnemyStatlines.Select(Format)));
                 }
-                await adminChannel.SendMessageAsync(
+                await adminSystemReportChannel.SendMessageAsync(
                     msg,
                     false,
                     embeds: new[] {
@@ -426,13 +498,13 @@ namespace CentralServer.LobbyServer.Discord
 
         public async Task SendLogEvent(Level severity, string msg)
         {
-            if (adminChannel == null || !conf.AdminEnableLog)
+            if (adminErrorLogChannel == null || !conf.AdminEnableLog)
             {
                 return;
             }
             try
             {
-                await adminChannel.SendMessageAsync(
+                await adminErrorLogChannel.SendMessageAsync(
                     username: "Atlas Reactor",
                     embeds: new[] { new EmbedBuilder
                     {
@@ -484,7 +556,7 @@ namespace CentralServer.LobbyServer.Discord
         
         public async void SendPlayerFeedback(long accountId, ClientFeedbackReport message)
         {
-            if (adminChannel == null || !conf.AdminEnableUserReports)
+            if (adminUserReportChannel == null || !conf.AdminEnableUserReports)
             {
                 return;
             }
@@ -508,7 +580,7 @@ namespace CentralServer.LobbyServer.Discord
                 {
                     eb.AddField("Game", $"{game.Server?.Name} {LobbyServerUtils.GameIdString(game.GameInfo)} Turn {game.GameMetrics.CurrentTurn}", true);
                 }
-                await adminChannel.SendMessageAsync(
+                await adminUserReportChannel.SendMessageAsync(
                     null,
                     false,
                     embeds: new[] { eb.Build() },

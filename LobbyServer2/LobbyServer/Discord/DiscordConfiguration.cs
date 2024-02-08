@@ -9,6 +9,11 @@ namespace CentralServer.LobbyServer.Discord
         public DiscordChannel AdminChannel;
         public DiscordChannel GameLogChannel;
         public DiscordChannel LobbyChannel;
+        public DiscordChannel AdminSystemReportChannel;
+        public DiscordChannel AdminUserReportChannel;
+        public DiscordChannel AdminChatLogChannel;
+        public DiscordChannel AdminActionLogChannel;
+        public DiscordChannel AdminErrorLogChannel;
 
         public string BotToken = "";
         public ulong? BotChannelId;
