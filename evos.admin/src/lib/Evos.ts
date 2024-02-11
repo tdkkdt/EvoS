@@ -173,6 +173,26 @@ export enum PendingShutdownType {
     WaitForPlayersToLeave = 'WaitForPlayersToLeave',
 }
 
+export enum Language {
+    en = 'en',
+    fr = 'fr',
+    de = 'de',
+    ru = 'ru',
+    es = 'es',
+    it = 'it',
+    pl = 'pl',
+    pt = 'pt',
+    ko = 'ko',
+    zh = 'zh'
+}
+
+export enum EvosServerMessageType {
+    MessageOfTheDay = 'MessageOfTheDay',
+    MessageOfTheDayPopup = 'MessageOfTheDayPopup',
+    LauncherMessageOfTheDay = 'LauncherMessageOfTheDay',
+    LauncherNotification = 'LauncherNotification',
+}
+
 export function asDate(date?: string) : Date | undefined {
     return date ? new Date(date) : undefined;
 }
@@ -183,6 +203,12 @@ export function formatDate(ts: string): string {
 
 export function cap(txt: string) : string {
     return txt.charAt(0).toUpperCase() + txt.slice(1);
+}
+
+export function toMap<I, K, V>(input: I[], keyMapper: (i: I) => K, valueMapper: (i: I) => V) : Map<K, V> {
+    const res = new Map<K, V>();
+    input.forEach(i => res.set(keyMapper(i), valueMapper(i)));
+    return res;
 }
 
 const baseUrl = ""
@@ -277,5 +303,18 @@ export function generateTempPassword(abort: AbortController, authHeader: string,
     return axios.post<RegistrationCodeResponse>(
         baseUrl + "/api/admin/player/generateTempPassword",
         { accountId: accountId },
+        { headers: {'Authorization': authHeader}, signal: abort.signal });
+}
+
+export function getMotd(abort: AbortController, type: EvosServerMessageType) {
+    return axios.get(
+        baseUrl + "/api/admin/lobby/motd/" + type,
+        { signal: abort.signal });
+}
+
+export function setMotd(abort: AbortController, authHeader: string, type: EvosServerMessageType, msg: Map<Language, string>) {
+    return axios.put(
+        baseUrl + "/api/admin/lobby/motd/" + type,
+        Object.fromEntries(msg),
         { headers: {'Authorization': authHeader}, signal: abort.signal });
 }

@@ -7,7 +7,7 @@ namespace EvoS.Framework.DataAccess.Daos
         Entry GetEntry(string Key);
         void SaveEntry(Entry entry);
 
-        [BsonKnownTypes(typeof(TextEntry), typeof(TrustWarEntry))]
+        [BsonKnownTypes(typeof(TextEntry), typeof(TrustWarEntry), typeof(ServerMessageEntry))]
         class Entry
         {
             public required string _id;
@@ -23,6 +23,11 @@ namespace EvoS.Framework.DataAccess.Daos
         class TrustWarEntry : Entry
         {
             public required long[] Points;
+        }
+        
+        class ServerMessageEntry : Entry
+        {
+            public required ServerMessage Message;
         }
     }
 }

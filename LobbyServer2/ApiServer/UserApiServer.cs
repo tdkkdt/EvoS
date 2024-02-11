@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
+using CentralServer.LobbyServer.Config;
 using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Utils;
 using EvoS.DirectoryServer;
@@ -33,6 +34,7 @@ public class UserApiServer : ApiServer
         app.MapPost("/api/login", Login).AllowAnonymous();
         app.MapPost("/api/register", Register).AllowAnonymous();
         app.MapGet("/api/lobby/status", StatusController.GetSimpleStatus).AllowAnonymous();
+        app.MapGet("/api/lobby/motd/{type}", GetMotd).AllowAnonymous();
         app.MapGet("/api/lobby/playerInfo", PlayerInfo).RequireAuthorization();
         // app.MapGet("/api/account/linkedAccountSupport", GetThirdPartyAccountTypes).RequireAuthorization();
         // app.MapGet("/api/account/linkAccount", LinkAccount).RequireAuthorization();
@@ -155,5 +157,17 @@ public class UserApiServer : ApiServer
         LoginManager.ResetPassword(tokenData.AccountId, authInfo._Password);
         log.Info($"Successfully updated password: {tokenData.Handle} {tokenData.AccountId} {httpContext.Connection.RemoteIpAddress}");
         return Results.Ok();
+    }
+        
+    public static IResult GetMotd(string type)
+    {
+        if (!Enum.TryParse(type, out EvosServerMessageType messageType))
+        {
+            return Results.NotFound();
+        }
+
+        ServerMessage motd = (DB.Get().MiscDao.GetEntry(messageType.ToString())
+            as MiscDao.ServerMessageEntry)?.Message ?? new ServerMessage();
+        return Results.Json(motd);
     }
 }

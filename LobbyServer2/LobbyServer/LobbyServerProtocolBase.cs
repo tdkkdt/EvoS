@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using CentralServer.LobbyServer.Chat;
+using CentralServer.LobbyServer.Config;
 using CentralServer.LobbyServer.Friend;
 using CentralServer.LobbyServer.Gamemode;
 using CentralServer.LobbyServer.Group;
@@ -14,6 +15,7 @@ using CentralServer.LobbyServer.Utils;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
+using EvoS.Framework.DataAccess.Daos;
 using EvoS.Framework.Network;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
@@ -206,12 +208,32 @@ namespace CentralServer.LobbyServer
 
             return new ServerMessageOverrides
             {
-                MOTDPopUpText = adminMessage ?? LobbyConfiguration.GetMOTDPopUpText(), // Popup message when client connects to lobby
-                MOTDText = LobbyConfiguration.GetMOTDText(), // "alert" text
+                MOTDPopUpText = adminMessage ?? GetMotdPopUpText(), // Popup message when client connects to lobby
+                MOTDText = GetMotdText(), // "alert" text
                 ReleaseNotesHeader = LobbyConfiguration.GetPatchNotesHeader(),
                 ReleaseNotesDescription = LobbyConfiguration.GetPatchNotesDescription(),
                 ReleaseNotesText = PatchNotesText, // ConfigManager.PatchNotesText,
             };
+        }
+
+        private static ServerMessage GetMotdText()
+        {
+            if (DB.Get().MiscDao.GetEntry(EvosServerMessageType.MessageOfTheDay.ToString()) is ServerMessageEntry msg
+                && !msg.Message.IsEmpty())
+            {
+                return msg.Message;
+            }
+            return LobbyConfiguration.GetMOTDText();
+        }
+
+        private static ServerMessage GetMotdPopUpText()
+        {
+            if (DB.Get().MiscDao.GetEntry(EvosServerMessageType.MessageOfTheDayPopup.ToString()) is ServerMessageEntry msg
+                && !msg.Message.IsEmpty())
+            {
+                return msg.Message.FillMissingLocalizations(); // otherwise is just won't show if there is no loc for the active language
+            }
+            return LobbyConfiguration.GetMOTDPopUpText();
         }
 
         protected void SetGameType(GameType gameType)

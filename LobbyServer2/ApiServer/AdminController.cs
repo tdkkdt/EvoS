@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Text.Json.Serialization;
 using CentralServer.LobbyServer;
 using CentralServer.LobbyServer.Chat;
+using CentralServer.LobbyServer.Config;
 using CentralServer.LobbyServer.CustomGames;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
@@ -81,6 +82,27 @@ namespace CentralServer.ApiServer
                 return Results.BadRequest();
             }
             SessionManager.Broadcast(data.Msg);
+            return Results.Ok();
+        }
+        
+        public static IResult SetMotd([FromBody] ServerMessage data, ClaimsPrincipal user, string type)
+        {
+            if (!ValidateAdmin(user, out IResult error, out long adminAccountId, out string adminHandle))
+            {
+                return error;
+            }
+            
+            if (!Enum.TryParse(type, out EvosServerMessageType messageType))
+            {
+                return Results.NotFound();
+            }
+
+            log.Info($"MOTD {type} {adminHandle}: {data.EN}");
+            DB.Get().MiscDao.SaveEntry(new MiscDao.ServerMessageEntry
+            {
+                _id = messageType.ToString(),
+                Message = data
+            });
             return Results.Ok();
         }
 

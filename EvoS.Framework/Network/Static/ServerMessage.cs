@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using EvoS.Framework.Misc;
 using EvoS.Framework.Network;
+using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 
 // Token: 0x020009D7 RID: 2519
@@ -26,6 +28,23 @@ public class ServerMessage
         };
     }
 
+    public ServerMessage FillMissingLocalizations()
+    {
+	    return new ServerMessage
+	    {
+		    EN = EN,
+		    FR = FR.IsNullOrEmpty() ? EN : FR,
+		    DE = DE.IsNullOrEmpty() ? EN : DE,
+		    RU = RU.IsNullOrEmpty() ? EN : RU,
+		    ES = ES.IsNullOrEmpty() ? EN : ES,
+		    IT = IT.IsNullOrEmpty() ? EN : IT,
+		    PL = PL.IsNullOrEmpty() ? EN : PL,
+		    PT = PT.IsNullOrEmpty() ? EN : PT,
+		    KO = KO.IsNullOrEmpty() ? EN : KO,
+		    ZH = ZH.IsNullOrEmpty() ? EN : ZH
+	    };
+    }
+
     public string EN { get; set; }
     public string FR { get; set; }
     public string DE { get; set; }
@@ -36,6 +55,20 @@ public class ServerMessage
     public string PT { get; set; }
     public string KO { get; set; }
     public string ZH { get; set; }
+
+    public bool IsEmpty()
+    {
+	    return EN.IsNullOrEmpty()
+	           && FR.IsNullOrEmpty()
+	           && DE.IsNullOrEmpty()
+	           && RU.IsNullOrEmpty()
+	           && ES.IsNullOrEmpty()
+	           && IT.IsNullOrEmpty()
+	           && PL.IsNullOrEmpty()
+	           && PT.IsNullOrEmpty()
+	           && KO.IsNullOrEmpty()
+	           && ZH.IsNullOrEmpty();
+    }
 
     /*
 	[JsonIgnore]
