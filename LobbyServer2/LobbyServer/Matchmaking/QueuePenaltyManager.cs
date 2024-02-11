@@ -21,7 +21,8 @@ public static class QueuePenaltyManager
     {
         if (!LobbyConfiguration.GetMatchAbandoningPenalty()
             || game?.GameInfo?.GameConfig is null
-            || game.GameInfo.GameConfig.GameType != GameType.PvP)
+            || game.GameInfo.GameConfig.GameType != GameType.PvP
+            || game.GameInfo.GameResult == GameResult.NoResult)
         {
             return;
         }
