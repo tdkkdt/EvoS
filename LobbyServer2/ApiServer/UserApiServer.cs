@@ -15,6 +15,7 @@ using log4net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using WebSocketSharp;
 
 namespace CentralServer.ApiServer;
 
@@ -34,7 +35,7 @@ public class UserApiServer : ApiServer
         app.MapPost("/api/login", Login).AllowAnonymous();
         app.MapPost("/api/register", Register).AllowAnonymous();
         app.MapGet("/api/lobby/status", StatusController.GetSimpleStatus).AllowAnonymous();
-        app.MapGet("/api/lobby/motd/{type}", GetMotd).AllowAnonymous();
+        app.MapGet("/api/lobby/motd/{type}/{language}", GetMotd).AllowAnonymous();
         app.MapGet("/api/lobby/playerInfo", PlayerInfo).RequireAuthorization();
         // app.MapGet("/api/account/linkedAccountSupport", GetThirdPartyAccountTypes).RequireAuthorization();
         // app.MapGet("/api/account/linkAccount", LinkAccount).RequireAuthorization();
@@ -158,16 +159,45 @@ public class UserApiServer : ApiServer
         log.Info($"Successfully updated password: {tokenData.Handle} {tokenData.AccountId} {httpContext.Connection.RemoteIpAddress}");
         return Results.Ok();
     }
-        
-    public static IResult GetMotd(string type)
+
+    private static readonly Dictionary<EvosServerMessageType, EvosServerMessageType> SERVER_MESSAGE_FALLBACK = new()
     {
-        if (!Enum.TryParse(type, out EvosServerMessageType messageType))
+        { EvosServerMessageType.LauncherMessageOfTheDay, EvosServerMessageType.MessageOfTheDay },
+        { EvosServerMessageType.LauncherNotification, EvosServerMessageType.MessageOfTheDayPopup },
+    };
+
+    public class ServerMessageModel
+    {
+        public string Text { get; set; }
+    }
+        
+    public static IResult GetMotd(string type, string language)
+    {
+        if (!Enum.TryParse(type, true, out EvosServerMessageType messageType)
+            || !Enum.TryParse(language, true, out ServerMessageLanguage messageLang))
         {
             return Results.NotFound();
         }
 
         ServerMessage motd = (DB.Get().MiscDao.GetEntry(messageType.ToString())
-            as MiscDao.ServerMessageEntry)?.Message ?? new ServerMessage();
-        return Results.Json(motd);
+            as MiscDao.ServerMessageEntry)?.Message;
+
+        if (motd is null && SERVER_MESSAGE_FALLBACK.TryGetValue(messageType, out var fallbackType))
+        {
+            motd = (DB.Get().MiscDao.GetEntry(fallbackType.ToString())
+                as MiscDao.ServerMessageEntry)?.Message;
+        }
+
+        string text = string.Empty;
+        if (motd is not null)
+        {
+            text = motd.GetValue(messageLang);
+            if (text.IsNullOrEmpty())
+            {
+                text = motd.GetValue(ServerMessageLanguage.EN);
+            }
+        }
+
+        return Results.Json(new ServerMessageModel { Text = text });
     }
 }

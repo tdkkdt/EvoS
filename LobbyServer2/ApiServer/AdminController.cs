@@ -92,7 +92,7 @@ namespace CentralServer.ApiServer
                 return error;
             }
             
-            if (!Enum.TryParse(type, out EvosServerMessageType messageType))
+            if (!Enum.TryParse(type, true, out EvosServerMessageType messageType))
             {
                 return Results.NotFound();
             }
@@ -104,6 +104,18 @@ namespace CentralServer.ApiServer
                 Message = data
             });
             return Results.Ok();
+        }
+        
+        public static IResult GetMotd(string type)
+        {
+            if (!Enum.TryParse(type, true, out EvosServerMessageType messageType))
+            {
+                return Results.NotFound();
+            }
+
+            ServerMessage motd = (DB.Get().MiscDao.GetEntry(messageType.ToString())
+                as MiscDao.ServerMessageEntry)?.Message ?? new ServerMessage();
+            return Results.Json(motd);
         }
 
         public struct PlayerDetails

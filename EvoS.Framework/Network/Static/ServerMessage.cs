@@ -70,6 +70,17 @@ public class ServerMessage
 	           && ZH.IsNullOrEmpty();
     }
 
+    public string GetValue(ServerMessageLanguage language)
+    {
+	    return (string)GetType().GetProperty(language.ToString()).GetValue(this, null);
+    }
+
+    public string GetValue(string languageCode)
+    {
+	    ServerMessageLanguage language = (ServerMessageLanguage)Enum.Parse(typeof(ServerMessageLanguage), languageCode, true);
+	    return GetValue(language);
+    }
+
     /*
 	[JsonIgnore]
 	public IEnumerable<string> Languages
