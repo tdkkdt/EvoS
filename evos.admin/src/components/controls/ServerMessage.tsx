@@ -91,7 +91,6 @@ export default function ServerMessage({type}: ServerMessageProps) {
                 name={lg}
                 key={lg}
                 multiline
-                autoFocus={lg === Language.en}
                 placeholder={serverMessage.get(Language.en)}
                 value={serverMessage.get(lg as Language) || ""}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e, lg as Language)}

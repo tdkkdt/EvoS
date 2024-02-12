@@ -10,5 +10,7 @@ public enum ServerMessageLanguage
     PL,
     PT,
     KO,
-    ZH
+    ZH,
+    NL,
+    BR,
 }

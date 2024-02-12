@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using EvoS.Framework.Misc;
 using EvoS.Framework.Network;
-using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json;
 
 // Token: 0x020009D7 RID: 2519
 [Serializable]
@@ -24,7 +20,9 @@ public class ServerMessage
             PL = value,
             PT = value,
             KO = value,
-            ZH = value
+            ZH = value,
+            NL = value,
+            BR = value
         };
     }
 
@@ -41,7 +39,9 @@ public class ServerMessage
 		    PL = PL.IsNullOrEmpty() ? EN : PL,
 		    PT = PT.IsNullOrEmpty() ? EN : PT,
 		    KO = KO.IsNullOrEmpty() ? EN : KO,
-		    ZH = ZH.IsNullOrEmpty() ? EN : ZH
+		    ZH = ZH.IsNullOrEmpty() ? EN : ZH,
+		    NL = NL.IsNullOrEmpty() ? EN : NL,
+		    BR = BR.IsNullOrEmpty() ? EN : BR
 	    };
     }
 
@@ -55,6 +55,10 @@ public class ServerMessage
     public string PT { get; set; }
     public string KO { get; set; }
     public string ZH { get; set; }
+    
+    // custom ones for the launcher
+    [field: NonSerialized] public string NL { get; set; }
+    [field: NonSerialized] public string BR { get; set; }
 
     public bool IsEmpty()
     {

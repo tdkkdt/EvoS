@@ -188,7 +188,9 @@ export enum Language {
     pl = 'pl',
     pt = 'pt',
     ko = 'ko',
-    zh = 'zh'
+    zh = 'zh',
+    nl = 'nl',
+    br = 'br',
 }
 
 export enum EvosServerMessageType {
