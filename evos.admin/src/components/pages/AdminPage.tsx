@@ -18,8 +18,8 @@ export default function AdminPage() {
             <EvosCard variant="outlined">
                 <Broadcast />
             </EvosCard>
-            {Object.keys(EvosServerMessageType).map(t => <EvosCard variant="outlined">
-                <ServerMessage type={t as EvosServerMessageType} key={t} />
+            {Object.keys(EvosServerMessageType).map(t => <EvosCard key={t} variant="outlined">
+                <ServerMessage type={t as EvosServerMessageType} />
             </EvosCard>)}
         </StackWrapper>
     );

@@ -169,6 +169,7 @@ public class UserApiServer : ApiServer
     public class ServerMessageModel
     {
         public string Text { get; set; }
+        public string Severity { get; set; }
     }
         
     public static IResult GetMotd(string type, string language)
@@ -179,25 +180,33 @@ public class UserApiServer : ApiServer
             return Results.NotFound();
         }
 
-        ServerMessage motd = (DB.Get().MiscDao.GetEntry(messageType.ToString())
-            as MiscDao.ServerMessageEntry)?.Message;
+        MiscDao.ServerMessageEntry motd = DB.Get().MiscDao.GetEntry(messageType.ToString()) 
+            as MiscDao.ServerMessageEntry;
 
-        if (motd is null && SERVER_MESSAGE_FALLBACK.TryGetValue(messageType, out var fallbackType))
+        EvosServerMessageSeverity? severityOverride = null;
+        if (motd is not null && motd.Message.IsEmpty())
         {
-            motd = (DB.Get().MiscDao.GetEntry(fallbackType.ToString())
-                as MiscDao.ServerMessageEntry)?.Message;
+            severityOverride = motd.Severity;
+        }
+
+        if ((motd is null || motd.Message.IsEmpty()) && SERVER_MESSAGE_FALLBACK.TryGetValue(messageType, out var fallbackType))
+        {
+            motd = DB.Get().MiscDao.GetEntry(fallbackType.ToString()) as MiscDao.ServerMessageEntry;
         }
 
         string text = string.Empty;
+        EvosServerMessageSeverity severity = EvosServerMessageSeverity.Warning;
         if (motd is not null)
         {
-            text = motd.GetValue(messageLang);
+            text = motd.Message.GetValue(messageLang);
             if (text.IsNullOrEmpty())
             {
-                text = motd.GetValue(ServerMessageLanguage.EN);
+                text = motd.Message.GetValue(ServerMessageLanguage.EN);
             }
+
+            severity = motd.Severity;
         }
 
-        return Results.Json(new ServerMessageModel { Text = text });
+        return Results.Json(new ServerMessageModel { Text = text, Severity = (severityOverride ?? severity).ToString().ToLower() });
     }
 }

@@ -1,3 +1,4 @@
+using CentralServer.LobbyServer.Config;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace EvoS.Framework.DataAccess.Daos
@@ -28,6 +29,7 @@ namespace EvoS.Framework.DataAccess.Daos
         class ServerMessageEntry : Entry
         {
             public required ServerMessage Message;
+            public required EvosServerMessageSeverity Severity;
         }
     }
 }

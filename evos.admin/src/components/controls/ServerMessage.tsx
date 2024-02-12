@@ -1,5 +1,13 @@
-import {Box, Button, LinearProgress, TextField, Typography} from "@mui/material";
-import {EvosServerMessageType, getMotd, Language, setMotd, toMap} from "../../lib/Evos";
+import {Box, Button, LinearProgress, MenuItem, Select, SelectChangeEvent, TextField, Typography} from "@mui/material";
+import {
+    EvosServerMessageSeverity,
+    EvosServerMessageType,
+    getMotd,
+    Language, makeServerMsgData,
+    MessagesWithMetadata,
+    setMotd,
+    toMap
+} from "../../lib/Evos";
 import React, {useEffect, useState} from "react";
 import {useAuthHeader} from "react-auth-kit";
 import {useNavigate} from "react-router-dom";
@@ -13,6 +21,7 @@ interface ServerMessageProps {
 export default function ServerMessage({type}: ServerMessageProps) {
     const [msg, setMsg] = useState<string>();
     const [serverMessage, setServerMessage] = useState<Map<Language,string>>();
+    const [serverMessageSeverity, setServerMessageSeverity] = useState<EvosServerMessageSeverity>(EvosServerMessageSeverity.Warning);
     const [loading, setLoading] = useState<boolean>();
     const [processing, setProcessing] = useState<boolean>();
     const authHeader = useAuthHeader();
@@ -22,10 +31,13 @@ export default function ServerMessage({type}: ServerMessageProps) {
         setLoading(true);
         const abort = new AbortController();
         getMotd(abort, type)
-            .then((resp) => setServerMessage(toMap(
+            .then((resp) => {
+                setServerMessage(toMap(
                     Object.keys(Language),
                     lg => lg as Language,
-                    lg => resp.data[lg] as string)))
+                    lg => resp.data.msg[lg] as string));
+                setServerMessageSeverity(resp.data.severity || EvosServerMessageSeverity.Warning);
+            })
             .catch(e => processError(e, err => setMsg(err.text), navigate))
             .then(() => setLoading(false));
 
@@ -40,6 +52,10 @@ export default function ServerMessage({type}: ServerMessageProps) {
         });
     };
 
+    const handleUpdateSeverity = (event: SelectChangeEvent) => {
+        setServerMessageSeverity(event.target.value as EvosServerMessageSeverity);
+    };
+
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
@@ -49,13 +65,17 @@ export default function ServerMessage({type}: ServerMessageProps) {
         }
 
         const abort = new AbortController();
-        setMotd(abort, authHeader(), type, serverMessage)
+        setMotd(abort, authHeader(), type, makeServerMsgData(serverMessage, serverMessageSeverity))
             .then(() => setMsg("Saved"))
             .catch(e => processError(e, err => setMsg(err.text), navigate))
             .then(() => setProcessing(false));
 
         return () => abort.abort();
     };
+
+    const isValid = !!serverMessage
+        && (!!serverMessage.get(Language.en)
+            || Object.keys(Language).reduce((res, lg) => res && !serverMessage.get(lg as Language), true))
 
     return <>
         <Box component="form" onSubmit={handleSubmit} noValidate style={{ padding: 4 }}>
@@ -77,8 +97,18 @@ export default function ServerMessage({type}: ServerMessageProps) {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e, lg as Language)}
             />)}
 
+            {MessagesWithMetadata.has(type) && <Select
+                id="severity"
+                value={serverMessageSeverity as string}
+                label="Severity"
+                onChange={handleUpdateSeverity}
+                fullWidth
+            >
+                {Object.keys(EvosServerMessageSeverity).map(s => <MenuItem value={s} key={s}>{s}</MenuItem>)}
+            </Select>}
+
             <Button
-                disabled={processing || loading || !serverMessage || !serverMessage.get(Language.en)}
+                disabled={processing || loading || !isValid}
                 type="submit"
                 fullWidth
                 variant="contained"

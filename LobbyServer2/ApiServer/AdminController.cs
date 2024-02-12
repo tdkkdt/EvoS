@@ -85,7 +85,28 @@ namespace CentralServer.ApiServer
             return Results.Ok();
         }
         
-        public static IResult SetMotd([FromBody] ServerMessage data, ClaimsPrincipal user, string type)
+        public class ServerMessageModel
+        {
+            public ServerMessage Msg { get; set; }
+            public string Severity { get; set; }
+
+            public static ServerMessageModel Of(MiscDao.ServerMessageEntry e)
+            {
+                return e is not null
+                    ? new ServerMessageModel
+                    {
+                        Msg = e.Message,
+                        Severity = e.Severity.ToString(),
+                    }
+                    : new ServerMessageModel
+                    {
+                        Msg = new ServerMessage(),
+                        Severity = EvosServerMessageSeverity.Warning.ToString(),
+                    };
+            }
+        }
+        
+        public static IResult SetMotd([FromBody] ServerMessageModel data, ClaimsPrincipal user, string type)
         {
             if (!ValidateAdmin(user, out IResult error, out long adminAccountId, out string adminHandle))
             {
@@ -96,12 +117,18 @@ namespace CentralServer.ApiServer
             {
                 return Results.NotFound();
             }
+            
+            if (!Enum.TryParse(data.Severity, true, out EvosServerMessageSeverity messageSeverity))
+            {
+                return Results.BadRequest();
+            }
 
-            log.Info($"MOTD {type} {adminHandle}: {data.EN}");
+            log.Info($"MOTD {type} {adminHandle}: [{data.Severity}] {data.Msg.EN}");
             DB.Get().MiscDao.SaveEntry(new MiscDao.ServerMessageEntry
             {
                 _id = messageType.ToString(),
-                Message = data
+                Message = data.Msg,
+                Severity = messageSeverity
             });
             return Results.Ok();
         }
@@ -113,8 +140,8 @@ namespace CentralServer.ApiServer
                 return Results.NotFound();
             }
 
-            ServerMessage motd = (DB.Get().MiscDao.GetEntry(messageType.ToString())
-                as MiscDao.ServerMessageEntry)?.Message ?? new ServerMessage();
+            ServerMessageModel motd = ServerMessageModel.Of(
+                DB.Get().MiscDao.GetEntry(messageType.ToString()) as MiscDao.ServerMessageEntry);
             return Results.Json(motd);
         }
 

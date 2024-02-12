@@ -173,6 +173,11 @@ export enum PendingShutdownType {
     WaitForPlayersToLeave = 'WaitForPlayersToLeave',
 }
 
+export interface ServerMessageData {
+    msg: any;
+    severity: EvosServerMessageSeverity;
+}
+
 export enum Language {
     en = 'en',
     fr = 'fr',
@@ -193,6 +198,18 @@ export enum EvosServerMessageType {
     LauncherNotification = 'LauncherNotification',
 }
 
+export enum EvosServerMessageSeverity {
+    Warning = 'Warning',
+    Success = 'Success',
+    Error = 'Error',
+    Info = 'Info',
+}
+
+export const MessagesWithMetadata = new Set([
+    EvosServerMessageType.LauncherMessageOfTheDay,
+    EvosServerMessageType.LauncherNotification
+]);
+
 export function asDate(date?: string) : Date | undefined {
     return date ? new Date(date) : undefined;
 }
@@ -209,6 +226,13 @@ export function toMap<I, K, V>(input: I[], keyMapper: (i: I) => K, valueMapper: 
     const res = new Map<K, V>();
     input.forEach(i => res.set(keyMapper(i), valueMapper(i)));
     return res;
+}
+
+export function makeServerMsgData(msgMap: Map<Language,string>, severity: EvosServerMessageSeverity): ServerMessageData {
+    return {
+        msg: Object.fromEntries(msgMap),
+        severity: severity,
+    }
 }
 
 const baseUrl = ""
@@ -307,14 +331,14 @@ export function generateTempPassword(abort: AbortController, authHeader: string,
 }
 
 export function getMotd(abort: AbortController, type: EvosServerMessageType) {
-    return axios.get(
+    return axios.get<ServerMessageData>(
         baseUrl + "/api/admin/lobby/motd/" + type,
         { signal: abort.signal });
 }
 
-export function setMotd(abort: AbortController, authHeader: string, type: EvosServerMessageType, msg: Map<Language, string>) {
+export function setMotd(abort: AbortController, authHeader: string, type: EvosServerMessageType, msg: ServerMessageData) {
     return axios.put(
         baseUrl + "/api/admin/lobby/motd/" + type,
-        Object.fromEntries(msg),
+        msg,
         { headers: {'Authorization': authHeader}, signal: abort.signal });
 }
