@@ -58,16 +58,7 @@ public class ServerMessage
 
     public bool IsEmpty()
     {
-	    return EN.IsNullOrEmpty()
-	           && FR.IsNullOrEmpty()
-	           && DE.IsNullOrEmpty()
-	           && RU.IsNullOrEmpty()
-	           && ES.IsNullOrEmpty()
-	           && IT.IsNullOrEmpty()
-	           && PL.IsNullOrEmpty()
-	           && PT.IsNullOrEmpty()
-	           && KO.IsNullOrEmpty()
-	           && ZH.IsNullOrEmpty();
+	    return EN.IsNullOrEmpty();
     }
 
     public string GetValue(ServerMessageLanguage language)

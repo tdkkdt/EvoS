@@ -78,7 +78,7 @@ export default function ServerMessage({type}: ServerMessageProps) {
             />)}
 
             <Button
-                disabled={processing || loading}
+                disabled={processing || loading || !serverMessage || !serverMessage.get(Language.en)}
                 type="submit"
                 fullWidth
                 variant="contained"
