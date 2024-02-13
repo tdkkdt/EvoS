@@ -235,6 +235,10 @@ public abstract class Game
     {
         return from p in TeamInfo.TeamPlayerInfo select p.AccountId;
     }
+    public IEnumerable<long> GetPlayersDistinct()
+    {
+        return GetPlayers().Distinct();
+    }
 
     public List<LobbyServerProtocol> GetClients()
     {

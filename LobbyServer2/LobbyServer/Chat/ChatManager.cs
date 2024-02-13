@@ -133,7 +133,7 @@ namespace CentralServer.LobbyServer.Chat
                     }
                     if (!isMuted)
                     {
-                        foreach (long accountId in conn.CurrentGame.GetPlayers())
+                        foreach (long accountId in conn.CurrentGame.GetPlayersDistinct())
                         {
                             SendMessageToPlayer(accountId, message, out bool isBlocked);
                             if (accountId != conn.AccountId)
