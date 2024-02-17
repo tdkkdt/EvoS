@@ -103,7 +103,10 @@ public abstract class Game
             log.Error("Failed to update elo", e);
         }
 
-        GameInfo.GameStatus = GameStatus.Stopped;
+        if (GameInfo is not null) // we can end up here before the game started assembling
+        {
+            GameInfo.GameStatus = GameStatus.Stopped;
+        }
         StopTime = DateTime.UtcNow.Add(TimeSpan.FromSeconds(8));
 
         _ = FinalizeGame();
@@ -318,9 +321,15 @@ public abstract class Game
 
     public void SendGameInfoNotifications()
     {
+        if (GameInfo is null)
+        {
+            log.Warn($"Attempting to send game info notifications before creating game info!");
+            return;
+        }
+        
         GameInfo.ActivePlayers = TeamInfo.TeamPlayerInfo.Count;
         GameInfo.UpdateTimestamp = DateTime.UtcNow.Ticks;
-        foreach (long player in GetPlayers())  // TODO distinct!!
+        foreach (long player in GetPlayersDistinct())
         {
             LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(player);
             if (playerConnection != null)
