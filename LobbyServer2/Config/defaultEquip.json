@@ -230,5 +230,26 @@
     "ModForAbility2": 1,
     "ModForAbility3": 3,
     "ModForAbility4": 2
+  },
+  "Gryd": {
+    "ModForAbility0": -1,
+    "ModForAbility1": -1,
+    "ModForAbility2": -1,
+    "ModForAbility3": -1,
+    "ModForAbility4": -1
+  },
+  "PunchingDummy": {
+    "ModForAbility0": -1,
+    "ModForAbility1": -1,
+    "ModForAbility2": -1,
+    "ModForAbility3": -1,
+    "ModForAbility4": -1
+  },
+  "PendingWillFill": {
+    "ModForAbility0": -1,
+    "ModForAbility1": -1,
+    "ModForAbility2": -1,
+    "ModForAbility3": -1,
+    "ModForAbility4": -1
   }
 }
