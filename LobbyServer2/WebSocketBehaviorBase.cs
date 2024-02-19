@@ -196,12 +196,12 @@ namespace CentralServer
         }
         
         // plz forgive me
-        protected void Wrap<T1, T2>(Action<T1, T2> handler, T1 param1, T2 param2)
+        protected R Wrap<T1, T2, R>(Func<T1, T2, R> handler, T1 param1, T2 param2)
         {
             LogContextPush();
             try
             {
-                handler(param1, param2);
+                return handler(param1, param2);
             }
             finally
             {

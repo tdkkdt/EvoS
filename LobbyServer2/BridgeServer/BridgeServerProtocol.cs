@@ -182,6 +182,11 @@ namespace CentralServer.BridgeServer
 
         public bool Send(AllianceMessageBase msg, int originalCallbackId = 0)
         {
+            return Wrap(SendImpl, msg, originalCallbackId);
+        }
+
+        private bool SendImpl(AllianceMessageBase msg, int originalCallbackId)
+        {
             short messageType = BridgeMessageSerializer.GetMessageType(msg);
             if (messageType >= 0)
             {
