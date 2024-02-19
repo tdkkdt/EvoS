@@ -255,8 +255,9 @@ public abstract class Game
         HashSet<long> accountIds = new HashSet<long>();
         foreach (LobbyServerPlayerInfo player in TeamInfo.TeamPlayerInfo)
         {
-            if (player.IsSpectator
-                || player.IsNPCBot
+            if (
+                // player.IsSpectator || 
+                player.IsNPCBot
                 || player.ReplacedWithBots
                 || accountIds.Contains(player.AccountId))
             {
