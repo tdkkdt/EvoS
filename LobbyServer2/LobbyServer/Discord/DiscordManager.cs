@@ -548,7 +548,7 @@ namespace CentralServer.LobbyServer.Discord
 
             EmbedFooterBuilder footer = new EmbedFooterBuilder
             {
-                Text = $"{serverName} - {serverVersion} - {LobbyServerUtils.GameIdString(gameInfo)}"
+                Text = $"{serverName} - {serverVersion} - {LobbyServerUtils.GameIdString(gameInfo)} - {gameInfo.GameServerProcessCode}"
             };
             eb.Footer = footer;
             return eb.Build();
