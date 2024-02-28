@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Sockets;
 using EvoS.Framework.Misc;
-using EvoS.Framework.Network.WebSocket;
 using log4net;
 using WebSocketSharp;
 using WebSocketSharp.Server;
@@ -16,7 +16,7 @@ namespace CentralServer
         
         private readonly Dictionary<Type, Action<TMessage, int>> messageHandlers = new Dictionary<Type, Action<TMessage, int>>();
         private bool unregistered = false;
-        public bool IsConnected { get; private set; } = true; // TODO default to false, set to true in OnOpen?
+        public bool IsConnected => State == WebSocketState.Open; 
 
         protected static void LogMessage(string prefix, object message)
         {
@@ -32,7 +32,6 @@ namespace CentralServer
         
         protected sealed override void OnOpen()
         {
-            IsConnected = true;
             Wrap((object x) => HandleOpen(), null);
         }
 
@@ -42,7 +41,6 @@ namespace CentralServer
         
         protected sealed override void OnClose(CloseEventArgs e)
         {
-            IsConnected = false;
             Wrap(x => log.Info($"Disconnect: code {x.Code}, reason '{x.Reason}', clean {x.WasClean}"), e);
             Wrap(HandleClose, e);
         }
