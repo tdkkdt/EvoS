@@ -37,6 +37,7 @@ public class UserApiServer : ApiServer
         app.MapGet("/api/lobby/status", StatusController.GetSimpleStatus).AllowAnonymous();
         app.MapGet("/api/lobby/motd/{type}/{language}", GetMotd).AllowAnonymous();
         app.MapGet("/api/lobby/playerInfo", PlayerInfo).RequireAuthorization();
+        app.MapGet("/api/account/me", ActivePlayer).RequireAuthorization();
         // app.MapGet("/api/account/linkedAccountSupport", GetThirdPartyAccountTypes).RequireAuthorization();
         // app.MapGet("/api/account/linkAccount", LinkAccount).RequireAuthorization();
         // app.MapGet("/api/account/unlinkAccount", UnlinkAccount).RequireAuthorization();
@@ -58,6 +59,18 @@ public class UserApiServer : ApiServer
         return Results.Json(StatusController.Player.Of(account));
     }
 
+    protected IResult ActivePlayer(ClaimsPrincipal user)
+    {
+        EvosAuth.TokenData tokenData = EvosAuth.GetTokenData(user);
+        PersistedAccountData account = DB.Get().AccountDao.GetAccount(tokenData.AccountId);
+        if (account == null)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.Json(StatusController.ActivePlayer.Of(account));
+    }
+
     protected IResult Register(HttpContext httpContext, [FromBody] LoginModel authInfo)
     {
         log.Info($"Registering via api: {authInfo.UserName}");
@@ -68,7 +81,7 @@ public class UserApiServer : ApiServer
         catch (ArgumentException e)
         {
             log.Info($"Cannot register {authInfo.UserName} with given credentials", e);
-            return Results.BadRequest(new ErrorResponseModel{ message = e.Message });
+            return Results.BadRequest(new ErrorResponseModel { message = e.Message });
         }
         catch (Exception e)
         {
@@ -85,10 +98,10 @@ public class UserApiServer : ApiServer
         {
             return Results.StatusCode(StatusCodes.Status501NotImplemented);
         }
-        
+
         EvosAuth.TokenData tokenData = EvosAuth.GetTokenData(user);
         log.Debug($"Generating auth ticket for {tokenData.Handle} {tokenData.AccountId}");
-        
+
         PersistedAccountData account = DB.Get().AccountDao.GetAccount(tokenData.AccountId);
         if (account is null)
         {
@@ -98,12 +111,12 @@ public class UserApiServer : ApiServer
         AuthTicket authTicket = new AuthTicket(EvosAuth.GenerateToken(EvosAuth.Context.TICKET_AUTH, tokenData), account);
         return new XmlResult(authTicket.AsXML());
     }
-    
+
     protected IResult LogOutEverywhere(HttpContext httpContext, ClaimsPrincipal user)
     {
         EvosAuth.TokenData tokenData = EvosAuth.GetTokenData(user);
         log.Info($"Log out everywhere: {tokenData.Handle} {tokenData.AccountId} {httpContext.Connection.RemoteIpAddress}");
-        
+
         LoginManager.RevokeActiveTickets(tokenData.AccountId);
         SessionManager.KillSession(tokenData.AccountId);
 
@@ -132,7 +145,7 @@ public class UserApiServer : ApiServer
     {
         EvosAuth.TokenData tokenData = EvosAuth.GetTokenData(user);
         log.Info($"Linking {ticket.Ticket.Type} account to {tokenData.Handle}/{tokenData.AccountId}");
-        LoginManager.LinkAccounts(tokenData.AccountId, new List<LinkedAccount.Ticket>{ticket.Ticket});
+        LoginManager.LinkAccounts(tokenData.AccountId, new List<LinkedAccount.Ticket> { ticket.Ticket });
         log.Info($"Successfully linked {ticket.Ticket.Type} account to {tokenData.Handle}/{tokenData.AccountId}");
         return Results.Ok();
     }
@@ -171,7 +184,7 @@ public class UserApiServer : ApiServer
         public string Text { get; set; }
         public string Severity { get; set; }
     }
-        
+
     public static IResult GetMotd(string type, string language)
     {
         if (!Enum.TryParse(type, true, out EvosServerMessageType messageType)
@@ -180,7 +193,7 @@ public class UserApiServer : ApiServer
             return Results.NotFound();
         }
 
-        MiscDao.ServerMessageEntry motd = DB.Get().MiscDao.GetEntry(messageType.ToString()) 
+        MiscDao.ServerMessageEntry motd = DB.Get().MiscDao.GetEntry(messageType.ToString())
             as MiscDao.ServerMessageEntry;
 
         EvosServerMessageSeverity? severityOverride = null;

@@ -13,6 +13,7 @@ using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.Static;
 using log4net;
 using Microsoft.AspNetCore.Http;
+using static EvoS.Framework.DataAccess.Daos.AdminMessageDao;
 
 namespace CentralServer.ApiServer
 {
@@ -20,9 +21,9 @@ namespace CentralServer.ApiServer
     public static class StatusController
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(StatusController));
-        
+
         private static readonly string MAP_UNKNOWN = "UNKNOWN";
-        
+
         public static IResult GetStatus()
         {
             List<BridgeServerProtocol> servers = ServerManager.GetServers();
@@ -53,7 +54,7 @@ namespace CentralServer.ApiServer
             };
             return Results.Json(status);
         }
-        
+
         public static IResult GetSimpleStatus()
         {
             List<BridgeServerProtocol> servers = ServerManager.GetServers();
@@ -113,6 +114,7 @@ namespace CentralServer.ApiServer
             public int bannerBg { get; set; }
             public int bannerFg { get; set; }
             public string status { get; set; }
+            public int titleId { get; set; }
             public TrustWarManager.PlayerTrustWarDetails factionData { get; set; }
 
             public static Player Of(PersistedAccountData acc)
@@ -121,10 +123,46 @@ namespace CentralServer.ApiServer
                 {
                     accountId = acc.AccountId,
                     handle = acc.Handle,
-                    bannerBg = acc.AccountComponent.SelectedBackgroundBannerID == -1  ? 95 : acc.AccountComponent.SelectedBackgroundBannerID, // if no Banner is set default to 95
-                    bannerFg = acc.AccountComponent.SelectedForegroundBannerID == -1  ? 65 : acc.AccountComponent.SelectedForegroundBannerID, // if no Foreground Banner is set default to 65
+                    bannerBg = acc.AccountComponent.SelectedBackgroundBannerID == -1 ? 95 : acc.AccountComponent.SelectedBackgroundBannerID, // if no Banner is set default to 95
+                    bannerFg = acc.AccountComponent.SelectedForegroundBannerID == -1 ? 65 : acc.AccountComponent.SelectedForegroundBannerID, // if no Foreground Banner is set default to 65
+                    titleId = acc.AccountComponent.SelectedTitleID,
                     status = FriendManager.GetStatusString(SessionManager.GetClientConnection(acc.AccountId)),
-                    factionData = TrustWarManager.PlayerTrustWarDetails.Of(acc)
+                    factionData = TrustWarManager.PlayerTrustWarDetails.Of(acc),
+                };
+            }
+        }
+
+        public struct ActivePlayer
+        {
+            public long accountId { get; set; }
+            public string handle { get; set; }
+            public int bannerBg { get; set; }
+            public int bannerFg { get; set; }
+            public string status { get; set; }
+            public int titleId { get; set; }
+            public TrustWarManager.PlayerTrustWarDetails factionData { get; set; }
+            public bool locked { get; set; }
+            public DateTime lockedUntil { get; set; }
+            public string lockedReason { get; set; }
+            public string adminMessage { get; set; }
+
+            public static ActivePlayer Of(PersistedAccountData acc)
+            {
+                AdminMessage adminMessage = DB.Get().AdminMessageDao.FindPending(acc.AccountId);
+
+                return new ActivePlayer
+                {
+                    accountId = acc.AccountId,
+                    handle = acc.Handle,
+                    bannerBg = acc.AccountComponent.SelectedBackgroundBannerID == -1 ? 95 : acc.AccountComponent.SelectedBackgroundBannerID, // if no Banner is set default to 95
+                    bannerFg = acc.AccountComponent.SelectedForegroundBannerID == -1 ? 65 : acc.AccountComponent.SelectedForegroundBannerID, // if no Foreground Banner is set default to 65
+                    titleId = acc.AccountComponent.SelectedTitleID,
+                    status = FriendManager.GetStatusString(SessionManager.GetClientConnection(acc.AccountId)),
+                    factionData = TrustWarManager.PlayerTrustWarDetails.Of(acc),
+                    locked = acc.AdminComponent.Locked,
+                    lockedUntil = acc.AdminComponent.LockedUntil.ToUniversalTime(),
+                    lockedReason = acc.AdminComponent.AdminActions?.FindLast(x => x.ActionType == AdminComponent.AdminActionType.Lock)?.Description ?? "",
+                    adminMessage = adminMessage?.message
                 };
             }
         }
@@ -147,7 +185,7 @@ namespace CentralServer.ApiServer
             {
                 return new Group
                 {
-                    accountIds = new List<long>{ accountId },
+                    accountIds = new List<long> { accountId },
                     groupId = accountId
                 };
             }
@@ -200,7 +238,7 @@ namespace CentralServer.ApiServer
                 };
             }
         }
-        
+
         public struct Game
         {
             public string id { get; set; }
@@ -237,7 +275,7 @@ namespace CentralServer.ApiServer
                 };
             }
         }
-        
+
         public struct GamePlayer
         {
             public long accountId { get; set; }
