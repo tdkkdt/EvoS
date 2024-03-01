@@ -287,11 +287,11 @@ public class Matchmaker
         MatchScratch matchScratch = new MatchScratch(_subType);
         Dictionary<long, Match> possibleMatches = new Dictionary<long, Match>();
         FindMatches(matchScratch, queuedGroups, possibleMatches, _eloKey); // TODO save possible matches between runs, update it iteratively
-        log.Debug($"Found {possibleMatches.Count} possible matches in " +
-                 $"{_gameType}#{_subType.LocalizedName}: " +
-                 $"({string.Join(",", queuedGroups.Select(g => g.Players.ToString()))})");
         if (possibleMatches.Count > 0)
         {
+            log.Debug($"Found {possibleMatches.Count} possible matches in " +
+                      $"{_gameType}#{_subType.LocalizedName}: " +
+                      $"({string.Join(",", queuedGroups.Select(g => g.Players.ToString()))})");
             // TODO log queue with order & wait time
             List<Match> filteredMatches = FilterMatches(possibleMatches, now);
             log.Info($"Found {filteredMatches.Count} allowed matches in " +
