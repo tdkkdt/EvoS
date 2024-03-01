@@ -80,5 +80,12 @@ namespace EvoS.Framework.DataAccess.Mongo
             UpdateField(data.AccountId, data, FCharacterData);
             UpdateUpdateTime(data);
         }
+
+        private static readonly FieldDefinition<ExperienceComponent> FExperienceComponent = new(x => x.ExperienceComponent);
+        public void UpdateExperienceComponent(PersistedAccountData data)
+        {
+            UpdateField(data.AccountId, data, FExperienceComponent);
+            UpdateUpdateTime(data);
+        }
     }
 } 

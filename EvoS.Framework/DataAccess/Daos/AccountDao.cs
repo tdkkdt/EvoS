@@ -37,5 +37,10 @@ namespace EvoS.Framework.DataAccess.Daos
         {
             UpdateAccount(data);
         }
+
+        public void UpdateExperienceComponent(PersistedAccountData data)
+        {
+            UpdateAccount(data);
+        }
     }
 }

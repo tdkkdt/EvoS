@@ -150,6 +150,7 @@ public static class Elo
         float currentElo = GetElo(acc, eloKey);
         log.Info($"Updating {acc.Handle}'s {eloKey} elo {currentElo} -> {currentElo + delta}");
         acc.ExperienceComponent.EloValues.ApplyDelta(eloKey, delta, 0);
+        DB.Get().AccountDao.UpdateExperienceComponent(acc);
     }
 
     private static void AwardEloTeam(List<PersistedAccountData> team, string eloKey, MatchmakingConfiguration conf, float eloDelta)
