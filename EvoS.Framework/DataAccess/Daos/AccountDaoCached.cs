@@ -88,5 +88,12 @@ namespace EvoS.Framework.DataAccess.Daos
             dao.UpdateCharacterComponent(data, characterType);
             Cache(data);
         }
+
+        public void UpdateExperienceComponent(PersistedAccountData data)
+        {
+            data.UpdateDate = DateTime.UtcNow;
+            dao.UpdateExperienceComponent(data);
+            Cache(data);
+        }
     }
 }
