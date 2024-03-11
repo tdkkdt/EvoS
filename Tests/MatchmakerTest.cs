@@ -159,7 +159,7 @@ public class MatchmakerTest : EvosTest
     private static Matchmaker MakeMatchmaker(MatchmakingConfiguration conf)
     {
         AccountDao dao = MockAccountDao(Accounts);
-        Matchmaker matchmaker = new Matchmaker(
+        Matchmaker matchmaker = new MatchmakerRanked(
             dao,
             GameType.PvP,
             new GameSubType

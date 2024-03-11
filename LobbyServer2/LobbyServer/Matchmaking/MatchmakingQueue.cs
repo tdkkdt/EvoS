@@ -72,7 +72,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             Matchmakers = MatchmakingQueueInfo.GameConfig.SubTypes
                 .ToDictionary(
                     st => st.LocalizedName,
-                    st => new Matchmaker(GameType, st, EloKey, GetConf));
+                    st => (Matchmaker)new MatchmakerRanked(GameType, st, EloKey, GetConf));
         }
 
         private void ReloadConfig()
