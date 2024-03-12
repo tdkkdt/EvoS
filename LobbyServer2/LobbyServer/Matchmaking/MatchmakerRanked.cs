@@ -9,12 +9,9 @@ using log4net;
 
 namespace CentralServer.LobbyServer.Matchmaking;
 
-public class MatchmakerRanked : Matchmaker
+public class MatchmakerRanked : MatchmakerBase
 {
     private static readonly ILog log = LogManager.GetLogger(typeof(Matchmaker));
-    
-    private readonly AccountDao _accountDao;
-    private readonly string _eloKey;
 
     public MatchmakerRanked(
         AccountDao accountDao,
@@ -22,10 +19,8 @@ public class MatchmakerRanked : Matchmaker
         GameSubType subType,
         string eloKey,
         Func<MatchmakingConfiguration> conf)
-        : base(gameType, subType, conf)
+        : base(accountDao, gameType, subType, eloKey, conf)
     {
-        _accountDao = accountDao;
-        _eloKey = eloKey;
     }
     
     public MatchmakerRanked(
@@ -35,41 +30,6 @@ public class MatchmakerRanked : Matchmaker
         Func<MatchmakingConfiguration> conf)
         :this(DB.Get().AccountDao, gameType, subType, eloKey, conf)
     {
-    }
-    
-    protected override IEnumerable<Match> FindMatches(List<MatchmakingGroup> queuedGroups)
-    {
-        return FindMatches(new MatchScratch(_subType), queuedGroups, new HashSet<long>(), _eloKey);
-    }
-    
-    private IEnumerable<Match> FindMatches(
-        MatchScratch matchScratch,
-        List<MatchmakingGroup> queuedGroups,
-        HashSet<long> processed,
-        string eloKey)
-    {
-        foreach (MatchmakingGroup groupInfo in queuedGroups)
-        {
-            if (matchScratch.Push(groupInfo))
-            {
-                if (matchScratch.IsMatch())
-                {
-                    long hash = matchScratch.GetHash();
-                    if (processed.Add(hash))
-                    {
-                        yield return matchScratch.ToMatch(_accountDao, eloKey);
-                    }
-                }
-                else
-                {
-                    foreach (Match match in FindMatches(matchScratch, queuedGroups, processed, eloKey))
-                    {
-                        yield return match;
-                    }
-                }
-                matchScratch.Pop();
-            }
-        }
     }
 
     protected override bool FilterMatch(Match match, DateTime now)
@@ -210,135 +170,5 @@ public class MatchmakerRanked : Matchmaker
     {
         acc.ExperienceComponent.EloValues.GetElo(_eloKey, out _, out int eloConfLevel);
         return eloConfLevel;
-    }
-    
-    class MatchScratch
-    {
-        class Team
-        {
-            private readonly int _capacity;
-            
-            private readonly List<MatchmakingGroup> _groups = new(5);
-            private int _size;
-
-            public Team(int capacity)
-            {
-                _capacity = capacity;
-            }
-
-            public Team(Team other) : this(other._capacity)
-            {
-                _groups = other._groups.ToList();
-                _size = other._size;
-            }
-
-            public bool IsFull => _size == _capacity;
-            public List<MatchmakingGroup> Groups => _groups;
-
-            public int GetHash()
-            {
-                return _groups
-                    .SelectMany(g => g.Members)
-                    .Order()
-                    .Select(accountId => accountId.GetHashCode())
-                    .Aggregate(17, (a, b) => a * 31 + b);
-            }
-
-            public bool Push(MatchmakingGroup groupInfo)
-            {
-                if (_capacity <= _size || _capacity - _size < groupInfo.Players)
-                {
-                    return false;
-                }
-                _size += groupInfo.Players;
-                _groups.Add(groupInfo);
-                return true;
-            }
-
-            public bool Pop(out long groupId)
-            {
-                groupId = -1;
-                if (_groups.Count <= 0)
-                {
-                    return false;
-                }
-                MatchmakingGroup groupInfo = _groups[^1];
-                _size -= groupInfo.Players;
-                _groups.RemoveAt(_groups.Count - 1);
-                groupId = groupInfo.GroupID;
-                return true;
-            }
-
-            public override string ToString()
-            {
-                return
-                    $"groups {string.Join(",", _groups.Select(g => g.GroupID))} " +
-                    $"<{string.Join(",", _groups.SelectMany(g => g.Members))}>";
-            }
-        }
-        
-        private readonly Team _teamA;
-        private readonly Team _teamB;
-        private readonly HashSet<long> _usedGroupIds = new(10);
-
-        public MatchScratch(GameSubType subType)
-        {
-            _teamA = new Team(subType.TeamAPlayers);
-            _teamB = new Team(subType.TeamBPlayers);
-        }
-
-        private MatchScratch(Team teamA, Team teamB, HashSet<long> usedGroupIds)
-        {
-            _teamA = teamA;
-            _teamB = teamB;
-            _usedGroupIds = usedGroupIds;
-        }
-
-        public Match ToMatch(AccountDao accountDao, string eloKey)
-        {
-            return new Match(accountDao, _teamA.Groups.ToList(), _teamB.Groups.ToList(), eloKey);
-        }
-
-        public long GetHash()
-        {
-            int a = _teamA.GetHash();
-            int b = _teamB.GetHash();
-            return (long)Math.Min(a, b) << 32 | (uint)Math.Max(a, b);
-        }
-
-        public bool Push(MatchmakingGroup groupInfo)
-        {
-            if (_usedGroupIds.Contains(groupInfo.GroupID))
-            {
-                return false;
-            }
-            if (_teamA.Push(groupInfo) || _teamB.Push(groupInfo))
-            {
-                _usedGroupIds.Add(groupInfo.GroupID);
-                return true;
-            }
-            return false;
-        }
-
-        public void Pop()
-        {
-            if (_teamB.Pop(out long groupId) || _teamA.Pop(out groupId))
-            {
-                _usedGroupIds.Remove(groupId);
-                return;
-            }
-            
-            throw new Exception("Matchmaking failure");
-        }
-
-        public bool IsMatch()
-        {
-            return _teamA.IsFull && _teamB.IsFull;
-        }
-
-        public override string ToString()
-        {
-            return $"{_teamA} vs {_teamB}";
-        }
     }
 }
