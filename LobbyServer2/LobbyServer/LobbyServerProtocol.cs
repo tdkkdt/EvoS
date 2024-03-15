@@ -77,6 +77,7 @@ namespace CentralServer.LobbyServer
             RegisterHandler<PlayerMatchDataRequest>(HandlePlayerMatchDataRequest);
             RegisterHandler<SetGameSubTypeRequest>(HandleSetGameSubTypeRequest);
             RegisterHandler<PlayerInfoUpdateRequest>(HandlePlayerInfoUpdateRequest);
+            RegisterHandler<PlayerGroupInfoUpdateRequest>(HandlePlayerGroupInfoUpdateRequest);
             RegisterHandler<CheckAccountStatusRequest>(HandleCheckAccountStatusRequest);
             RegisterHandler<CheckRAFStatusRequest>(HandleCheckRAFStatusRequest);
             RegisterHandler<ClientErrorSummary>(HandleClientErrorSummary);
@@ -426,7 +427,7 @@ namespace CentralServer.LobbyServer
             }
             LobbyPlayerGroupInfo info = GroupManager.GetGroupInfo(AccountId);
 
-            GroupUpdateNotification update = new GroupUpdateNotification()
+            Send(new GroupUpdateNotification
             {
                 Members = info.Members,
                 GameType = info.SelectedQueueType,
@@ -434,9 +435,7 @@ namespace CentralServer.LobbyServer
                 AllyDifficulty = BotDifficulty.Medium,
                 EnemyDifficulty = BotDifficulty.Medium,
                 GroupId = GroupManager.GetGroupID(AccountId)
-            };
-
-            Send(update);
+            });
         }
 
         private void HandleGroupPromoteRequest(GroupPromoteRequest message)
@@ -632,9 +631,35 @@ namespace CentralServer.LobbyServer
 
         public void HandleSetGameSubTypeRequest(SetGameSubTypeRequest request)
         {
-            this.SelectedSubTypeMask = request.SubTypeMask;
-            SetGameSubTypeResponse response = new SetGameSubTypeResponse() { ResponseId = request.RequestId };
-            Send(response);
+            // SubType update comes before GameType update in PlayerInfoUpdateRequest
+            SelectedSubTypeMask = request.SubTypeMask;
+            Send(new SetGameSubTypeResponse { ResponseId = request.RequestId });
+        }
+        
+        public void HandlePlayerGroupInfoUpdateRequest(PlayerGroupInfoUpdateRequest request)
+        {
+            GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
+            if (!group.IsLeader(AccountId))
+            {
+                Send(new PlayerGroupInfoUpdateResponse
+                {
+                    Success = false,
+                    LocalizedFailure = LocalizationPayload.Create("NotTheLeader@GroupManager"),
+                    ResponseId = request.RequestId
+                });
+                return;
+            }
+            
+            foreach (long accountId in group.Members)
+            {
+                SessionManager.GetClientConnection(accountId)?.SetGameType(request.GameType);
+            }
+            
+            Send(new PlayerGroupInfoUpdateResponse
+            {
+                Success = true,
+                ResponseId = request.RequestId
+            });
         }
 
         public void HandlePlayerInfoUpdateRequest(PlayerInfoUpdateRequest request)
@@ -699,7 +724,7 @@ namespace CentralServer.LobbyServer
                     DB.Get().AccountDao.UpdateCharacterComponent(account, characterType); 
                 }
 
-                if (request.GameType != null && request.GameType.HasValue)
+                if (GroupManager.GetPlayerGroup(AccountId).IsSolo() && request.GameType != null && request.GameType.HasValue)
                 {
                     SetGameType(request.GameType.Value);
                 }
@@ -969,13 +994,18 @@ namespace CentralServer.LobbyServer
                     return;
                 }
 
-                Send(new JoinMatchmakingQueueResponse { Success = true, ResponseId = request.RequestId });
                 IsReady = true;
                 MatchmakingManager.AddGroupToQueue(request.GameType, group);
+                Send(new JoinMatchmakingQueueResponse { Success = true, ResponseId = request.RequestId });
             }
             catch (Exception e)
             {
-                Send(new JoinMatchmakingQueueResponse { Success = false, ResponseId = request.RequestId });
+                Send(new JoinMatchmakingQueueResponse
+                {
+                    Success = false,
+                    ResponseId = request.RequestId,
+                    LocalizedFailure = LocalizationPayload.Create("ServerError@Global")
+                });
                 log.Error("Failed to process join queue request", e);
             }
         }
@@ -1718,8 +1748,8 @@ namespace CentralServer.LobbyServer
 
         public void OnLeaveGroup()
         {
-            RefreshGroup();
             IsReady = false;
+            RefreshGroup();
         }
 
         public void OnJoinGroup()

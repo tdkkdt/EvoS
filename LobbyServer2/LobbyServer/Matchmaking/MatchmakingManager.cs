@@ -81,11 +81,6 @@ namespace CentralServer.LobbyServer.Matchmaking
             {
                 // Send 'Assigned to queue notification' to the players
                 GroupManager.Broadcast(group, new MatchmakingQueueAssignmentNotification() { MatchmakingQueueInfo = info });
-                GroupManager.Broadcast(group, new MatchmakingQueueToPlayersNotification() 
-                {
-                    GameType = gameType,
-                    MessageToSend = MatchmakingQueueToPlayersNotification.MatchmakingQueueMessage.QueueConfirmed,    
-                });
 
                 foreach (long member in group.Members)
                 {
@@ -95,7 +90,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                         AccountId = member,
                         MessageToSend = MatchmakingQueueToPlayersNotification.MatchmakingQueueMessage.QueueConfirmed,
                         GameType = gameType,
-                        SubTypeMask = 1
+                        SubTypeMask = GroupManager.GetGroupSubTypeMask(group)
                     });
                 }
             }
@@ -231,25 +226,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 log.Info($"Failed to create {gameType} game");
                 return;
             }
-            SendUnassignQueueNotification(game.GetClients()); // TODO check if it's really needed
             await game.StartGameAsync(teamA, teamB, gameType, gameSubType);
-        }
-
-        public static void SendUnassignQueueNotification(List<LobbyServerProtocol> clients)
-        {
-            foreach (LobbyServerProtocol client in clients)
-            {
-                SendUnassignQueueNotification(client);
-            }
-        }
-
-        public static void SendUnassignQueueNotification(LobbyServerProtocol client)
-        {
-            client.Send(new MatchmakingQueueAssignmentNotification
-            {
-                MatchmakingQueueInfo = null,
-                Reason = "MatchFound@NewFrontEndScene"
-            });
         }
 
         public static void OnGameEnded(LobbyGameInfo gameInfo, LobbyGameSummary gameSummary)

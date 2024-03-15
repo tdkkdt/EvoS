@@ -7,6 +7,7 @@ using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Utils;
 using EvoS.Framework;
 using EvoS.Framework.DataAccess;
+using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using EvoS.Framework.Network.WebSocket;
 using log4net;
@@ -253,8 +254,22 @@ namespace CentralServer.LobbyServer.Group
 
         private static void OnGroupMembersUpdated(GroupInfo groupInfo)
         {
-            MatchmakingManager.RemoveGroupFromQueue(groupInfo, true);
-            SessionManager.GetClientConnection(groupInfo.Leader)?.BroadcastRefreshGroup(true);
+            if (!MatchmakingManager.RemoveGroupFromQueue(groupInfo, true))
+            {
+                SessionManager.GetClientConnection(groupInfo.Leader)?.BroadcastRefreshGroup(true);
+            }
+        }
+        
+        public static void OnLeaveQueue(long groupId)
+        {
+            GroupInfo groupInfo = GetGroup(groupId);
+            if (groupInfo is null)
+            {
+                log.Error($"Received OnLeaveQueue for group {groupId} that does not exist");
+                return;
+            }
+            Broadcast(groupInfo, new MatchmakingQueueAssignmentNotification { MatchmakingQueueInfo = null });
+            SessionManager.GetClientConnection(groupInfo.Leader)?.BroadcastRefreshGroup(false);
         }
 
         public static void Broadcast(GroupInfo group, WebSocketMessage message)
@@ -263,6 +278,27 @@ namespace CentralServer.LobbyServer.Group
             {
                 SessionManager.GetClientConnection(groupMember)?.Send(message);
             }
+        }
+
+        public static ushort GetGroupSubTypeMask(long groupId)
+        {
+            return GetGroupSubTypeMask(GetGroup(groupId));
+        }
+
+        public static ushort GetGroupSubTypeMask(GroupInfo groupInfo)
+        {
+            if (groupInfo is null)
+            {
+                return 0;
+            }
+
+            LobbyServerProtocol conn = SessionManager.GetClientConnection(groupInfo.Leader);
+            if (conn is null)
+            {
+                return 0;
+            }
+
+            return conn.SelectedSubTypeMask;
         }
     }
 }

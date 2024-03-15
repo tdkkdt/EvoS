@@ -117,6 +117,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             if (removed)
             {
                 UpdateQueueInfo();
+                GroupManager.OnLeaveQueue(groupId);
                 log.Info($"Removed group {groupId} from {GameType} queue");
                 log.Info($"{GetPlayerCount()} players in {GameType} queue ({QueuedGroups.Count} groups)");
             }
