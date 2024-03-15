@@ -156,6 +156,59 @@ public class MatchmakerTest : EvosTest
         Assert.Equal(combinations, matchesRanked.Count);
     }
 
+    [Fact]
+    public void TestFifo()
+    {
+        AccountDao dao = MockAccountDao(Accounts);
+        Matchmaker matchmaker = new MatchmakerFifo(
+            dao,
+            GameType.PvP,
+            new GameSubType
+            {
+                LocalizedName = "Test",
+                TeamAPlayers = 1,
+                TeamBPlayers = 0
+            },
+            EloKey);
+
+        HelperTestFifo(matchmaker);
+    }
+
+    [Fact]
+    public void TestSingleGroupFifo()
+    {
+        AccountDao dao = MockAccountDao(Accounts);
+        Matchmaker matchmaker = new MatchmakerSingleGroup(
+            dao,
+            GameType.PvP,
+            new GameSubType
+            {
+                LocalizedName = "Test",
+                TeamAPlayers = 1,
+                TeamBPlayers = 0
+            });
+
+        HelperTestFifo(matchmaker);
+    }
+
+    private static void HelperTestFifo(Matchmaker matchmaker)
+    {
+        DateTime now = DateTime.UtcNow;
+        int i = 0;
+        List<Matchmaker.MatchmakingGroup> queuedGroups = new List<Matchmaker.MatchmakingGroup>
+        {
+            new(i++, new List<long> {1}, now - TimeSpan.FromMinutes(2)),
+            new(i++, new List<long> {2, 3}, now - TimeSpan.FromMinutes(4)),
+            new(i++, new List<long> {4}, now - TimeSpan.FromMinutes(3)),
+            new(i++, new List<long> {5}, now - TimeSpan.FromMinutes(1)),
+        };
+        
+        List<Matchmaker.Match> matchesRanked = matchmaker.GetMatchesRanked(queuedGroups, now);
+        Assert.NotEmpty(matchesRanked);
+        Assert.NotEmpty(matchesRanked[0].TeamA.AccountIds);
+        Assert.Equal(4, matchesRanked[0].TeamA.AccountIds[0]);
+    }
+
     private static Matchmaker MakeMatchmaker(MatchmakingConfiguration conf)
     {
         AccountDao dao = MockAccountDao(Accounts);

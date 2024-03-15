@@ -15,9 +15,8 @@ public abstract class MatchmakerBase: Matchmaker
         AccountDao accountDao,
         GameType gameType,
         GameSubType subType,
-        string eloKey,
-        Func<MatchmakingConfiguration> conf)
-        : base(gameType, subType, conf)
+        string eloKey)
+        : base(gameType, subType)
     {
         _accountDao = accountDao;
         _eloKey = eloKey;

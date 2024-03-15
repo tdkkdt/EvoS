@@ -13,14 +13,19 @@ public class MatchmakerRanked : MatchmakerBase
 {
     private static readonly ILog log = LogManager.GetLogger(typeof(Matchmaker));
 
+    
+    private readonly Func<MatchmakingConfiguration> _conf;
+    protected MatchmakingConfiguration Conf => _conf();
+    
     public MatchmakerRanked(
         AccountDao accountDao,
         GameType gameType,
         GameSubType subType,
         string eloKey,
         Func<MatchmakingConfiguration> conf)
-        : base(accountDao, gameType, subType, eloKey, conf)
+        : base(accountDao, gameType, subType, eloKey)
     {
+        _conf = conf;
     }
     
     public MatchmakerRanked(
@@ -30,6 +35,12 @@ public class MatchmakerRanked : MatchmakerBase
         Func<MatchmakingConfiguration> conf)
         :this(DB.Get().AccountDao, gameType, subType, eloKey, conf)
     {
+    }
+
+    protected override bool IgnoreFiltering(List<MatchmakingGroup> queuedGroups, DateTime now)
+    {
+        double waitTime = Math.Sqrt(queuedGroups.Select(g => Math.Pow((now - g.QueueTime).TotalSeconds, 2)).Average());
+        return waitTime > Conf.FallbackTime.TotalSeconds;
     }
 
     protected override bool FilterMatch(Match match, DateTime now)

@@ -14,19 +14,15 @@ public abstract class Matchmaker
 
     protected readonly GameType _gameType;
     protected readonly GameSubType _subType;
-    private readonly Func<MatchmakingConfiguration> _conf;
 
     protected Matchmaker(
         GameType gameType,
-        GameSubType subType,
-        Func<MatchmakingConfiguration> conf)
+        GameSubType subType)
     {
         _gameType = gameType;
         _subType = subType;
-        _conf = conf;
     }
     
-    protected MatchmakingConfiguration Conf => _conf();
     
     public class MatchmakingGroup
     {
@@ -149,8 +145,7 @@ public abstract class Matchmaker
                      $"{_gameType}#{_subType.LocalizedName} after filtering");
             if (filteredMatches.Count == 0 && possibleMatches.Count > 0)
             {
-                double waitTime = Math.Sqrt(queuedGroups.Select(g => Math.Pow((now - g.QueueTime).TotalSeconds, 2)).Average());
-                if (waitTime > Conf.FallbackTime.TotalSeconds)
+                if (IgnoreFiltering(queuedGroups, now))
                 {
                     log.Info("Ignoring filtering");
                     filteredMatches = possibleMatches;
@@ -166,6 +161,11 @@ public abstract class Matchmaker
         }
 
         return new();
+    }
+
+    protected virtual bool IgnoreFiltering(List<MatchmakingGroup> queuedGroups, DateTime now)
+    {
+        return false;
     }
 
     protected virtual IEnumerable<Match> FindMatches(List<MatchmakingGroup> queuedGroups)
