@@ -23,7 +23,8 @@ public static class Elo
         IMatchHistoryProvider matchHistoryProvider)
     {
         if (gameSummary is null
-            || gameSummary.GameResult != GameResult.TeamAWon && gameSummary.GameResult != GameResult.TeamBWon)
+            || gameSummary.GameResult != GameResult.TeamAWon && gameSummary.GameResult != GameResult.TeamBWon
+            || gameInfo.GameConfig.GameType != GameType.PvP)
         {
             return;
         }
