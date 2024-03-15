@@ -117,8 +117,21 @@ namespace CentralServer.ApiServer
             public int titleId { get; set; }
             public TrustWarManager.PlayerTrustWarDetails factionData { get; set; }
 
+            private static readonly Player BotPlayer = new Player
+            {
+                handle = "Bot",
+                bannerBg = 95,
+                bannerFg = 65,
+                titleId = -1,
+                status = string.Empty,
+            };
+
             public static Player Of(PersistedAccountData acc)
             {
+                if (acc is null)
+                {
+                    return BotPlayer;
+                }
                 return new Player
                 {
                     accountId = acc.AccountId,
