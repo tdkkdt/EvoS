@@ -1,6 +1,6 @@
 [
   {
-    "LocalizedName": "Deathmatch@SubTypes",
+    "LocalizedName": "CoopWithHumans@SubTypes",
     "GameMapConfigs": [
       {
         "Map": "Skyway_Deathmatch",
@@ -31,10 +31,10 @@
         "IsActive": true
       }
     ],
-    "TeamAPlayers": 1,
-    "TeamBPlayers": 1,
+    "TeamAPlayers": 4,
+    "TeamBPlayers": 4,
     "TeamABots": 0,
-    "TeamBBots": 0,
+    "TeamBBots": 4,
     "TeamComposition": {
       "Rules": {
         "A1": {
@@ -63,8 +63,9 @@
       "TurnTimeSpan": "00:00:20"
     }
   },
+
   {
-    "LocalizedName": "PlayerTitle_47_Unlock_1_Condition@GameWideData",
+    "LocalizedName": "SingleGroupVsBots@SubTypes",
     "GameMapConfigs": [
       {
         "Map": "Skyway_Deathmatch",
@@ -95,10 +96,10 @@
         "IsActive": true
       }
     ],
-    "TeamAPlayers": 1,
-    "TeamBPlayers": 1,
+    "TeamAPlayers": 4,
+    "TeamBPlayers": 4,
     "TeamABots": 0,
-    "TeamBBots": 0,
+    "TeamBBots": 4,
     "TeamComposition": {
       "Rules": {
         "A1": {
@@ -122,7 +123,8 @@
     "Mods": [
       "AllowPlayingLockedCharacters",
       "HumansHaveFirstSlots",
-      "RankedFreelancerSelection"
+      "AntiSocial",
+      "ShowWithAITeammates"
     ],
     "GameOverrides": {
       "TurnTimeSpan": "00:00:20"

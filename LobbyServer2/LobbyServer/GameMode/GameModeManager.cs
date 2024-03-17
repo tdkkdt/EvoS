@@ -11,10 +11,11 @@ namespace CentralServer.LobbyServer.Gamemode
     class GameModeManager
     {
         private const string ConfigPath = @"Config/GameSubTypes/";
-        private static readonly Dictionary<GameType, List<string>> ConfigFiles = new Dictionary<GameType, List<string>>()
+        private static readonly Dictionary<GameType, string> ConfigFiles = new Dictionary<GameType, string>()
         {
-            { GameType.PvP, new List<string> { "DeathMatch.json" } },
-            { GameType.Custom, new List<string> { "Custom.json", "CustomTournament.json" } }
+            { GameType.PvP, "DeathMatch.json" },
+            { GameType.Custom, "Custom.json" },
+            { GameType.Coop, "Coop.json" }
         };
 
         public static Dictionary<GameType, GameTypeAvailability> GetGameTypeAvailabilities()
@@ -84,53 +85,36 @@ namespace CentralServer.LobbyServer.Gamemode
 
         private static GameTypeAvailability GetCoopGameTypeAvailability()
         {
-            GameTypeAvailability type = new GameTypeAvailability();
-            type.IsActive = LobbyConfiguration.GetGameTypeCoopAvailable();
-            type.MaxWillFillPerTeam = 0;
-            type.SubTypes = new List<GameSubType>() {
-                new GameSubType() {
-                    TeamAPlayers = 4,
-                    TeamABots = 0,
-                    TeamBPlayers = 0,
-                    TeamBBots = 4,
-
-                    DuplicationRule = FreelancerDuplicationRuleTypes.noneInTeam,
-                    GameMapConfigs = GameMapConfig.GetDeatmatchMaps(),
-                    InstructionsToDisplay = GameSubType.GameLoadScreenInstructions.Default,
-
-                }
+            return new GameTypeAvailability
+            {
+                IsActive = LobbyConfiguration.GetGameTypePvPAvailable(),
+                MaxWillFillPerTeam = 4,
+                SubTypes = LoadGameSubTypes(ConfigFiles[GameType.Coop])
             };
-            return type;
         }
 
         private static GameTypeAvailability GetPvPGameTypeAvailability()
         {
-            GameTypeAvailability type = new GameTypeAvailability();
-            type.IsActive = LobbyConfiguration.GetGameTypePvPAvailable();
-            type.MaxWillFillPerTeam = 4;
-            List<GameSubType> subTypes = new List<GameSubType>();
-
-            foreach (string file in ConfigFiles[GameType.PvP])
+            return new GameTypeAvailability
             {
-                subTypes.Add(LoadGameSubType(file));
-            }
-
-            type.SubTypes = subTypes;
-            return type;
+                IsActive = LobbyConfiguration.GetGameTypePvPAvailable(),
+                MaxWillFillPerTeam = 4,
+                SubTypes = LoadGameSubTypes(ConfigFiles[GameType.PvP])
+            };
         }
 
         /// <summary>
         /// Reads a json file that represents a GameSubType
         /// </summary>
         /// <param name="filename">File name inside the folder 'Config/GameSubTypes/'</param>
-        /// <returns>A GameSubType loaded from the file</returns>
-        private static GameSubType LoadGameSubType(string filename)
+        /// <returns>List of GameSubTypes loaded from the file</returns>
+        private static List<GameSubType> LoadGameSubTypes(string filename)
         {
             // TODO: this always read from file, it could be stored in a cache
             JsonReader reader = new JsonTextReader(new StreamReader(ConfigPath + filename));
             try
             {
-                return new JsonSerializer().Deserialize<GameSubType>(reader);
+                return new JsonSerializer().Deserialize<List<GameSubType>>(reader);
             }
             finally { reader.Close(); }
         }
@@ -146,18 +130,12 @@ namespace CentralServer.LobbyServer.Gamemode
 
         private static GameTypeAvailability GetCustomGameTypeAvailability()
         {
-            GameTypeAvailability type = new GameTypeAvailability();
-            type.IsActive = LobbyConfiguration.GetGameTypeCustomAvailable();
-            type.MaxWillFillPerTeam = 5;
-            List<GameSubType> subTypes = new List<GameSubType>();
-
-            foreach (string file in ConfigFiles[GameType.Custom])
+            return new GameTypeAvailability
             {
-                subTypes.Add(LoadGameSubType(file));
-            }
-
-            type.SubTypes = subTypes;
-            return type;
+                IsActive = LobbyConfiguration.GetGameTypeCustomAvailable(),
+                MaxWillFillPerTeam = 5,
+                SubTypes = LoadGameSubTypes(ConfigFiles[GameType.Custom])
+            };
         }
 
     }

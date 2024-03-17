@@ -18,7 +18,7 @@ namespace EvoS.Framework
         public string PatchNotesCommitsUrl = "";
 
         public bool GameTypePracticeAvailable = false;
-        public bool GameTypeCoopAvailable = false;
+        public bool GameTypeCoopAvailable = true;
         public bool GameTypePvPAvailable = true;
         public bool GameTypeRankedAvailable = false;
         public bool GameTypeCustomAvailable = true;
