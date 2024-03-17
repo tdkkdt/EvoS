@@ -20,15 +20,16 @@ public class PvpGame: Game
         AssignServer(server);
     }
     
-    public async Task StartGameAsync(List<long> teamA, List<long> teamB, GameType gameType, GameSubType gameSubType)
+    public async Task StartGameAsync(List<long> teamA, List<long> teamB, GameType gameType, List<GameSubType> gameSubTypes, int subTypeIndex)
     {
+        GameSubType gameSubType = gameSubTypes[subTypeIndex];
         // Fill Teams
         if (!FillTeam(teamA, Team.TeamA, gameSubType) || !FillTeam(teamB, Team.TeamB, gameSubType))
         {
             return;
         }
 
-        BuildGameInfo(gameType, gameSubType);
+        BuildGameInfo(gameType, gameSubTypes, subTypeIndex);
 
         // Assign Current Server
         GetClients().ForEach(c => c.JoinGame(this));
@@ -117,8 +118,9 @@ public class PvpGame: Game
         log.Info($"Game {gameType} started");
     }
     
-    public void BuildGameInfo(GameType gameType, GameSubType gameMode)
+    public void BuildGameInfo(GameType gameType, List<GameSubType> gameSubTypes, int subTypeIndex)
     {
+        GameSubType gameMode = gameSubTypes[subTypeIndex];
         GameInfo = new LobbyGameInfo
         {
             AcceptedPlayers = TeamInfo.TeamPlayerInfo.Count(p => p.IsReady),
@@ -130,20 +132,20 @@ public class PvpGame: Game
             CreateTimestamp = DateTime.UtcNow.Ticks,
             GameConfig = new LobbyGameConfig
             {
-                GameOptionFlags = GameOptionFlag.NoInputIdleDisconnect & GameOptionFlag.NoInputIdleDisconnect,
+                GameOptionFlags = GameOptionFlag.NoInputIdleDisconnect,
                 GameServerShutdownTime = -1,
                 GameType = gameType,
-                InstanceSubTypeBit = 1,
+                InstanceSubTypeBit = (ushort)(1 << subTypeIndex),
                 IsActive = true,
                 Map = MatchmakingQueue.SelectMap(gameMode),
                 ResolveTimeoutLimit = 1600, // TODO ?
                 RoomName = "",
                 Spectators = 0,
-                SubTypes = GameModeManager.GetGameTypeAvailabilities()[gameType].SubTypes,
-                TeamABots = 0,
-                TeamAPlayers = TeamInfo.TeamAPlayerInfo.Count(),
-                TeamBBots = 0,
-                TeamBPlayers = TeamInfo.TeamBPlayerInfo.Count(),
+                SubTypes = gameSubTypes,
+                TeamABots = gameMode.TeamABots, // TODO update with actual values (for antisocial)?
+                TeamAPlayers = gameMode.TeamAPlayers,
+                TeamBBots = gameMode.TeamBBots,
+                TeamBPlayers = gameMode.TeamBPlayers,
             },
             GameResult = GameResult.NoResult,
             GameServerAddress = Server.URI,

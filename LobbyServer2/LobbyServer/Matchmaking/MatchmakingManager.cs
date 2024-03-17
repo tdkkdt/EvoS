@@ -23,8 +23,8 @@ namespace CentralServer.LobbyServer.Matchmaking
         private static Dictionary<GameType, MatchmakingQueue> Queues = new Dictionary<GameType, MatchmakingQueue>()
         {
             // { GameType.Practice, new MatchmakingQueue(GameType.Practice) },
-            // { GameType.Coop, new MatchmakingQueue(GameType.Coop) },
-            { GameType.PvP, new MatchmakingQueue(GameType.PvP) },
+            { GameType.Coop, new MatchmakingQueue(GameType.Coop, false) },
+            { GameType.PvP, new MatchmakingQueue(GameType.PvP, true) },
             // { GameType.Ranked, new MatchmakingQueue(GameType.Ranked) },
             // { GameType.Custom, new MatchmakingQueue(GameType.Custom) }
         };
@@ -217,7 +217,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             */
         }
 
-        public static async Task StartGameAsync(List<long> teamA, List<long> teamB, GameType gameType, GameSubType gameSubType)
+        public static async Task StartGameAsync(List<long> teamA, List<long> teamB, GameType gameType, List<GameSubType> gameSubTypes, int subTypeIndex)
         {
             log.Info($"Starting {gameType} game...");
             PvpGame game = GameManager.CreatePvpGame();
@@ -226,7 +226,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 log.Info($"Failed to create {gameType} game");
                 return;
             }
-            await game.StartGameAsync(teamA, teamB, gameType, gameSubType);
+            await game.StartGameAsync(teamA, teamB, gameType, gameSubTypes, subTypeIndex);
         }
 
         public static void OnGameEnded(LobbyGameInfo gameInfo, LobbyGameSummary gameSummary)

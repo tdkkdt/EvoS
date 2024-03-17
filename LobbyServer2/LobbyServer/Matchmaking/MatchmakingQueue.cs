@@ -24,7 +24,8 @@ namespace CentralServer.LobbyServer.Matchmaking
         private const string ConfigPath = @"Config/Matchmaking/";
 
         private readonly string EloKey;
-        private MatchmakingConfiguration Conf = new MatchmakingConfiguration();
+        private readonly bool RankedMatchmaking;
+        private MatchmakingConfiguration Conf = new MatchmakingConfiguration(); // TODO move to MatchmakerRanked
         private readonly Dictionary<string, Matchmaker> Matchmakers;
         
         Dictionary<string, LobbyGameInfo> Games = new Dictionary<string, LobbyGameInfo>();
@@ -52,9 +53,10 @@ namespace CentralServer.LobbyServer.Matchmaking
         
         private static int GameID = 0;
 
-        public MatchmakingQueue(GameType gameType)
+        public MatchmakingQueue(GameType gameType, bool isRanked)
         {
             EloKey = gameType.ToString();
+            RankedMatchmaking = isRanked;
             MatchmakingQueueInfo = new LobbyMatchmakingQueueInfo()
             {
                 QueueStatus = QueueStatus.Idle,
@@ -66,13 +68,21 @@ namespace CentralServer.LobbyServer.Matchmaking
                     GameType = gameType,
                 }
             };
+
             ReloadConfig();
 
             // TODO handle matchmakers more carefully
             Matchmakers = MatchmakingQueueInfo.GameConfig.SubTypes
-                .ToDictionary(
-                    st => st.LocalizedName,
-                    st => (Matchmaker)new MatchmakerRanked(GameType, st, EloKey, GetConf));
+                .ToDictionary(st => st.LocalizedName, MatchmakerFactory);
+        }
+
+        private Matchmaker MatchmakerFactory(GameSubType st)
+        {
+            return RankedMatchmaking
+                ? new MatchmakerRanked(GameType, st, EloKey, GetConf)
+                : st.Mods is not null && st.Mods.Contains(GameSubType.SubTypeMods.AntiSocial)
+                    ? new MatchmakerSingleGroup(GameType, st)
+                    : new MatchmakerFifo(GameType, st);
         }
 
         private void ReloadConfig()
@@ -85,6 +95,11 @@ namespace CentralServer.LobbyServer.Matchmaking
 
         private void ReloadMatchmakingConfig(GameType gameType)
         {
+            if (!RankedMatchmaking)
+            {
+                return;
+            }
+            
             JsonReader reader = null;
             try
             {
@@ -154,31 +169,36 @@ namespace CentralServer.LobbyServer.Matchmaking
 
         private void TryMatch()
         {
-            foreach (GameSubType subType in MatchmakingQueueInfo.GameConfig.SubTypes)
+            for (int i = 0; i < MatchmakingQueueInfo.GameConfig.SubTypes.Count; i++)
             {
+                GameSubType subType = MatchmakingQueueInfo.GameConfig.SubTypes[i];
+                uint subTypeFlag = 1U << i;
                 lock (GroupManager.Lock)
                 {
                     List<Matchmaker.MatchmakingGroup> queuedGroups = GetQueuedGroups()
+                        .Where(groupId => (GroupManager.GetGroupSubTypeMask(groupId) & subTypeFlag) != 0)
                         .Select(groupId =>
                         {
                             if (!GetQueueTime(groupId, out DateTime queueTime))
                             {
                                 log.Error($"Cannon fetch queue time for group {groupId}");
                             }
+
                             return new Matchmaker.MatchmakingGroup(groupId, queueTime);
                         })
                         .ToList();
 
-                    List<Matchmaker.Match> matches = Matchmakers[subType.LocalizedName].GetMatchesRanked(queuedGroups, DateTime.UtcNow);
+                    List<Matchmaker.Match> matches = Matchmakers[subType.LocalizedName]
+                        .GetMatchesRanked(queuedGroups, DateTime.UtcNow);
                     if (matches.Count > 0)
                     {
-                        StartMatch(matches[0]);
+                        StartMatch(matches[0], i);
                     }
                 }
             }
         }
 
-        private void StartMatch(Matchmaker.Match match)
+        private void StartMatch(Matchmaker.Match match, int subTypeIndex)
         {
             if (!CheckGameServerAvailable())
             {
@@ -193,7 +213,8 @@ namespace CentralServer.LobbyServer.Matchmaking
                 match.TeamA.AccountIds, 
                 match.TeamB.AccountIds, 
                 GameType,
-                MatchmakingQueueInfo.GameConfig.SubTypes[0]);
+                MatchmakingQueueInfo.GameConfig.SubTypes,
+                subTypeIndex);
         }
         
         public bool CheckGameServerAvailable()
