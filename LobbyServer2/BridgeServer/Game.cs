@@ -504,8 +504,14 @@ public abstract class Game
 
     protected bool FillTeam(List<long> players, Team team, GameSubType gameSubType)
     {
-        int playerNum = team == Team.TeamA ? gameSubType.TeamAPlayers : gameSubType.TeamBPlayers;
         int botNum = team == Team.TeamA ? gameSubType.TeamABots : gameSubType.TeamBBots;
+        int playerNum = (team == Team.TeamA ? gameSubType.TeamAPlayers : gameSubType.TeamBPlayers) - botNum;
+        
+        if (playerNum < 0)
+        {
+            log.Error($"Misconfigured sub type {gameSubType.LocalizedName} with {playerNum} human players in {team}");
+            playerNum = 0;
+        }
         
         if (team == Team.TeamA
             && gameSubType.Mods is not null
