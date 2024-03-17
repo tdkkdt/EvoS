@@ -298,7 +298,7 @@ namespace CentralServer.LobbyServer.Group
                 return 0;
             }
 
-            return conn.SelectedSubTypeMask;
+            return Math.Max((ushort)1, conn.SelectedSubTypeMask);
         }
     }
 }
