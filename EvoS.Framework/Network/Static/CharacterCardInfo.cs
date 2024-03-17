@@ -8,6 +8,16 @@ namespace EvoS.Framework.Network.Static
     [EvosMessage(541)]
     public struct CharacterCardInfo : ISerializedItem
     {
+        public static CharacterCardInfo MakeDefault()
+        {
+            return new CharacterCardInfo
+            {
+                PrepCard = CardType.StarterCritShot,
+                CombatCard = CardType.Cleanse,
+                DashCard = CardType.Flash
+            };
+        }
+        
         public CharacterCardInfo Reset()
         {
             PrepCard = CardType.None;

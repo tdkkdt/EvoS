@@ -453,7 +453,7 @@ namespace CentralServer.LobbyServer.Character
                 CharacterType.PunchingDummy,
                 new CharacterConfig()
                 {
-                    AllowForBots = true,
+                    AllowForBots = false,
                     AllowForPlayers = false,
                     CharacterRole = CharacterRole.Assassin,
                     CharacterType = CharacterType.PunchingDummy,

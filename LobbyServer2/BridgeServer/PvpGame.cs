@@ -23,7 +23,7 @@ public class PvpGame: Game
     public async Task StartGameAsync(List<long> teamA, List<long> teamB, GameType gameType, GameSubType gameSubType)
     {
         // Fill Teams
-        if (!FillTeam(teamA, Team.TeamA) || !FillTeam(teamB, Team.TeamB))
+        if (!FillTeam(teamA, Team.TeamA, gameSubType) || !FillTeam(teamB, Team.TeamB, gameSubType))
         {
             return;
         }

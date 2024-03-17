@@ -24,6 +24,7 @@ public abstract class Game
 {
     private static readonly ILog log = LogManager.GetLogger(typeof(Game));
     public static readonly object characterSelectionLock = new object();
+    protected static readonly Random rand = new Random();
     
     public LobbyGameInfo GameInfo { protected set; get; } // TODO check it is set when needed
     public LobbyServerTeamInfo TeamInfo { protected set; get; } = new LobbyServerTeamInfo() { TeamPlayerInfo = new List<LobbyServerPlayerInfo>() };
@@ -501,8 +502,26 @@ public abstract class Game
         Terminate();
     }
 
-    protected bool FillTeam(List<long> players, Team team)
+    protected bool FillTeam(List<long> players, Team team, GameSubType gameSubType)
     {
+        int playerNum = team == Team.TeamA ? gameSubType.TeamAPlayers : gameSubType.TeamBPlayers;
+        int botNum = team == Team.TeamA ? gameSubType.TeamABots : gameSubType.TeamBBots;
+        
+        if (team == Team.TeamA
+            && gameSubType.Mods is not null
+            && gameSubType.Mods.Contains(GameSubType.SubTypeMods.AntiSocial))
+        {
+            int botsForAntiSocial = playerNum - players.Count;
+            botNum += botsForAntiSocial;
+            playerNum = players.Count;
+            log.Error($"Adding {botsForAntiSocial} bots for an antisocial game");
+        }
+        
+        if (playerNum != players.Count)
+        {
+            log.Error($"Expected {playerNum} players in {team} but got {players.Count}");
+        }
+        
         foreach (long accountId in players)
         {
             LobbyServerProtocol client = SessionManager.GetClientConnection(accountId);
@@ -522,7 +541,71 @@ public abstract class Game
             TeamInfo.TeamPlayerInfo.Add(playerInfo);
         }
 
+        for (int i = 0; i < botNum; i++)
+        {
+            LobbyServerPlayerInfo playerInfo = AddBot(team);
+            log.Info($"adding bot {playerInfo.CharacterType} to {team}");
+        }
+
         return true;
+    }
+
+    protected LobbyServerPlayerInfo AddBot(Team team)
+    {
+        CharacterType characterType = PickCharacter(team, true);
+        LobbyServerPlayerInfo playerInfo = new LobbyServerPlayerInfo
+        {
+            ReadyState = ReadyState.Ready,
+            IsGameOwner = false,
+            TeamId = team,
+            PlayerId = TeamInfo.TeamPlayerInfo.Count + 1,
+            IsNPCBot = true,
+            Handle = characterType.ToString(),
+            CharacterInfo = new LobbyCharacterInfo
+            {
+                CharacterType = characterType,
+                CharacterAbilityVfxSwaps = new CharacterAbilityVfxSwapInfo(),
+                CharacterCards = CharacterCardInfo.MakeDefault(),
+                CharacterLevel = 1,
+                CharacterLoadouts = new List<CharacterLoadout>(),
+                CharacterMatches = 0,
+                CharacterMods = EvoS.DirectoryServer.Character.CharacterManager.GetDefaultMods(characterType),
+                CharacterSkin = new CharacterVisualInfo(),
+                CharacterTaunts = new List<PlayerTauntData>()
+            },
+            ControllingPlayerId = 0,
+            ControllingPlayerInfo = null,
+            CustomGameVisualSlot = 0,
+            Difficulty = BotDifficulty.Medium,
+            BotCanTaunt = true,
+        };
+        TeamInfo.TeamPlayerInfo.Add(playerInfo);
+        return playerInfo;
+    }
+
+    protected CharacterType PickCharacter(Team team, bool forBot)
+    {
+        HashSet<CharacterType> teammateCharacters = TeamInfo.TeamInfo(team)
+            .Select(tm => tm.CharacterType)
+            .ToHashSet();
+        List<CharacterRole> teammateRoles = teammateCharacters
+            .Select(ct => CharacterConfigs.Characters[ct].CharacterRole)
+            .ToList();
+        CharacterRole roleToPick = teammateRoles.All(r => r != CharacterRole.Tank)
+            ? CharacterRole.Tank
+            : teammateRoles.All(r => r != CharacterRole.Support)
+                ? CharacterRole.Support
+                : CharacterRole.Assassin;
+        List<CharacterType> options = (
+                from keyValuePair in CharacterConfigs.Characters
+                where (forBot || keyValuePair.Value.AllowForPlayers)
+                      && (!forBot || keyValuePair.Value.AllowForBots)
+                      && keyValuePair.Value.CharacterRole == roleToPick
+                      && !teammateCharacters.Contains(keyValuePair.Key)
+                select keyValuePair.Key)
+            .ToList();
+
+        return options[rand.Next(options.Count)];
     }
 
     public virtual bool UpdateCharacterInfo(long accountId, LobbyCharacterInfo characterInfo, LobbyPlayerInfoUpdate update)
