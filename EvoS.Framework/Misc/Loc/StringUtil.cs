@@ -436,6 +436,10 @@ public static class StringUtil
 	// {
 	// 	return ScriptLocalization.Get(ScriptLocalization.GetMapNameKey(mapId));
 	// }
+	public static string TR_MapName(string mapId) // TODO temp placeholder
+	{
+		return mapId;
+	}
 	//
 	// public static string TR_GetMatrixPackEventText(int matrixId)
 	// {
@@ -561,6 +565,10 @@ public static class StringUtil
 	// {
 	// 	return ScriptLocalization.Get(ScriptLocalization.GetKeyBindCommandNameKey(keyBindId));
 	// }
+	public static string TR_KeyBindCommand(string keyBindId) // TODO temp placeholder
+	{
+		return keyBindId;
+	}
 	//
 	// public static string TR_CardDisplayName(CardType m_cardType)
 	// {
