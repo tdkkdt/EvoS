@@ -13,6 +13,7 @@ using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.DataAccess.Daos;
+using EvoS.Framework.GameData;
 using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
@@ -566,7 +567,7 @@ public abstract class Game
             TeamId = team,
             PlayerId = TeamInfo.TeamPlayerInfo.Count + 1,
             IsNPCBot = true,
-            Handle = characterType.ToString(),
+            Handle = GameWideData.Get().GetCharacterResourceLink(characterType).m_displayName, // TODO localization?
             CharacterInfo = new LobbyCharacterInfo
             {
                 CharacterType = characterType,

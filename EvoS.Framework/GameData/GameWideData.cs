@@ -51,6 +51,7 @@ namespace EvoS.Framework.GameData
 		public AbilityModPropertyInt m_slowEnergyGainEnergyGainMod;
 		// [Separator("Character Resource Links", true)]
 		public CharacterResourceLink[] m_characterResourceLinks;
+		private readonly Dictionary<CharacterType, CharacterResourceLink> m_characterResourceLinkDictionary = new();
 		// public GameObject SpectatorPrefab;
 		// [Separator("Map Data", true)]
 		public MapData[] m_mapData;
@@ -111,6 +112,7 @@ namespace EvoS.Framework.GameData
 				}
 
 				list.Add(m_characterResourceLinks[i].CreateUnlockData());
+				m_characterResourceLinkDictionary.Add(m_characterResourceLinks[i].m_characterType, m_characterResourceLinks[i]);
 			}
 
 			m_gameBalanceVars.characterUnlockData = list.ToArray();
@@ -138,12 +140,9 @@ namespace EvoS.Framework.GameData
 
 		public CharacterResourceLink GetCharacterResourceLink(CharacterType characterType)
 		{
-			foreach (CharacterResourceLink characterResourceLink in m_characterResourceLinks)
+			if (m_characterResourceLinkDictionary.TryGetValue(characterType, out CharacterResourceLink data))
 			{
-				if (characterResourceLink.m_characterType == characterType)
-				{
-					return characterResourceLink;
-				}
+				return data;
 			}
 
 			throw new Exception($"Character resource link not found for: {characterType} in GameWideData.");

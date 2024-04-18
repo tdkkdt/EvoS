@@ -9,6 +9,7 @@ using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Utils;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
+using EvoS.Framework.GameData;
 using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
@@ -336,6 +337,11 @@ public class CustomGame : Game
         }
         // TODO validate there is no duplicates/duplicates are allowed
         lobbyServerPlayerInfo.CharacterInfo = characterInfo;
+        if (lobbyServerPlayerInfo.IsAIControlled)
+        {
+            lobbyServerPlayerInfo.Handle =
+                GameWideData.Get().GetCharacterResourceLink(characterInfo.CharacterType).m_displayName; // TODO localization?
+        }
     }
 
     public bool Join(long accountId, bool asSpectator)
