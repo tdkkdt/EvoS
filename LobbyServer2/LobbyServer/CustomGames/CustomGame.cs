@@ -21,7 +21,7 @@ public class CustomGame : Game
 {
     private static readonly ILog log = LogManager.GetLogger(typeof(CustomGame));
 
-    private const bool AllowBots = false;
+    private const bool AllowBots = true;
     
     public readonly long Owner;
     

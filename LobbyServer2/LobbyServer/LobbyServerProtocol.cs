@@ -25,6 +25,7 @@ using LobbyGameClientMessages;
 using log4net;
 using Newtonsoft.Json;
 using WebSocketSharp;
+using CharacterManager = EvoS.DirectoryServer.Character.CharacterManager;
 
 namespace CentralServer.LobbyServer
 {
@@ -686,11 +687,24 @@ namespace CentralServer.LobbyServer
 
             log.Debug($"HandlePlayerInfoUpdateRequest characterType={characterType} " +
                      $"(update={update.CharacterType} " +
-                     $"server={CurrentGame?.GetPlayerInfo(AccountId)?.CharacterType} " +
-                     $"account={account.AccountComponent.LastCharacter})");
+                     $"server={playerInfo.CharacterType} " +
+                     $"account={account?.AccountComponent.LastCharacter})");
 
-            bool characterDataUpdate = ApplyCharacterDataUpdate(account, characterType, update, out CharacterComponent characterComponent);
-            LobbyCharacterInfo characterInfo = LobbyCharacterInfo.Of(account.CharacterData[characterType], characterComponent);
+            bool characterDataUpdate = false;
+            CharacterComponent characterComponent;
+            LobbyCharacterInfo characterInfo;
+            if (account is not null)
+            {
+                characterComponent = (CharacterComponent)account.CharacterData[characterType].CharacterComponent.Clone();
+                characterDataUpdate = ApplyCharacterDataUpdate(characterComponent, update);
+                characterInfo = LobbyCharacterInfo.Of(account.CharacterData[characterType], characterComponent);
+            }
+            else
+            {
+                characterComponent = CharacterManager.GetCharacterComponent(0, characterType);
+                ApplyCharacterDataUpdate(characterComponent, update);
+                characterInfo = LobbyCharacterInfo.Of(new PersistedCharacterData(characterType), characterComponent);
+            }
 
             if (CurrentGame != null)
             {
@@ -710,7 +724,7 @@ namespace CentralServer.LobbyServer
             }
 
             // persisting changes
-            if (account.AccountId == AccountId)
+            if (account is not null && account.AccountId == AccountId)
             {
                 if (updateSelectedCharacter && update.CharacterType.HasValue)
                 {
@@ -747,7 +761,7 @@ namespace CentralServer.LobbyServer
             Send(new PlayerInfoUpdateResponse
             {
                 PlayerInfo = LobbyPlayerInfo.FromServer(playerInfo, 0, new MatchmakingQueueConfig()),
-                CharacterInfo = account.AccountId == AccountId ? playerInfo.CharacterInfo : null,
+                CharacterInfo = account?.AccountId == AccountId ? playerInfo.CharacterInfo : null,
                 OriginalPlayerInfoUpdate = update,
                 ResponseId = request.RequestId
             });
@@ -755,13 +769,10 @@ namespace CentralServer.LobbyServer
         }
 
         private static bool ApplyCharacterDataUpdate(
-            PersistedAccountData account,
-            CharacterType characterType,
-            LobbyPlayerInfoUpdate update,
-            out CharacterComponent characterComponent)
+            CharacterComponent characterComponent,
+            LobbyPlayerInfoUpdate update)
         {
             bool characterDataUpdate = false;
-            characterComponent = (CharacterComponent)account.CharacterData[characterType].CharacterComponent.Clone();
             
             if (update.CharacterSkin.HasValue)
             {
