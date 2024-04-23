@@ -87,7 +87,7 @@ namespace CentralServer.LobbyServer.Gamemode
         {
             return new GameTypeAvailability
             {
-                IsActive = LobbyConfiguration.GetGameTypePvPAvailable(),
+                IsActive = LobbyConfiguration.GetGameTypeCoopAvailable(),
                 MaxWillFillPerTeam = 4,
                 SubTypes = LoadGameSubTypes(ConfigFiles[GameType.Coop])
             };

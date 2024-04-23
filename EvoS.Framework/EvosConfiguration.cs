@@ -39,7 +39,7 @@ namespace EvoS.Framework
         public bool PingOnGroupRequest = true;
 
         private static Lazy<EvosConfiguration> _instance = new Lazy<EvosConfiguration>(() =>
-            new DeserializerBuilder().Build().Deserialize<EvosConfiguration>(File.ReadAllText("settings.yaml")));
+            new DeserializerBuilder().Build().Deserialize<EvosConfiguration>(File.ReadAllText("Config/settings.yaml")));
 
         private static EvosConfiguration Instance => _instance.Value;
 
