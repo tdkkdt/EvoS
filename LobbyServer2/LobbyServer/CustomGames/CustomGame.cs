@@ -305,7 +305,9 @@ public class CustomGame : Game
                     PlayerId = teamInfo.TeamPlayerInfo.Count + 1,
                     IsNPCBot = true,
                     Handle = player.Handle,
-                    CharacterInfo = player.CharacterInfo,
+                    CharacterInfo = LobbyCharacterInfo.Of(
+                        new PersistedCharacterData(player.CharacterType), 
+                        EvoS.DirectoryServer.Character.CharacterManager.GetCharacterComponent(0, player.CharacterType)),
                     ControllingPlayerId = 0,
                     ControllingPlayerInfo = null,
                     CustomGameVisualSlot = player.CustomGameVisualSlot,
