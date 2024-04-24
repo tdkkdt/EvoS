@@ -459,7 +459,7 @@ namespace CentralServer.LobbyServer.Discord
                 if (gameSummary.GameResult == GameResult.TeamAWon
                     || gameSummary.GameResult == GameResult.TeamBWon
                     || gameInfo.GameConfig == null
-                    || gameInfo.GameConfig.GameType == GameType.Custom)
+                    || gameInfo.GameConfig.GameType != GameType.PvP)
                 {
                     return;
                 }
