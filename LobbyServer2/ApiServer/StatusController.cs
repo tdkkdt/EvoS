@@ -123,7 +123,7 @@ namespace CentralServer.ApiServer
                 bannerBg = 95,
                 bannerFg = 65,
                 titleId = -1,
-                status = string.Empty,
+                status = FriendManager.Status_InGame,
             };
 
             public static Player Of(PersistedAccountData acc)

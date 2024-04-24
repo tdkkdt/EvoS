@@ -24,7 +24,9 @@ namespace CentralServer.LobbyServer.Friend
             .ToDictionary((PlayerOnlineStatus e) => e.ToString());
         
         private static readonly ConcurrentDictionary<long, byte> PendingUpdate = new ConcurrentDictionary<long, byte>();
-        
+
+        public const string Status_InGame = "In Game";
+
         public static FriendStatusNotification GetFriendStatusNotification(long accountId)
         {
             FriendStatusNotification notification = new FriendStatusNotification()
@@ -83,7 +85,7 @@ namespace CentralServer.LobbyServer.Friend
             }
             if (client.IsInGame())
             {
-                return client.IsInCharacterSelect() ? "Character Select" : "In Game";
+                return client.IsInCharacterSelect() ? "Character Select" : Status_InGame;
             }
             if (client.IsInQueue())
             {

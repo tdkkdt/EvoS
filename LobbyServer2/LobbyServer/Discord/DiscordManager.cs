@@ -626,9 +626,21 @@ namespace CentralServer.LobbyServer.Discord
                 return;
             }
 
-            PersistedAccountData account = DB.Get().AccountDao.GetAccount(player.AccountId);
+            string handle = "UNKNOWN";
+            if (player.AccountId == 0)
+            {
+                handle = player.CharacterName;
+            }
+            else
+            {
+                PersistedAccountData account = DB.Get().AccountDao.GetAccount(player.AccountId);
+                if (account is not null)
+                {
+                    handle = account.Handle;
+                }
+            }
             eb.AddField(
-                $"{account.Handle} ({player.CharacterName})",
+                $"{handle} ({player.CharacterName})",
                 $"**[ {player.NumAssists} : {player.NumDeaths} : {player.NumKills} ] [ {player.TotalPlayerDamage} : " +
                 $"{player.GetTotalHealingFromAbility() + player.TotalPlayerAbsorb} : {player.TotalPlayerDamageReceived} ]**",
                 true);
