@@ -128,8 +128,8 @@ public abstract class MatchmakerBase: Matchmaker
 
         public MatchScratch(GameSubType subType)
         {
-            _teamA = new Team(subType.TeamAPlayers);
-            _teamB = new Team(subType.TeamBPlayers);
+            _teamA = new Team(subType.TeamAHumanPlayers);
+            _teamB = new Team(subType.TeamBHumanPlayers);
         }
 
         private MatchScratch(Team teamA, Team teamB, HashSet<long> usedGroupIds)

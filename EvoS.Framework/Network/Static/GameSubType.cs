@@ -55,6 +55,11 @@ namespace EvoS.Framework.Network.Static
         public GameBalanceVars.GameRewardBucketType RewardBucket = GameBalanceVars.GameRewardBucketType.NoRewards;
         public TimeSpan LoadoutSelectionTimeoutOverride;
 
+        [JsonIgnore]
+        public int TeamAHumanPlayers => TeamAPlayers - TeamABots;
+        [JsonIgnore]
+        public int TeamBHumanPlayers => TeamBPlayers - TeamBBots;
+
         [EvosMessage(160)]
         public enum GameLoadScreenInstructions
         {
