@@ -103,7 +103,16 @@ namespace EvoS.DirectoryServer
                 
                 AssignGameClientRequest request = JsonConvert.DeserializeObject<AssignGameClientRequest>(requestBody);
                 log.Debug($"< {request.GetType().Name} {DefaultJsonSerializer.Serialize(request)}");
-                AssignGameClientResponse response = ProcessRequest(request, context);
+                AssignGameClientResponse response;
+                try
+                {
+                    response = ProcessRequest(request, context);
+                }
+                catch (Exception e)
+                {
+                    response = Fail(request, "Unexpected server error. Please, restart the game.");
+                    log.Error("Fail during login", e);
+                }
                 log.Debug($"> {response.GetType().Name} {DefaultJsonSerializer.Serialize(response)}");
                 await context.Response.WriteAsync(JsonConvert.SerializeObject(response));
             });
