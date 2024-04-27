@@ -42,10 +42,10 @@ namespace EvoS.Framework.Network.Static
         public Rate MaxMatchesGrantingXP;
         public TeamCompositionRules TeamComposition;
         public GameValueOverrides GameOverrides;
-        public int TeamAPlayers = -1;
-        public int TeamBPlayers = -1;
-        public int TeamABots = -1;
-        public int TeamBBots = -1;
+        public int TeamAPlayers = 0;
+        public int TeamBPlayers = 0;
+        public int TeamABots = 0;
+        public int TeamBBots = 0;
         public FreelancerRoleBalancingRuleTypes RoleBalancingRule;
         public FreelancerDuplicationRuleTypes DuplicationRule;
         public FreelancerTieBreakerRuleTypes TiebreakerRule;
