@@ -254,6 +254,7 @@ namespace EvoS.Framework.Network.Static
         {
             if (EvosStoreConfiguration.AreVfxFree())
             {
+                AbilityVfxSwaps = new List<PlayerAbilityVfxSwapData>();
                 switch (characterType)
                 {
                     case CharacterType.BattleMonk:
