@@ -433,6 +433,12 @@ public class CustomGame : Game
         foreach (LobbyServerPlayerInfo playerCheck in TeamInfo.TeamPlayerInfo)
         {
             LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(playerCheck.AccountId);
+
+            if (playerConnection is null)
+            {
+                continue;
+            }
+            
             if (accountIdToIgnore > 0 && playerCheck.AccountId != accountIdToIgnore)
             {
                 playerConnection.Send(new GameAssignmentNotification
