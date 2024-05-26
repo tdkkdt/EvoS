@@ -38,8 +38,15 @@ public abstract class Matchmaker
         }
 
         public MatchmakingGroup(long groupID, DateTime queueTime = default)
-            : this(groupID, GroupManager.GetGroup(groupID).Members, queueTime)
+            : this(groupID, GroupManager.GetGroup(groupID).Members.ToList(), queueTime)
         {
+        }
+
+        public bool Is(GroupInfo groupInfo)
+        {
+            if (GroupID != groupInfo.GroupId) return false;
+            if (Members.Count != groupInfo.Members.Count) return false;
+            return Members.All(accId => groupInfo.Members.Contains(accId));
         }
         
         public int Players => Members.Count;

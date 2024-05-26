@@ -214,7 +214,7 @@ namespace CentralServer.ApiServer
                 return new Queue
                 {
                     type = q.GameType.ToString(),
-                    groupIds = q.GetQueuedGroups()
+                    groupIds = q.GetQueuedGroupsAsList()
                 };
             }
 
@@ -223,7 +223,7 @@ namespace CentralServer.ApiServer
                 return new Queue
                 {
                     type = q.GameType.ToString(),
-                    groupIds = q.GetQueuedPlayers()
+                    groupIds = q.GetQueuedPlayersAsList()
                 };
             }
         }

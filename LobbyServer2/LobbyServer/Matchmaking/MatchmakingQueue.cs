@@ -33,14 +33,28 @@ namespace CentralServer.LobbyServer.Matchmaking
         public LobbyMatchmakingQueueInfo MatchmakingQueueInfo;
         public GameType GameType => MatchmakingQueueInfo.GameType;
 
-        public List<long> GetQueuedGroups()
+        public IEnumerable<long> GetQueuedGroups()
         {
-            return QueuedGroups.OrderBy(kv => kv.Value).Select(kv => kv.Key).ToList();
+            return QueuedGroups.OrderBy(kv => kv.Value).Select(kv => kv.Key);
         }
-        public List<long> GetQueuedPlayers()
+        
+        public List<long> GetQueuedGroupsAsList()
+        {
+            return GetQueuedGroups().ToList();
+        }
+        
+        public IEnumerable<long> GetQueuedGroups(int subTypeIndex)
+        {
+            uint subTypeFlag = 1U << subTypeIndex;
+            return GetQueuedGroups()
+                .Where(groupId => (GroupManager.GetGroupSubTypeMask(groupId) & subTypeFlag) != 0);
+        }
+        
+        public List<long> GetQueuedPlayersAsList()
         {
             return QueuedGroups.Keys.SelectMany(g => GroupManager.GetGroup(g).Members).ToList();
         }
+        
         public bool GetQueueTime(long groupId, out DateTime time)
         {
             return QueuedGroups.TryGetValue(groupId, out time);
@@ -172,28 +186,46 @@ namespace CentralServer.LobbyServer.Matchmaking
             for (int i = 0; i < MatchmakingQueueInfo.GameConfig.SubTypes.Count; i++)
             {
                 GameSubType subType = MatchmakingQueueInfo.GameConfig.SubTypes[i];
-                uint subTypeFlag = 1U << i;
-                lock (GroupManager.Lock)
+                while (true)
                 {
-                    List<Matchmaker.MatchmakingGroup> queuedGroups = GetQueuedGroups()
-                        .Where(groupId => (GroupManager.GetGroupSubTypeMask(groupId) & subTypeFlag) != 0)
-                        .Select(groupId =>
-                        {
-                            if (!GetQueueTime(groupId, out DateTime queueTime))
+                    List<Matchmaker.MatchmakingGroup> queuedGroups;
+                    lock (GroupManager.Lock)
+                    {
+                        queuedGroups = GetQueuedGroups(i)
+                            .Select(groupId =>
                             {
-                                log.Error($"Cannon fetch queue time for group {groupId}");
-                            }
+                                if (!GetQueueTime(groupId, out DateTime queueTime))
+                                {
+                                    log.Error($"Cannon fetch queue time for group {groupId}");
+                                }
 
-                            return new Matchmaker.MatchmakingGroup(groupId, queueTime);
-                        })
-                        .ToList();
+                                return new Matchmaker.MatchmakingGroup(groupId, queueTime);
+                            })
+                            .ToList();
+                    }
 
                     List<Matchmaker.Match> matches = Matchmakers[subType.LocalizedName]
                         .GetMatchesRanked(queuedGroups, DateTime.UtcNow);
                     if (matches.Count > 0)
                     {
-                        StartMatch(matches[0], i);
+                        Matchmaker.Match match = matches[0];
+                        lock (GroupManager.Lock)
+                        {
+                            HashSet<long> stillQueued = GetQueuedGroups(i).ToHashSet();
+                            if (match.Groups.Any(g =>
+                                    !stillQueued.Contains(g.GroupID)
+                                    || !g.Is(GroupManager.GetGroup(g.GroupID))))
+                            {
+                                log.Info("One of the players in the best match "
+                                         + $"left {MatchmakingQueueInfo.GameType} queue ({subType.LocalizedName}). "
+                                         + "Retrying.");
+                                continue;
+                            }
+                        }
+                        StartMatch(match, i);
                     }
+
+                    break;
                 }
             }
         }
