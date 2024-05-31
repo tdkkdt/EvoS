@@ -180,8 +180,8 @@ namespace CentralServer.LobbyServer.Character
                 CharacterType.Iceborg,
                 new CharacterConfig()
                 {
-                    AllowForBots = false,
-                    AllowForPlayers = false,
+                    AllowForBots = true,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Assassin,
                     CharacterType = CharacterType.Iceborg,
                     Difficulty = 1,
