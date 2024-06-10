@@ -306,7 +306,7 @@ namespace CentralServer.LobbyServer
             UnregisterAllHandlers();
             log.Info(string.Format(Messages.PlayerDisconnected, this.UserName));
 
-            // ServerManager.GetServerWithPlayer(AccountId)?.DisconnectPlayer(AccountId);
+            CurrentGame?.OnPlayerDisconnectedFromLobby(AccountId);
 
             SessionManager.OnPlayerDisconnect(this);
             

@@ -67,6 +67,11 @@ public abstract class Game
     {
         Server?.DisconnectPlayer(GetPlayerInfo(accountId));
     }
+
+    public virtual void OnPlayerDisconnectedFromLobby(long accountId)
+    {
+        
+    }
     
     protected void OnGameEnded(BridgeServerProtocol server, LobbyGameSummary summary, LobbyGameSummaryOverrides overrides)
     {

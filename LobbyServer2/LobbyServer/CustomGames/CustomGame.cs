@@ -399,6 +399,16 @@ public class CustomGame : Game
     public override void DisconnectPlayer(long accountId)
     {
         base.DisconnectPlayer(accountId);
+        OnPlayerLeft(accountId);
+    }
+
+    public override void OnPlayerDisconnectedFromLobby(long accountId)
+    {
+        OnPlayerLeft(accountId);
+    }
+
+    private void OnPlayerLeft(long accountId)
+    {
         if (GameStatus > GameStatus.Launching)
         {
             return;
