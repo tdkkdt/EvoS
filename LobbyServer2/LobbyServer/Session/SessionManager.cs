@@ -87,9 +87,9 @@ namespace CentralServer.LobbyServer.Session
                     session = sessionInfo
                 });
                 ConnectingSessions.TryRemove(client.AccountId, out _);
-                
-                OnPlayerConnected(client);
             }
+                
+            OnPlayerConnected(client);
         }
 
         public static void OnPlayerDisconnect(LobbyServerProtocol client)
@@ -113,14 +113,14 @@ namespace CentralServer.LobbyServer.Session
                     account.AdminComponent.LastLogoutSessionToken = $"{sessionInfo.session.SessionToken}";
                     DB.Get().AccountDao.UpdateAdminComponent(account);
                 }
+            }
 
-                OnPlayerDisconnected(client);
+            OnPlayerDisconnected(client);
 
-                if (CentralServer.PendingShutdown == CentralServer.PendingShutdownType.WaitForPlayersToLeave
-                    && SessionInfos.IsEmpty)
-                {
-                    CentralServer.PendingShutdown = CentralServer.PendingShutdownType.Now;
-                }
+            if (CentralServer.PendingShutdown == CentralServer.PendingShutdownType.WaitForPlayersToLeave
+                && SessionInfos.IsEmpty)
+            {
+                CentralServer.PendingShutdown = CentralServer.PendingShutdownType.Now;
             }
         }
 
@@ -162,6 +162,8 @@ namespace CentralServer.LobbyServer.Session
 
         public static LobbySessionInfo CreateSession(long accountId, LobbySessionInfo connectingSessionInfo, IPAddress ipAddress)
         {
+            PersistedAccountData account;
+            LobbySessionInfo sessionInfo;
             lock (SessionInfos) {
                 // If we have a game with this accountId do not remove the session we need the info to be able to reconnect
                 // Else remove it and create a new Session
@@ -181,8 +183,8 @@ namespace CentralServer.LobbyServer.Session
                 }
                 DisconnectedSessionInfos.TryRemove(accountId, out _);
 
-                PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
-                LobbySessionInfo sessionInfo = new LobbySessionInfo
+                account = DB.Get().AccountDao.GetAccount(accountId);
+                sessionInfo = new LobbySessionInfo
                 {
                     AccountId = accountId,
                     Handle = account.Handle,
@@ -200,12 +202,11 @@ namespace CentralServer.LobbyServer.Session
                 
                 KillSession(accountId);
                 ConnectingSessions[accountId] = sessionInfo;
-
-                account.AdminComponent.RecordLogin(ipAddress);
-                DB.Get().AccountDao.UpdateAdminComponent(account);
-                
-                return sessionInfo;
             }
+
+            account.AdminComponent.RecordLogin(ipAddress);
+            DB.Get().AccountDao.UpdateAdminComponent(account);
+            return sessionInfo;
         }
 
         public static LobbySessionInfo GetDisconnectedSessionInfo(long accountId)
