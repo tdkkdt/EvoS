@@ -30,6 +30,43 @@ namespace EvoS.Framework.Network.Static
         public int CharacterMatches;
 
         public int CharacterLevel;
+        
+        private static readonly Dictionary<CharacterType, CharacterAbilityConfigOverride> s_overrides = new();
+
+        static LobbyCharacterInfo()
+        {
+            BanMod(CharacterType.Manta, 4, 1); // Phaedra's "AfterShock"
+            BanMod(CharacterType.Claymore, 1, 3); // Titus' "Single Minded"
+            BanMod(CharacterType.Tracker, 4, 1); // Grey's "Overcharged coils"
+            BanMod(CharacterType.Spark, 4, 5); // Quark's "Piercing Light"
+            BanMod(CharacterType.Blaster, 0, 5); // Elle's "Long Barrel"
+            BanMod(CharacterType.Fireborg, 4, 7); // Lex's "Spontaneous Combustion"
+        }
+
+        private static void BanMod(CharacterType characterType, int abilityIndex, int modAbilityScopeId)
+        {
+            if (!s_overrides.TryGetValue(characterType, out CharacterAbilityConfigOverride confOverride))
+            {
+                confOverride = new CharacterAbilityConfigOverride(characterType);
+                s_overrides.Add(characterType, confOverride);
+            }
+            confOverride.AbilityConfigs[abilityIndex] = new AbilityConfigOverride(characterType, abilityIndex)
+            {
+                AbilityModConfigs = new Dictionary<int, AbilityModConfigOverride>
+                {
+                    {
+                        modAbilityScopeId,
+                        new AbilityModConfigOverride
+                        {
+                            AbilityIndex = abilityIndex,
+                            AbilityModIndex = modAbilityScopeId,
+                            Allowed = false,
+                            CharacterType = characterType
+                        }
+                    }
+                }
+            };
+        }
 
         public static LobbyCharacterInfo Of(PersistedCharacterData data)
         {
@@ -89,110 +126,7 @@ namespace EvoS.Framework.Network.Static
 
         public static Dictionary<CharacterType, CharacterAbilityConfigOverride> GetChacterAbilityConfigOverrides()
         {
-            Dictionary<CharacterType, CharacterAbilityConfigOverride> overrides = new Dictionary<CharacterType, CharacterAbilityConfigOverride>();
-
-            // Disable Phaedra's "AfterShock" mod
-            CharacterAbilityConfigOverride MantaAbilityConfigOverride = new CharacterAbilityConfigOverride(CharacterType.Manta);
-            MantaAbilityConfigOverride.AbilityConfigs[4] = new AbilityConfigOverride(CharacterType.Manta, 4)
-            {
-                AbilityModConfigs = new Dictionary<int, AbilityModConfigOverride>()
-                {
-                    {
-                        1,
-                        new AbilityModConfigOverride
-                        {
-                            AbilityIndex = 4,
-                            AbilityModIndex = 1,
-                            Allowed = false,
-                            CharacterType = CharacterType.Manta
-                        }
-                    }
-                }
-            };
-            overrides.Add(CharacterType.Manta, MantaAbilityConfigOverride);
-
-            // Disable Titus' "Single Minded" mod
-            CharacterAbilityConfigOverride ClaymoreAbilityConfigOverride = new CharacterAbilityConfigOverride(CharacterType.Claymore);
-            ClaymoreAbilityConfigOverride.AbilityConfigs[1] = new AbilityConfigOverride(CharacterType.Claymore, 1)
-            {
-                AbilityModConfigs = new Dictionary<int, AbilityModConfigOverride>()
-                {
-                    {
-                        3,
-                        new AbilityModConfigOverride
-                        {
-                            AbilityIndex = 1,
-                            AbilityModIndex = 3,
-                            Allowed = false,
-                            CharacterType = CharacterType.Claymore
-                        }
-                    }
-                }
-            };
-            overrides.Add(CharacterType.Claymore, ClaymoreAbilityConfigOverride);
-
-            // Disable Grey's "Overcharged coils" mod
-            CharacterAbilityConfigOverride TrackerAbilityConfigOverride = new CharacterAbilityConfigOverride(CharacterType.Tracker);
-            TrackerAbilityConfigOverride.AbilityConfigs[4] = new AbilityConfigOverride(CharacterType.Tracker, 4)
-            {
-                AbilityModConfigs = new Dictionary<int, AbilityModConfigOverride>()
-                {
-                    {
-                        1,
-                        new AbilityModConfigOverride
-                        {
-                            AbilityIndex = 4,
-                            AbilityModIndex = 1,
-                            Allowed = false,
-                            CharacterType = CharacterType.Tracker
-                        }
-                    }
-                }
-            };
-            overrides.Add(CharacterType.Tracker, TrackerAbilityConfigOverride);
-
-            // Disable Quark's "Piercing Light" mod
-            CharacterAbilityConfigOverride SparkAbilityConfigOverride = new CharacterAbilityConfigOverride(CharacterType.Spark);
-            SparkAbilityConfigOverride.AbilityConfigs[4] = new AbilityConfigOverride(CharacterType.Spark, 4)
-            {
-                AbilityModConfigs = new Dictionary<int, AbilityModConfigOverride>()
-                {
-                    {
-                        5,
-                        new AbilityModConfigOverride
-                        {
-                            AbilityIndex = 4,
-                            AbilityModIndex = 5,
-                            Allowed = false,
-                            CharacterType = CharacterType.Spark
-                        }
-                    }
-                }
-            };
-            overrides.Add(CharacterType.Spark, SparkAbilityConfigOverride);
-
-            // Disable Elle's "Long Barrel" mod
-            CharacterAbilityConfigOverride BlasterAbilityConfigOverride = new CharacterAbilityConfigOverride(CharacterType.Blaster);
-            BlasterAbilityConfigOverride.AbilityConfigs[0] = new AbilityConfigOverride(CharacterType.Blaster, 0)
-            {
-                AbilityModConfigs = new Dictionary<int, AbilityModConfigOverride>()
-                {
-                    {
-                        5,
-                        new AbilityModConfigOverride
-                        {
-                            AbilityIndex = 0,
-                            AbilityModIndex = 5,
-                            Allowed = false,
-                            CharacterType = CharacterType.Blaster
-                        }
-                    }
-                }
-            };
-            overrides.Add(CharacterType.Blaster, BlasterAbilityConfigOverride);
-
-
-            return overrides;
+            return s_overrides;
         }
     }
 }
