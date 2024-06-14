@@ -102,8 +102,8 @@ namespace CentralServer.LobbyServer.Character
                 CharacterType.Dino,
                 new CharacterConfig()
                 {
-                    AllowForBots = false,
-                    AllowForPlayers = false,
+                    AllowForBots = true,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Tank,
                     CharacterType = CharacterType.Dino,
                     Difficulty = 1,
