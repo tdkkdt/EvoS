@@ -528,7 +528,7 @@ public abstract class Game
             int botsForAntiSocial = playerNum - players.Count;
             botNum += botsForAntiSocial;
             playerNum = players.Count;
-            log.Error($"Adding {botsForAntiSocial} bots for an antisocial game");
+            log.Info($"Adding {botsForAntiSocial} bots for an antisocial game");
         }
         
         if (playerNum != players.Count)
