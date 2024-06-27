@@ -7,6 +7,7 @@ using log4net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Prometheus;
 
 namespace CentralServer.ApiServer;
 
@@ -40,6 +41,10 @@ public class AdminApiServer : ApiServer
         builder.Services.AddAuthorizationBuilder()
             .AddPolicy("api_readonly", policy => policy.RequireRole("api_readonly"))
             .AddPolicy("api_admin", policy => policy.RequireRole("api_admin"));
+        builder.Services.AddMetricServer(options =>
+        {
+            options.Port = EvosConfiguration.GetMetricsPort();
+        });
     }
 
     protected override void ConfigureApp(WebApplication app)

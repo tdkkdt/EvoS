@@ -11,6 +11,7 @@ using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using EvoS.Framework.Network.WebSocket;
 using log4net;
+using Prometheus;
 
 namespace CentralServer.LobbyServer.Session
 {
@@ -46,6 +47,19 @@ namespace CentralServer.LobbyServer.Session
         
         public static event Action<LobbyServerProtocol> OnPlayerConnected = delegate {};
         public static event Action<LobbyServerProtocol> OnPlayerDisconnected = delegate {};
+        
+        private static readonly Gauge LobbySize = Metrics
+            .CreateGauge(
+                "evos_lobby_size",
+                "Number of people in the lobby.");
+
+        static SessionManager()
+        {
+            Metrics.DefaultRegistry.AddBeforeCollectCallback(() =>
+            {
+                LobbySize.Set(GetOnlinePlayers().Count);
+            });
+        }
 
         public static void OnPlayerConnect(LobbyServerProtocol client, RegisterGameClientRequest registerRequest)
         {

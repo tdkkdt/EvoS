@@ -32,6 +32,7 @@ namespace EvoS.Framework
         public string AdminApiKey = "";
         public int AdminApiPort = 3001;
         public string TicketAuthKey = "";
+        public ushort MetricsPort = 1234;
         public bool AllowUsernamePasswordAuth = true;
         public List<string> Proxies = new List<string>();
         public List<string> LightProxies = new List<string>();
@@ -97,6 +98,8 @@ namespace EvoS.Framework
         public static int GetAdminApiPort() => Instance.AdminApiPort;
 
         public static int GetUserApiPort() => Instance.UserApiPort;
+
+        public static ushort GetMetricsPort() => Instance.MetricsPort;
 
         public static string GetTicketAuthKey() => Instance.TicketAuthKey;
 

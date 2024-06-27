@@ -21,6 +21,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
+using Prometheus;
 using WebSocketSharp;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
@@ -112,6 +113,11 @@ public abstract class ApiServer
                     break;
             }
         }));
+        app.UseHttpMetrics(options =>
+        {
+            options.AddCustomLabel("host", context => context.Request.Host.Host);
+            options.AddCustomLabel("api", context => authContext.ToString());
+        });
         
         ConfigureApp(app);
         

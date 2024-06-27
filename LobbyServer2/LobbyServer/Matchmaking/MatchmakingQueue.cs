@@ -14,7 +14,9 @@ using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
 using log4net;
 using Newtonsoft.Json;
+using Prometheus;
 using WebSocketSharp;
+using StreamReader = System.IO.StreamReader;
 
 namespace CentralServer.LobbyServer.Matchmaking
 {
@@ -25,13 +27,26 @@ namespace CentralServer.LobbyServer.Matchmaking
 
         private readonly string EloKey;
         private readonly bool RankedMatchmaking;
-        private MatchmakingConfiguration Conf = new MatchmakingConfiguration(); // TODO move to MatchmakerRanked
+        private MatchmakingConfiguration Conf = new(); // TODO move to MatchmakerRanked
         private readonly Dictionary<string, Matchmaker> Matchmakers;
         
-        Dictionary<string, LobbyGameInfo> Games = new Dictionary<string, LobbyGameInfo>();
-        private readonly ConcurrentDictionary<long, DateTime> QueuedGroups = new ConcurrentDictionary<long, DateTime>();
-        public LobbyMatchmakingQueueInfo MatchmakingQueueInfo;
+        private readonly ConcurrentDictionary<long, DateTime> QueuedGroups = new();
+        public readonly LobbyMatchmakingQueueInfo MatchmakingQueueInfo;
         public GameType GameType => MatchmakingQueueInfo.GameType;
+        private readonly string GameTypeString;
+        
+        private static readonly Gauge MatchmakingTime = Metrics
+            .CreateGauge(
+                "evos_matchmaking_time_seconds",
+                "Time spent in matchmaking routine last time.",
+                "queue",
+                "subType");
+        private static readonly Gauge QueueSize = Metrics
+            .CreateGauge(
+                "evos_matchmaking_queue_size",
+                "Number of people in the queue.",
+                "queue",
+                "subType");
 
         public IEnumerable<long> GetQueuedGroups()
         {
@@ -64,12 +79,11 @@ namespace CentralServer.LobbyServer.Matchmaking
         {
             return Conf;
         }
-        
-        private static int GameID = 0;
 
         public MatchmakingQueue(GameType gameType, bool isRanked)
         {
-            EloKey = gameType.ToString();
+            GameTypeString = gameType.ToString();
+            EloKey = GameTypeString;
             RankedMatchmaking = isRanked;
             MatchmakingQueueInfo = new LobbyMatchmakingQueueInfo()
             {
@@ -88,6 +102,17 @@ namespace CentralServer.LobbyServer.Matchmaking
             // TODO handle matchmakers more carefully
             Matchmakers = MatchmakingQueueInfo.GameConfig.SubTypes
                 .ToDictionary(st => st.LocalizedName, MatchmakerFactory);
+            
+            Metrics.DefaultRegistry.AddBeforeCollectCallback(() =>
+            {
+                for (int i = 0; i < MatchmakingQueueInfo.GameConfig.SubTypes.Count; i++)
+                {
+                    GameSubType subType = MatchmakingQueueInfo.GameConfig.SubTypes[i];
+                    M(QueueSize, subType).Set(GetPlayerCount(i));
+                }
+
+                M(QueueSize).Set(GetPlayerCount());
+            });
         }
 
         private Matchmaker MatchmakerFactory(GameSubType st)
@@ -101,10 +126,8 @@ namespace CentralServer.LobbyServer.Matchmaking
 
         private void ReloadConfig()
         {
-            GameType gameType = MatchmakingQueueInfo.GameConfig.GameType;
-            MatchmakingQueueInfo.GameConfig.SubTypes = GameModeManager.GetGameTypeAvailabilities()[gameType].SubTypes;
-
-            ReloadMatchmakingConfig(gameType);
+            MatchmakingQueueInfo.GameConfig.SubTypes = GameModeManager.GetGameTypeAvailabilities()[GameType].SubTypes;
+            ReloadMatchmakingConfig(GameType);
         }
 
         private void ReloadMatchmakingConfig(GameType gameType)
@@ -117,7 +140,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             JsonReader reader = null;
             try
             {
-                reader = new JsonTextReader(new System.IO.StreamReader(ConfigPath + gameType + ".json"));
+                reader = new JsonTextReader(new StreamReader(ConfigPath + gameType + ".json"));
                 Conf = new JsonSerializer().Deserialize<MatchmakingConfiguration>(reader);
             }
             catch (Exception e)
@@ -165,6 +188,13 @@ namespace CentralServer.LobbyServer.Matchmaking
                 .Sum(group => group?.Members.Count ?? 0);
         }
 
+        public int GetPlayerCount(int subTypeIndex)
+        {
+            return GetQueuedGroups(subTypeIndex)
+                .Select(GroupManager.GetGroup)
+                .Sum(group => group?.Members.Count ?? 0);
+        }
+
         public void Update()
         {
             log.Debug($"{GetPlayerCount()} players in {GameType} queue ({QueuedGroups.Count} groups)");
@@ -186,46 +216,49 @@ namespace CentralServer.LobbyServer.Matchmaking
             for (int i = 0; i < MatchmakingQueueInfo.GameConfig.SubTypes.Count; i++)
             {
                 GameSubType subType = MatchmakingQueueInfo.GameConfig.SubTypes[i];
-                while (true)
+                using (M(MatchmakingTime, subType).NewTimer())
                 {
-                    List<Matchmaker.MatchmakingGroup> queuedGroups;
-                    lock (GroupManager.Lock)
+                    while (true)
                     {
-                        queuedGroups = GetQueuedGroups(i)
-                            .Select(groupId =>
-                            {
-                                if (!GetQueueTime(groupId, out DateTime queueTime))
-                                {
-                                    log.Error($"Cannon fetch queue time for group {groupId}");
-                                }
-
-                                return new Matchmaker.MatchmakingGroup(groupId, queueTime);
-                            })
-                            .ToList();
-                    }
-
-                    List<Matchmaker.Match> matches = Matchmakers[subType.LocalizedName]
-                        .GetMatchesRanked(queuedGroups, DateTime.UtcNow);
-                    if (matches.Count > 0)
-                    {
-                        Matchmaker.Match match = matches[0];
+                        List<Matchmaker.MatchmakingGroup> queuedGroups;
                         lock (GroupManager.Lock)
                         {
-                            HashSet<long> stillQueued = GetQueuedGroups(i).ToHashSet();
-                            if (match.Groups.Any(g =>
-                                    !stillQueued.Contains(g.GroupID)
-                                    || !g.Is(GroupManager.GetGroup(g.GroupID))))
-                            {
-                                log.Info("One of the players in the best match "
-                                         + $"left {MatchmakingQueueInfo.GameType} queue ({subType.LocalizedName}). "
-                                         + "Retrying.");
-                                continue;
-                            }
-                        }
-                        StartMatch(match, i);
-                    }
+                            queuedGroups = GetQueuedGroups(i)
+                                .Select(groupId =>
+                                {
+                                    if (!GetQueueTime(groupId, out DateTime queueTime))
+                                    {
+                                        log.Error($"Cannon fetch queue time for group {groupId}");
+                                    }
 
-                    break;
+                                    return new Matchmaker.MatchmakingGroup(groupId, queueTime);
+                                })
+                                .ToList();
+                        }
+
+                        List<Matchmaker.Match> matches = Matchmakers[subType.LocalizedName]
+                            .GetMatchesRanked(queuedGroups, DateTime.UtcNow);
+                        if (matches.Count > 0)
+                        {
+                            Matchmaker.Match match = matches[0];
+                            lock (GroupManager.Lock)
+                            {
+                                HashSet<long> stillQueued = GetQueuedGroups(i).ToHashSet();
+                                if (match.Groups.Any(g =>
+                                        !stillQueued.Contains(g.GroupID)
+                                        || !g.Is(GroupManager.GetGroup(g.GroupID))))
+                                {
+                                    log.Info("One of the players in the best match "
+                                             + $"left {MatchmakingQueueInfo.GameType} queue ({subType.LocalizedName}). "
+                                             + "Retrying.");
+                                    continue;
+                                }
+                            }
+                            StartMatch(match, i);
+                        }
+
+                        break;
+                    }
                 }
             }
         }
@@ -273,46 +306,6 @@ namespace CentralServer.LobbyServer.Matchmaking
             return false;
         }
 
-        public LobbyGameInfo CreateGameInfo()
-        {
-            GameTypeAvailability gameAvailability = GameModeManager.GetGameTypeAvailabilities()[GameType];
-
-            LobbyGameInfo gameInfo = new LobbyGameInfo
-            {
-                AcceptedPlayers = gameAvailability.TeamAPlayers + gameAvailability.TeamBPlayers,
-                AcceptTimeout = GameType == GameType.Practice ? TimeSpan.FromSeconds(0) : TimeSpan.FromSeconds(5),
-                ActiveHumanPlayers = 0,
-                ActivePlayers = 0,
-                ActiveSpectators = 0,
-                CreateTimestamp = DateTime.UtcNow.Ticks,
-                GameConfig = new LobbyGameConfig
-                {
-                    GameOptionFlags = GameOptionFlag.AllowDuplicateCharacters & GameOptionFlag.EnableTeamAIOutput & GameOptionFlag.NoInputIdleDisconnect,
-                    GameType = GameType,
-                    IsActive = true,
-                    RoomName = $"Evos-{GameType.ToString()}-{GameID++}",
-                    SubTypes = gameAvailability.SubTypes,
-                    TeamAPlayers = gameAvailability.TeamAPlayers,
-                    TeamABots = gameAvailability.TeamABots,
-                    TeamBPlayers = gameAvailability.TeamBPlayers,
-                    TeamBBots = gameAvailability.TeamBBots,
-                    Map = SelectMap(gameAvailability.SubTypes[0]),
-                    ResolveTimeoutLimit = 1600,
-                    Spectators = 0
-                },
-                GameResult = GameResult.NoResult,
-                GameServerAddress = "",
-                GameStatus = GameStatus.Assembling,
-                GameServerHost = "",
-                IsActive = true,
-                LoadoutSelectTimeout = GameType==GameType.Practice ? TimeSpan.FromSeconds(0) : TimeSpan.FromSeconds(5),
-                SelectTimeout = GameType==GameType.Practice ? TimeSpan.FromSeconds(0) : TimeSpan.FromSeconds(5),
-                // TODO: there are more options that may be usefull
-            };
-
-            return gameInfo;
-        }
-
         public static string SelectMap(GameSubType gameSubType)
         {
             List<GameMapConfig> maps = gameSubType.GameMapConfigs.Where(x => x.IsActive).ToList();
@@ -321,11 +314,6 @@ namespace CentralServer.LobbyServer.Matchmaking
             string selected = maps[index].Map;
             log.Info($"Selected {selected} out of {maps.Count} maps");
             return selected;
-        }
-
-        public void SetGameStatus(string roomName, GameStatus gameStatus)
-        {
-            Games[roomName].GameStatus = gameStatus;
         }
 
         public void OnGameEnded(LobbyGameInfo gameInfo, LobbyGameSummary gameSummary)
@@ -359,6 +347,17 @@ namespace CentralServer.LobbyServer.Matchmaking
             {
                 SessionManager.GetClientConnection(accountId)?.Send(notify);
             }
+        }
+
+        // metrics helpers
+        private TChild M<TChild>(Collector<TChild> metrics, GameSubType subType) where TChild : ChildBase
+        {
+            return metrics.WithLabels(GameTypeString, subType.LocalizedName);
+        }
+
+        private TChild M<TChild>(Collector<TChild> metrics) where TChild : ChildBase
+        {
+            return metrics.WithLabels(GameTypeString, "Total");
         }
     }
 }
