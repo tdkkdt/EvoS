@@ -71,7 +71,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 LabelNames,
                 new HistogramConfiguration
                 {
-                    Buckets = new double[] { 53, 55, 60, 65, 75, 90 }
+                    Buckets = new[] { .51, .52, .53, .54, .55, .56, .57, .58, .59, .60, .65, .70, .75, .90 }
                 });
 
         public IEnumerable<long> GetQueuedGroups()
