@@ -24,6 +24,7 @@ using EvoS.Framework.Network.Static;
 using LobbyGameClientMessages;
 using log4net;
 using Newtonsoft.Json;
+using Prometheus;
 using WebSocketSharp;
 using CharacterManager = EvoS.DirectoryServer.Character.CharacterManager;
 
@@ -69,7 +70,16 @@ namespace CentralServer.LobbyServer
 
         public event Action<LobbyServerProtocol, ChatNotification> OnChatNotification = delegate { };
         public event Action<LobbyServerProtocol, GroupChatRequest> OnGroupChatRequest = delegate { };
-
+        
+        private static readonly Summary ConnectionEndStatus = Metrics
+            .CreateSummary(
+                "evos_connection_player_statuses",
+                "Error code player connection are ended with.",
+                new[] { "errorCode"},
+                new SummaryConfiguration
+                {
+                    MaxAge = TimeSpan.FromHours(1)
+                });
 
         public LobbyServerProtocol()
         {
@@ -309,6 +319,7 @@ namespace CentralServer.LobbyServer
         {
             UnregisterAllHandlers();
             log.Info(string.Format(Messages.PlayerDisconnected, this.UserName));
+            ConnectionEndStatus.WithLabels(e.Code.ToString()).Observe(1);
 
             CurrentGame?.OnPlayerDisconnectedFromLobby(AccountId);
 

@@ -4,6 +4,7 @@ using System.Linq;
 using CentralServer.LobbyServer;
 using EvoS.Framework.Constants.Enums;
 using log4net;
+using Prometheus;
 
 namespace CentralServer.BridgeServer;
 
@@ -11,6 +12,25 @@ public class GameManager
 {
     private static readonly ILog log = LogManager.GetLogger(typeof(GameManager));
     private static readonly ConcurrentDictionary<string, Game> Games = new ConcurrentDictionary<string, Game>();
+    
+    private static readonly Gauge GameNum = Metrics
+        .CreateGauge(
+            "evos_lobby_games",
+            "Number of ongoing games.",
+            "gameType");
+
+    private static readonly GameType[] GameTypesForStats = { GameType.PvP, GameType.Custom, GameType.Coop };
+    static GameManager()
+    {
+        Metrics.DefaultRegistry.AddBeforeCollectCallback(() =>
+        {
+            foreach (GameType gameType in GameTypesForStats)
+            {
+                GameNum.WithLabels(gameType.ToString()).Set(GetRunningGamesNum(gameType));
+            }
+            GameNum.WithLabels("Total").Set(GetRunningGamesNum());
+        });
+    }
     
     public static PvpGame CreatePvpGame()
     {
@@ -98,6 +118,16 @@ public class GameManager
     public static List<Game> GetGames()
     {
         return Games.Values.ToList();
+    }
+
+    public static int GetRunningGamesNum(GameType gameType)
+    {
+        return Games.Values.Count(g => g.GameInfo?.GameConfig?.GameType == gameType && g.GameStatus == GameStatus.Started);
+    }
+
+    public static int GetRunningGamesNum()
+    {
+        return Games.Values.Count(g => g.GameStatus == GameStatus.Started);
     }
 
     public static void StopAllGames()

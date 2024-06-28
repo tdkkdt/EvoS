@@ -95,5 +95,15 @@ namespace EvoS.Framework.DataAccess.Daos
             dao.UpdateExperienceComponent(data);
             Cache(data);
         }
+
+        public long GetUserCountWithLoginsSince(DateTime dateTime)
+        {
+            return dao.GetUserCountWithLoginsSince(dateTime);
+        }
+
+        public long GetUserCount()
+        {
+            return dao.GetUserCount();
+        }
     }
 }

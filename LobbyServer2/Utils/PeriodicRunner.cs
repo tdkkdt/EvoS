@@ -23,26 +23,32 @@ public abstract class PeriodicRunner
     {
         string className = GetType().ToString();
         using PeriodicTimer timer = new PeriodicTimer(_period);
+        await DoRun(className);
         while (
             !_token.IsCancellationRequested &&
             await timer.WaitForNextTickAsync(_token))
         {
-            try
+            await DoRun(className);
+        }
+    }
+
+    private async Task DoRun(string className)
+    {
+        try
+        {
+            if (IsEnabled)
             {
-                if (IsEnabled)
-                {
-                    log.Debug($"Executing task {className}");
-                    await ExecuteAsync(_token);
-                }
-                else
-                {
-                    log.Debug($"Skipping task {className}");
-                }
+                log.Debug($"Executing task {className}");
+                await ExecuteAsync(_token);
             }
-            catch (Exception ex)
+            else
             {
-                log.Error($"Failed to execute {className}", ex);
+                log.Debug($"Skipping task {className}");
             }
+        }
+        catch (Exception ex)
+        {
+            log.Error($"Failed to execute {className}", ex);
         }
     }
 

@@ -1,3 +1,4 @@
+using System;
 using EvoS.Framework.Network.Static;
 
 namespace EvoS.Framework.DataAccess.Daos
@@ -41,6 +42,16 @@ namespace EvoS.Framework.DataAccess.Daos
         public void UpdateExperienceComponent(PersistedAccountData data)
         {
             UpdateAccount(data);
+        }
+
+        public long GetUserCountWithLoginsSince(DateTime dateTime)
+        {
+            return 0;
+        }
+
+        public long GetUserCount()
+        {
+            return 0;
         }
     }
 }

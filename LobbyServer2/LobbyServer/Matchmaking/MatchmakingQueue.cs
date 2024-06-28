@@ -34,19 +34,45 @@ namespace CentralServer.LobbyServer.Matchmaking
         public readonly LobbyMatchmakingQueueInfo MatchmakingQueueInfo;
         public GameType GameType => MatchmakingQueueInfo.GameType;
         private readonly string GameTypeString;
-        
+
+        private static readonly string[] LabelNames = { "queue","subType" };
         private static readonly Gauge MatchmakingTime = Metrics
             .CreateGauge(
                 "evos_matchmaking_time_seconds",
                 "Time spent in matchmaking routine last time.",
-                "queue",
-                "subType");
+                LabelNames);
         private static readonly Gauge QueueSize = Metrics
             .CreateGauge(
                 "evos_matchmaking_queue_size",
                 "Number of people in the queue.",
-                "queue",
-                "subType");
+                LabelNames);
+        private static readonly Summary TimeInQueue = Metrics
+            .CreateSummary(
+                "evos_matchmaking_time_in_queue_seconds",
+                "How long does it take to get a game.",
+                LabelNames,
+                new SummaryConfiguration
+                {
+                    Objectives = new List<QuantileEpsilonPair>
+                    {
+                        new(0.5, 0.01),
+                        new(0.75, 0.01),
+                        new(0.9, 0.01),
+                        new(0.95, 0.01),
+                        new(0.98, 0.01),
+                        new(0.99, 0.01),
+                    },
+                    MaxAge = TimeSpan.FromHours(1)
+                });
+        private static readonly Histogram PredictedChances = Metrics
+            .CreateHistogram(
+                "evos_matchmaking_predicted_chances_percent",
+                "How likely is one of the teams to win",
+                LabelNames,
+                new HistogramConfiguration
+                {
+                    Buckets = new double[] { 53, 55, 60, 65, 75, 90 }
+                });
 
         public IEnumerable<long> GetQueuedGroups()
         {
@@ -255,6 +281,22 @@ namespace CentralServer.LobbyServer.Matchmaking
                                 }
                             }
                             StartMatch(match, i);
+
+                            DateTime now = DateTime.UtcNow;
+                            foreach (Matchmaker.MatchmakingGroup matchmakingGroup in match.Groups)
+                            {
+                                double timeInQueueSeconds = (now - matchmakingGroup.QueueTime).TotalSeconds;
+                                for (int j = 0; j < matchmakingGroup.Players; j++)
+                                {
+                                    M(TimeInQueue, subType).Observe(timeInQueueSeconds);
+                                }
+                            }
+
+                            float prediction = Elo.GetPrediction(match.TeamA.Elo, match.TeamB.Elo);
+                            if (!float.IsNaN(prediction))
+                            {
+                                M(PredictedChances, subType).Observe(MathF.Max(prediction, 1 - prediction));
+                            }
                         }
 
                         break;

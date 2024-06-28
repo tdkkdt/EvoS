@@ -87,5 +87,15 @@ namespace EvoS.Framework.DataAccess.Mongo
             UpdateField(data.AccountId, data, FExperienceComponent);
             UpdateUpdateTime(data);
         }
+
+        public long GetUserCountWithLoginsSince(DateTime dateTime)
+        {
+            return c.CountDocuments(f.Gte("AdminComponent.LastLogin", dateTime));
+        }
+        
+        public long GetUserCount()
+        {
+            return c.CountDocuments(f.Empty);
+        }
     }
 } 

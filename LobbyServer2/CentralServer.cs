@@ -79,6 +79,9 @@ namespace CentralServer
 
             MatchmakingTask matchmakingTask = new MatchmakingTask(CancellationToken.None);
             _ = Task.Run(matchmakingTask.Run, CancellationToken.None);
+
+            ServerStatisticsTask serverStatisticsTask = new ServerStatisticsTask(CancellationToken.None);
+            _ = Task.Run(serverStatisticsTask.Run, CancellationToken.None);
             
             _server.Start();
             log.Info($"Started lobby server on port {port}");
