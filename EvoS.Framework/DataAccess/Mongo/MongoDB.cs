@@ -117,7 +117,7 @@ namespace EvoS.Framework.DataAccess.Mongo
                 BsonDocument bsonDocument = BsonDocument.Parse(json);
                 serializer.Serialize(context, bsonDocument.AsBsonValue);
             }
-            catch (FormatException e)
+            catch (FormatException)
             {
                 context.Writer.WriteString(json);
             }

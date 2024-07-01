@@ -7,11 +7,11 @@ namespace EvoS.Framework.GameData;
 public class PrefabResourceLink
 {
 	[SerializeField]
-	private string m_resourcePath;
+	private string m_resourcePath = null;
 	[SerializeField]
-	private string m_GUID;
+	private string m_GUID = null;
 	[SerializeField]
-	private string m_debugPrefabPath;
+	private string m_debugPrefabPath = null;
 
 	public string GUID => m_GUID;
 	internal string ResourcePath => m_resourcePath;

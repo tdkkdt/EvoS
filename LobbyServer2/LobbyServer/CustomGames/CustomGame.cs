@@ -578,7 +578,7 @@ public class CustomGame : Game
     }
 
     // TODO merge with Game/PvpGame
-    private void CheckIfAllSelected()
+    private new void CheckIfAllSelected()
     {
         bool changed = false;
         lock (characterSelectionLock)

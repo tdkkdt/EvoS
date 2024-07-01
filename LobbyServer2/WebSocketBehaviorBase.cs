@@ -24,7 +24,7 @@ namespace CentralServer
             {
                 log.Debug($"{prefix} {message.GetType().Name} {DefaultJsonSerializer.Serialize(message)}");
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 log.Debug($"{prefix} {message.GetType().Name} <failed to serialize message>");
             }
@@ -99,7 +99,7 @@ namespace CentralServer
             {
                 deserialized = DeserializeMessage(e.RawData, out callbackId);
             }
-            catch (NullReferenceException nullEx)
+            catch (NullReferenceException)
             {
                 log.Error("No message handler registered for data: " + BitConverter.ToString(e.RawData));
             }

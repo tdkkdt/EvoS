@@ -94,7 +94,7 @@ namespace CentralServer.LobbyServer.Discord
             }
         }
 
-        private async Task ClientOnMessageReceived(SocketMessage socketMessage)
+        private Task ClientOnMessageReceived(SocketMessage socketMessage)
         {
             // Check if Author is not a bot and allow only reading from the discord LobbyChannel
             if (botChannelId == null
@@ -102,7 +102,7 @@ namespace CentralServer.LobbyServer.Discord
                 || socketMessage.Channel.Id != botChannelId
                 || socketMessage.Author.IsWebhook)
             {
-                return;
+                return Task.CompletedTask;
             }
 
             log.Info($"Discord message from {socketMessage.Author.Username}: {socketMessage.Content}");
@@ -121,6 +121,8 @@ namespace CentralServer.LobbyServer.Discord
                     player.Send(message);
                 }
             }
+
+            return Task.CompletedTask;
         }
 
         private async Task SlashCommandHandler(SocketSlashCommand command)

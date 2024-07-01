@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using NetSerializer;
 
 namespace EvoS.Framework.Network.Static
 {
+    // TODO RequirementCollection is broken on lobby server side
     [Serializable]
     [EvosMessage(147)]
     public class RequirementCollection // : IEnumerable<QueueRequirement>, IEnumerable
@@ -11,11 +11,11 @@ namespace EvoS.Framework.Network.Static
         [EvosMessage(150)]
         public List<byte[]> RequirementsAsBinaryData;
 
-        [NonSerialized] private bool m_dirty = true;
+        // [NonSerialized] private bool m_dirty = true;
 
         [EvosMessage(148)]
         private List<QueueRequirement> m_queueRequirementAsList = new List<QueueRequirement>();
 
-        private static Serializer s_serializer;
+        // private static Serializer s_serializer;
     }
 }

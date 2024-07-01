@@ -8,11 +8,16 @@ namespace EvoS.Framework.Network.Static
     {
         public float MaxValue { get; set; }
 
-        public override bool AnyGroupMember => this.m_anyGroupMember;
+        public override bool AnyGroupMember => m_anyGroupMember;
 
-        public override QueueRequirement.RequirementType Requirement =>
-            QueueRequirement.RequirementType.MaxLeavingPoints;
+        public override RequirementType Requirement =>
+            RequirementType.MaxLeavingPoints;
 
         private bool m_anyGroupMember;
+
+        public QueueRequirement_MaxLeavingPoints(bool mAnyGroupMember)
+        {
+            m_anyGroupMember = mAnyGroupMember;
+        }
     }
 }

@@ -168,7 +168,7 @@ public abstract class ApiServer
         {
             accountId = LoginManager.Login(authInfo.UserName, authInfo._Password);
         }
-        catch (Exception _)
+        catch (Exception)
         {
             log.Info($"Failed to authorize {authInfo.UserName} from {LobbyServerUtils.GetIpAddress(httpContext)} for {authContext} access");
             return Results.Unauthorized();

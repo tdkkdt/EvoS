@@ -1,5 +1,4 @@
 using System;
-using Newtonsoft.Json;
 
 namespace EvoS.Framework.Network.Static
 {
@@ -9,13 +8,19 @@ namespace EvoS.Framework.Network.Static
     {
         public int MinValue { get; set; }
 
-        public override bool AnyGroupMember => this.m_anyGroupMember;
+        public override bool AnyGroupMember => m_anyGroupMember;
 
-        public override QueueRequirement.RequirementType Requirement => this.m_requirementType;
+        public override RequirementType Requirement => m_requirementType;
 
 
-        private QueueRequirement.RequirementType m_requirementType;
+        private RequirementType m_requirementType;
 
         private bool m_anyGroupMember;
+
+        public QueueRequirement_GreaterThan(RequirementType mRequirementType, bool mAnyGroupMember)
+        {
+            m_requirementType = mRequirementType;
+            m_anyGroupMember = mAnyGroupMember;
+        }
     }
 }

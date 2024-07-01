@@ -70,7 +70,7 @@ public class AuthTicket
 		{
 			return Parse(ticketData);
 		}
-		catch (Exception e)
+		catch (Exception)
 		{
 			return null;
 		}

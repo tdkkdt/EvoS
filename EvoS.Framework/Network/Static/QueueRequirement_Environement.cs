@@ -12,5 +12,10 @@ namespace EvoS.Framework.Network.Static
         public override RequirementType Requirement => RequirementType.ProhibitEnvironment;
         
         private EnvironmentType Environment;
+
+        public QueueRequirement_Environement(EnvironmentType environment)
+        {
+            Environment = environment;
+        }
     }
 }

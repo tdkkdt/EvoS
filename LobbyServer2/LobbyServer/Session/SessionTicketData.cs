@@ -13,7 +13,7 @@ namespace CentralServer.LobbyServer.Session
         private static readonly HashAlgorithm algorithm = SHA256.Create();
         private static readonly Guid saltGuid = Guid.NewGuid(); // new salt everytime the server restarts
 
-        public string ToString()
+        public override string ToString()
         {
             return $"{AccountID}\n{SessionToken}\n{ReconnectionSessionToken}";
         }

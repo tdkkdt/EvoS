@@ -1,4 +1,3 @@
-using I2.Loc;
 using System;
 using System.Collections.Generic;
 
@@ -41,4 +40,9 @@ public class LocalizationArg_BroadcastMessage : LocalizationArg
 	// 	}
 	// 	return string.Empty;
 	// }
+
+	public override string ToString()
+	{
+		return $"{nameof(m_packedMessages)}: {m_packedMessages}, {nameof(m_timeInAdvance)}: {m_timeInAdvance}";
+	}
 }
