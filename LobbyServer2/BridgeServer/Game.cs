@@ -427,7 +427,7 @@ public abstract class Game
             LobbyServerProtocol playerConnection = SessionManager.GetClientConnection(playerInfo.AccountId);
             if (playerConnection == null || !playerConnection.IsConnected || playerConnection.CurrentGame != this)
             {
-                log.Error($"Player {playerInfo.Handle}/{playerInfo.AccountId} who was to participate in game {GameInfo.Name} has disconnected");
+                log.Info($"Player {playerInfo.Handle}/{playerInfo.AccountId} who was to participate in game {GameInfo.Name} has disconnected");
                 CancelMatch(playerInfo.Handle);
                 return false;
             }
