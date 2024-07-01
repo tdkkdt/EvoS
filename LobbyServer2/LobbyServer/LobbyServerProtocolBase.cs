@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
+using System.Net.Http;
 using System.Text;
 using CentralServer.LobbyServer.Chat;
 using CentralServer.LobbyServer.Config;
@@ -15,7 +15,6 @@ using CentralServer.LobbyServer.Utils;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
-using EvoS.Framework.DataAccess.Daos;
 using EvoS.Framework.Network;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
@@ -173,9 +172,12 @@ namespace CentralServer.LobbyServer
             {
                 try
                 {
-                    using WebClient wc = new WebClient();
-                    wc.Headers.Set("User-Agent", "AtlasReactor");
-                    string json = wc.DownloadString(LobbyConfiguration.GetPatchNotesCommitsUrl());
+                    using HttpClient httpClient = new HttpClient();
+                    httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; Evos/1.0)");
+                    var request = new HttpRequestMessage(HttpMethod.Get, LobbyConfiguration.GetPatchNotesCommitsUrl());
+                    var response = httpClient.Send(request);
+                    using var reader = new StreamReader(response.Content.ReadAsStream());
+                    string json = reader.ReadToEnd();
                     JArray array = JArray.Parse(json);
                     StringBuilder parsed = new StringBuilder();
                     foreach (JObject obj in array)
