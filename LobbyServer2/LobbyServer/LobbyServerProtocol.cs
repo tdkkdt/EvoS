@@ -568,8 +568,6 @@ namespace CentralServer.LobbyServer
                 Send(response);
                 SendLobbyServerReadyNotification();
 
-                GroupManager.CreateGroup(AccountId);
-
                 // Send 'Connected to lobby server' notification to chat
                 foreach (long playerAccountId in SessionManager.GetOnlinePlayers())
                 {

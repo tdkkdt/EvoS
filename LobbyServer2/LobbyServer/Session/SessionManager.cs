@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using CentralServer.BridgeServer;
+using CentralServer.LobbyServer.Group;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Exceptions;
@@ -65,18 +66,17 @@ namespace CentralServer.LobbyServer.Session
         {
             lock (SessionInfos)
             {
-                
                 if (registerRequest.SessionInfo == null) 
                     throw new RegisterGameException("Session Info not received");
                 if (registerRequest.SessionInfo.SessionToken == 0)
-                    throw new RegisterGameException("Session Info not received"); ;
+                    throw new RegisterGameException("Session Info not received");
                 
                 LobbySessionInfo sessionInfo = ConnectingSessions.GetValueOrDefault(registerRequest.SessionInfo.AccountId);
 
                 if (sessionInfo == null)
-                    throw new RegisterGameException("Session not found. User not logged"); ; // Session not found
+                    throw new RegisterGameException("Session not found. User not logged"); // Session not found
                 if (sessionInfo.SessionToken != registerRequest.SessionInfo.SessionToken)
-                    throw new RegisterGameException("This session is not valid anymore"); ; // Session token do not match
+                    throw new RegisterGameException("This session is not valid anymore"); // Session token do not match
 
                 long accountId = sessionInfo.AccountId;
             
@@ -94,6 +94,8 @@ namespace CentralServer.LobbyServer.Session
                 client.SelectedSubTypeMask = 0;
                 client.SessionToken = sessionInfo.SessionToken;
 
+                GroupManager.CreateGroup(client.AccountId);
+                
                 SessionInfos.TryRemove(client.AccountId, out _);
                 SessionInfos.TryAdd(client.AccountId, new SessionInfo
                 {
