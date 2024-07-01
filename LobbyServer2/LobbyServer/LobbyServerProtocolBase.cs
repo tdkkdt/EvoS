@@ -15,6 +15,7 @@ using CentralServer.LobbyServer.Utils;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
+using EvoS.Framework.Misc;
 using EvoS.Framework.Network;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
@@ -36,6 +37,8 @@ namespace CentralServer.LobbyServer
         public BotDifficulty AllyDifficulty;
         public BotDifficulty EnemyDifficulty;
         public bool SessionCleaned = false; // tracks clean up methods execution for reconnection
+
+        private static readonly Lazy<string> CachedPatchNotes = new(FetchGithubPatchNotes);
 
         protected override string GetConnContext()
         {
@@ -163,45 +166,50 @@ namespace CentralServer.LobbyServer
                 ServerMessageOverrides = GetServerMessageOverrides()
             };
         }
+        
+        private static string FetchGithubPatchNotes()
+        {
+            if (LobbyConfiguration.GetPatchNotesCommitsUrl().IsNullOrEmpty())
+            {
+                return null;
+            }
+            
+            try
+            {
+                using HttpClient httpClient = new HttpClient();
+                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; Evos/1.0)");
+                var request = new HttpRequestMessage(HttpMethod.Get, LobbyConfiguration.GetPatchNotesCommitsUrl());
+                var response = httpClient.Send(request);
+                using var reader = new StreamReader(response.Content.ReadAsStream());
+                string json = reader.ReadToEnd();
+                JArray array = JArray.Parse(json);
+                StringBuilder parsed = new StringBuilder();
+                foreach (JObject obj in array)
+                {
+                    string sha = obj["sha"].ToString();
+                    string author = obj["commit"]["author"]["name"].ToString();
+                    string message = obj["commit"]["message"].ToString();
+                    List<string> parts = message.Split('\n').ToList();
+                    string title = parts[0];
+                    parts.RemoveAt(0);
+                    message = String.Join('\n', parts);
+                    parsed.AppendLine($"<size=20>[{sha.Substring(0, 7)}] <color=#ff66ff>{author}</color></size>");
+                    parsed.AppendLine($"<size=30><b>{title}</b></size>");
+                    parsed.AppendLine($"{message}\n\n\n");
+                }
+
+                return parsed.ToString();
+            }
+            catch (Exception e)
+            {
+                log.Info($"Could not get github commits {e.Message}");
+            }
+
+            return null;
+        }
 
         private ServerMessageOverrides GetServerMessageOverrides()
         {
-            string PatchNotesText = LobbyConfiguration.GetPatchNotesText();
-
-            if (LobbyConfiguration.GetPatchNotesCommitsUrl() != "")
-            {
-                try
-                {
-                    using HttpClient httpClient = new HttpClient();
-                    httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; Evos/1.0)");
-                    var request = new HttpRequestMessage(HttpMethod.Get, LobbyConfiguration.GetPatchNotesCommitsUrl());
-                    var response = httpClient.Send(request);
-                    using var reader = new StreamReader(response.Content.ReadAsStream());
-                    string json = reader.ReadToEnd();
-                    JArray array = JArray.Parse(json);
-                    StringBuilder parsed = new StringBuilder();
-                    foreach (JObject obj in array)
-                    {
-                        string sha = obj["sha"].ToString();
-                        string author = obj["commit"]["author"]["name"].ToString();
-                        string message = obj["commit"]["message"].ToString();
-                        List<string> parts = message.Split('\n').ToList();
-                        string title = parts[0];
-                        parts.RemoveAt(0);
-                        message = String.Join('\n', parts);
-                        parsed.AppendLine($"<size=20>[{sha.Substring(0, 7)}] <color=#ff66ff>{author}</color></size>");
-                        parsed.AppendLine($"<size=30><b>{title}</b></size>");
-                        parsed.AppendLine($"{message}\n\n\n");
-                    }
-
-                    PatchNotesText = parsed.ToString();
-                }
-                catch (Exception e)
-                {
-                    log.Info($"Could not get github commits {e.Message}");
-                }
-            }
-
             string adminMessage = AdminMessageManager.PopAdminMessage(AccountId);
             if (adminMessage is not null)
             {
@@ -214,7 +222,7 @@ namespace CentralServer.LobbyServer
                 MOTDText = GetMotdText(), // "alert" text
                 ReleaseNotesHeader = LobbyConfiguration.GetPatchNotesHeader(),
                 ReleaseNotesDescription = LobbyConfiguration.GetPatchNotesDescription(),
-                ReleaseNotesText = PatchNotesText, // ConfigManager.PatchNotesText,
+                ReleaseNotesText = CachedPatchNotes.Value ?? LobbyConfiguration.GetPatchNotesText()
             };
         }
 
