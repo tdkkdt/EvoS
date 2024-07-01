@@ -14,7 +14,7 @@ namespace CentralServer.LobbyServer.Discord
         private readonly DiscordWebhookClient client;
         private readonly ulong? threadId;
         private readonly ulong? pingRoleId;
-        private readonly string? pingRoleHandle;
+        private readonly string pingRoleHandle;
         
         public DiscordClientWrapper(DiscordChannel conf)
         {

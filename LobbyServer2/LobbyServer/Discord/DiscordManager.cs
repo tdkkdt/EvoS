@@ -618,7 +618,7 @@ namespace CentralServer.LobbyServer.Discord
             }
         }
 
-        private static void GameReportAddPlayer(EmbedBuilder eb, PlayerGameSummary? player)
+        private static void GameReportAddPlayer(EmbedBuilder eb, PlayerGameSummary player)
         {
             if (player == null)
             {

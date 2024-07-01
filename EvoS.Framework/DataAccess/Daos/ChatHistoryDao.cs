@@ -24,7 +24,7 @@ namespace EvoS.Framework.DataAccess.Daos
             public long sender;
             public DateTime time;
             public string message;
-            public string? game;
+            public string game;
             public List<long> recipients;
             public List<long> blockedRecipients;
             public bool isMuted;
@@ -35,7 +35,7 @@ namespace EvoS.Framework.DataAccess.Daos
             public Entry(
                 ChatNotification Notify,
                 DateTime Time,
-                string? Game,
+                string Game,
                 IEnumerable<long> Recipients,
                 IEnumerable<long> BlockedRecipients,
                 bool IsMuted)

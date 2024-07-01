@@ -343,13 +343,9 @@ public class AuthTicket
 		}
 	}
 
-	public AuthEntitlement? GetEntitlement(string entitlementCode)
+	public AuthEntitlement GetEntitlement(string entitlementCode)
 	{
-		if (m_entitlementsByCode.TryGetValue(entitlementCode, out AuthEntitlement value))
-		{
-			return value;
-		}
-		return null;
+		return m_entitlementsByCode.GetValueOrDefault(entitlementCode);
 	}
 
 	public bool HasEntitlement(string entitlementCode)
