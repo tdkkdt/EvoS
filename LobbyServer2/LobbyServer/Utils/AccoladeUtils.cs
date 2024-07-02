@@ -29,7 +29,7 @@ namespace CentralServer.LobbyServer.Utils
             
             if (badge.ComparisonGroup == GameBalanceVars.GameResultBadge.ComparisonType.None)
             {
-                return candidates.Select(player => player.PlayerId).ToList();
+                return candidates.Select(player => player.ActorIndex).ToList();
             }
 
             if (badge.ComparisonGroup == GameBalanceVars.GameResultBadge.ComparisonType.Game)
@@ -37,18 +37,18 @@ namespace CentralServer.LobbyServer.Utils
                 float max = candidates.Select(player => player.GetStat(badge.BadgePointCalcType)).Max() ?? 0;
                 return candidates
                     .Where(player => player.GetStat(badge.BadgePointCalcType) == max)
-                    .Select(player => player.PlayerId)
+                    .Select(player => player.ActorIndex)
                     .ToList();
             }
             
             // again, we have no global stats, so we are using game stats
             Dictionary<int, int> percentiles = GetPercentiles(gameSummary, badge.BadgePointCalcType);
             List<int> result = new List<int>();
-            foreach ((int player, int percentile) in percentiles)
+            foreach ((int actorIndex, int percentile) in percentiles)
             {
                 if (percentile > badge.GlobalPercentileToObtain)
                 {
-                    result.Add(player);
+                    result.Add(actorIndex);
                 }
             }
 
@@ -64,14 +64,14 @@ namespace CentralServer.LobbyServer.Utils
             foreach (int badgeId in badgeGroup.BadgeIDs)
             {
                 GameBalanceVars.GameResultBadge badge = AccoladeBadges.GameResultBadges[badgeId];
-                List<int> players = AwardBadge(gameSummary, badge);
-                foreach (int player in players)
+                List<int> actorIndices = AwardBadge(gameSummary, badge);
+                foreach (int actorIndex in actorIndices)
                 {
-                    if (!badgeInfos.ContainsKey(player))
+                    if (!badgeInfos.ContainsKey(actorIndex))
                     {
-                        badgeInfos[player] = new List<BadgeInfo>();
+                        badgeInfos[actorIndex] = new List<BadgeInfo>();
                     }
-                    badgeInfos[player].Add(new BadgeInfo { BadgeId = badge.GetID() });
+                    badgeInfos[actorIndex].Add(new BadgeInfo { BadgeId = badge.GetID() });
                 }
             }
             
@@ -96,15 +96,15 @@ namespace CentralServer.LobbyServer.Utils
         public static Dictionary<int, List<BadgeInfo>> AwardBadges(LobbyGameSummary gameSummary)
         {
             Dictionary<int, List<BadgeInfo>> badgeInfos = gameSummary.PlayerGameSummaryList
-                .ToDictionary(player => player.PlayerId, x => new List<BadgeInfo>());
+                .ToDictionary(player => player.ActorIndex, x => new List<BadgeInfo>());
 
             HashSet<int> processedBadges = new HashSet<int>();
             foreach (GameResultBadgeData.ConsolidatedBadgeGroup badgeGroup in AccoladeBadges.BadgeGroups)
             {
                 Dictionary<int,List<BadgeInfo>> groupBadgeInfos = AwardBadgeGroup(gameSummary, badgeGroup);
-                foreach ((int player, List<BadgeInfo> playerBadges) in groupBadgeInfos)
+                foreach ((int actorIndex, List<BadgeInfo> playerBadges) in groupBadgeInfos)
                 {
-                    badgeInfos[player].AddRange(playerBadges);
+                    badgeInfos[actorIndex].AddRange(playerBadges);
                 }
                 foreach (int badgeID in badgeGroup.BadgeIDs)
                 {
@@ -116,9 +116,9 @@ namespace CentralServer.LobbyServer.Utils
             {
                 if (processedBadges.Contains(badge.GetID())) continue;
                 List<int> groupBadgeInfos = AwardBadge(gameSummary, badge);
-                foreach (int player in groupBadgeInfos)
+                foreach (int actorIndex in groupBadgeInfos)
                 {
-                    badgeInfos[player].Add(new BadgeInfo { BadgeId = badge.GetID() });
+                    badgeInfos[actorIndex].Add(new BadgeInfo { BadgeId = badge.GetID() });
                 }
                 processedBadges.Add(badge.GetID());
             }
@@ -128,7 +128,7 @@ namespace CentralServer.LobbyServer.Utils
 
         public static Dictionary<TopParticipantSlot, int> GetAccolades(Dictionary<int, List<BadgeInfo>> badgeInfos)
         {
-            Dictionary<TopParticipantSlot, Dictionary<int, float>> slot2Player2Score =
+            Dictionary<TopParticipantSlot, Dictionary<int, float>> slot2ActorIndex2Score =
                 new Dictionary<TopParticipantSlot, Dictionary<int, float>>
                 {
                     { TopParticipantSlot.Deadliest, new Dictionary<int, float>() },
@@ -137,23 +137,23 @@ namespace CentralServer.LobbyServer.Utils
                     { TopParticipantSlot.MostDecorated, new Dictionary<int, float>() },
                 };
 
-            foreach ((int player, List<BadgeInfo> badges) in badgeInfos)
+            foreach ((int actorIndex, List<BadgeInfo> badges) in badgeInfos)
             {
                 foreach (BadgeInfo badgeInfo in badges)
                 {
                     GameBalanceVars.GameResultBadge badge = AccoladeBadges.GameResultBadges[badgeInfo.BadgeId];
-                    foreach ((TopParticipantSlot slot, Dictionary<int, float> playerScores) in slot2Player2Score)
+                    foreach ((TopParticipantSlot slot, Dictionary<int, float> playerScores) in slot2ActorIndex2Score)
                     {
                         if (badge.Role.IsFor(slot))
                         {
-                            playerScores.TryAdd(player, 0);
-                            playerScores[player] += badge.GetQualityWorth();
+                            playerScores.TryAdd(actorIndex, 0);
+                            playerScores[actorIndex] += badge.GetQualityWorth();
                         }
                     }
                 }
             }
 
-            return slot2Player2Score.ToDictionary(
+            return slot2ActorIndex2Score.ToDictionary(
                 e => e.Key,
                 e => e.Value
                     .OrderByDescending(p2s => p2s.Value)
@@ -175,7 +175,7 @@ namespace CentralServer.LobbyServer.Utils
             foreach (PlayerGameSummary player in gameSummary.PlayerGameSummaryList)
             {
                 List<TopParticipantSlot> topParticipationEarned = accolades
-                    .Where(e => e.Value == player.PlayerId)
+                    .Where(e => e.Value == player.ActorIndex)
                     .Select(e => e.Key)
                     .ToList();
                 
@@ -184,7 +184,7 @@ namespace CentralServer.LobbyServer.Utils
                     PlayerId = player.PlayerId,
                     TeamId = player.IsInTeamA() ? Team.TeamA : Team.TeamB,
                     TeamSlot = player.TeamSlot,
-                    BadgesEarned = badgeInfos[player.PlayerId],
+                    BadgesEarned = badgeInfos[player.ActorIndex],
                     TopParticipationEarned = topParticipationEarned,
                     GlobalPercentiles = new Dictionary<StatDisplaySettings.StatType, PercentileInfo>(),
                     FreelancerSpecificPercentiles = new Dictionary<int, PercentileInfo>(),
@@ -216,12 +216,12 @@ namespace CentralServer.LobbyServer.Utils
         public static Dictionary<int, int> GetPercentiles(LobbyGameSummary gameSummary, StatDisplaySettings.StatType statType)
         {
             Dictionary<int,float> values = gameSummary.PlayerGameSummaryList
-                .ToDictionary(player => player.PlayerId, player => player.GetStat(statType) ?? 0);
+                .ToDictionary(player => player.ActorIndex, player => player.GetStat(statType) ?? 0);
 
             Dictionary<int, int> percentiles = new Dictionary<int, int>();
-            foreach ((int player, float value) in values)
+            foreach ((int actorIndex, float value) in values)
             {
-                percentiles[player] = 100 * values.Values.Count(x => x < value) / values.Count;
+                percentiles[actorIndex] = 100 * values.Values.Count(x => x < value) / values.Count;
             }
 
             return percentiles;
