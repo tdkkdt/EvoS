@@ -77,6 +77,7 @@ public class AllianceMessageBase : MessageBase
 			try
 			{
 				string jsonStr = reader.ReadString();
+				log.Debug($"Falling back to json deserializer for {o.GetType().Name}: {jsonStr}");
 				o = JsonConvert.DeserializeObject<T>(jsonStr);
 			}
 			catch (Exception e)
