@@ -25,6 +25,7 @@ namespace EvoS.Framework
         public bool RequireRegistrationCode = false;
         public TimeSpan RegistrationCodeLifetime = TimeSpan.Zero;
         public TimeSpan TempPasswordLifetime = TimeSpan.FromHours(12);
+        public bool DisableUserIpCheck = false;
         public int MaxLinkedAccounts = 6;
         public DBConfig Database = new DBConfig();
         public string UserApiKey = "";
@@ -84,6 +85,8 @@ namespace EvoS.Framework
         public static TimeSpan GetRegistrationCodeLifetime() => Instance.RegistrationCodeLifetime;
         
         public static TimeSpan GetTempPasswordLifetime() => Instance.TempPasswordLifetime;
+        
+        public static bool GetDisableUserIpCheck() => Instance.DisableUserIpCheck;
 
         public static int GetMaxLinkedAccounts() => Instance.MaxLinkedAccounts;
         

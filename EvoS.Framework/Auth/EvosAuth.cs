@@ -131,9 +131,15 @@ public class EvosAuth
     public static bool ValidateTokenData(HttpContext httpContext, TokenData tokenData, Context authContext)
     {
         return tokenData is not null
-               && tokenData.IpAddress.IsSameSubnet(
-                   httpContext.Connection.RemoteIpAddress,
-                   GetAllowedSubnet(authContext));
+               && (SkipIpCheck(authContext)
+                    || tokenData.IpAddress.IsSameSubnet(
+                        httpContext.Connection.RemoteIpAddress,
+                        GetAllowedSubnet(authContext)));
+    }
+
+    private static bool SkipIpCheck(Context authContext)
+    {
+        return EvosConfiguration.GetDisableUserIpCheck() && authContext is Context.TICKET_AUTH or Context.USER_API;
     }
 
     private static int GetAllowedSubnet(Context context)
