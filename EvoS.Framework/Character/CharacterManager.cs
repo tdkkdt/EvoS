@@ -14,7 +14,7 @@ namespace EvoS.DirectoryServer.Character
         private static readonly ILog log = LogManager.GetLogger(typeof(CharacterManager));
         
         private static readonly Lazy<Dictionary<CharacterType, CharacterModInfo>> DEFAULT_EQUIP = new Lazy<Dictionary<CharacterType, CharacterModInfo>>(() =>
-            JsonConvert.DeserializeObject<Dictionary<CharacterType, CharacterModInfo>>(File.ReadAllText("config/defaultEquip.json")));
+            JsonConvert.DeserializeObject<Dictionary<CharacterType, CharacterModInfo>>(File.ReadAllText("Config/defaultEquip.json")));
         
         public static Dictionary<CharacterType, PersistedCharacterData> GetPersistedCharacterData(long accountId)
         {
