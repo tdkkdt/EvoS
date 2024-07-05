@@ -128,8 +128,8 @@ namespace CentralServer.LobbyServer.Character
                 CharacterType.Fireborg,
                 new CharacterConfig()
                 {
-                    AllowForBots = false,
-                    AllowForPlayers = false,
+                    AllowForBots = true,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Assassin,
                     CharacterType = CharacterType.Fireborg,
                     Difficulty = 1,
