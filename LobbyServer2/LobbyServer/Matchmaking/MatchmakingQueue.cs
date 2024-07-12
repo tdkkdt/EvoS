@@ -139,6 +139,12 @@ namespace CentralServer.LobbyServer.Matchmaking
 
                 M(QueueSize).Set(GetPlayerCount());
             });
+            
+            foreach (GameSubType subType in MatchmakingQueueInfo.GameConfig.SubTypes)
+            {
+                M(PredictedChances, subType).Publish();
+            }
+            M(PredictedChances).Publish();
         }
 
         private Matchmaker MatchmakerFactory(GameSubType st)
