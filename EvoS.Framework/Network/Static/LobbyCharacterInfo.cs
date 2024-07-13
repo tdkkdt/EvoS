@@ -40,7 +40,6 @@ namespace EvoS.Framework.Network.Static
             BanMod(CharacterType.Tracker, 4, 1); // Grey's "Overcharged coils"
             BanMod(CharacterType.Spark, 4, 5); // Quark's "Piercing Light"
             BanMod(CharacterType.Blaster, 0, 5); // Elle's "Long Barrel"
-            BanMod(CharacterType.Fireborg, 4, 7); // Lex's "Spontaneous Combustion"
         }
 
         private static void BanMod(CharacterType characterType, int abilityIndex, int modAbilityScopeId)
