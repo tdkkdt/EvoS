@@ -297,8 +297,8 @@ namespace CentralServer.LobbyServer.Character
                 CharacterType.Scamp,
                 new CharacterConfig()
                 {
-                    AllowForBots = false,
-                    AllowForPlayers = false,
+                    AllowForBots = true,
+                    AllowForPlayers = true,
                     CharacterRole = CharacterRole.Tank,
                     CharacterType = CharacterType.Scamp,
                     Difficulty = 1,
