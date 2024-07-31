@@ -20,6 +20,14 @@ export interface PlayerData {
     bannerBg: number;
     bannerFg: number;
     status: string;
+    titleId: number;
+    factionData: PlayerFactionData;
+    buildVersion: string;
+}
+
+export interface PlayerFactionData {
+    factions: number[];
+    selectedRibbonID: number;
 }
 
 export interface PlayerDetails {

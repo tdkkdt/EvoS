@@ -101,6 +101,12 @@ function Player({info, greyOut}: Props) {
                 }}>
                 <Typography component={'span'} style={{ fontSize: '1em' }}>{info.status === "" ? "Online" : info.status}</Typography>
             </ImageTextWrapper>}
+            {info && info.buildVersion &&
+                <ImageTextWrapper style={{bottom: '2%', width: '69%', textAlign: 'right'}}>
+                    <Typography component={'span'} style={{ fontSize: '1.4em' }}>
+                        {info.buildVersion.replace(/^STABLE-122-100_/, '')}
+                    </Typography>
+                </ImageTextWrapper>}
         </div>
     </div>;
 }

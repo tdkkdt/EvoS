@@ -67,6 +67,7 @@ namespace EvoS.DirectoryServer
     public class DirectoryServer
     {
         public const string SUPPORTED_PROTO_VERSION = "b486c83d8a8950340936d040e1953493";
+        public const string BUILD_VERSION = "STABLE-122-100";
         public const string ERROR_INVALID_PROTOCOL_VERSION = "INVALID_PROTOCOL_VERSION";
 
         private static readonly ILog log = LogManager.GetLogger(typeof(DirectoryServer));

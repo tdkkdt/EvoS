@@ -33,8 +33,12 @@ namespace CentralServer.ApiServer
                 players = SessionManager.GetOnlinePlayers()
                     .Concat(games.SelectMany(g => g.GetPlayers()))
                     .Distinct()
-                    .Select(id => DB.Get().AccountDao.GetAccount(id))
-                    .Select(Player.Of)
+                    .Select(id =>
+                    {
+                        PersistedAccountData acc = DB.Get().AccountDao.GetAccount(id);
+                        LobbySessionInfo session = SessionManager.GetSessionInfo(id);
+                        return Player.Of(acc, session);
+                    })
                     .ToList(),
                 groups = GroupManager.GetGroups()
                     .Select(Group.Of)
@@ -116,6 +120,7 @@ namespace CentralServer.ApiServer
             public string status { get; set; }
             public int titleId { get; set; }
             public TrustWarManager.PlayerTrustWarDetails factionData { get; set; }
+            public string buildVersion { get; set; }
 
             private static readonly Player BotPlayer = new Player
             {
@@ -128,11 +133,17 @@ namespace CentralServer.ApiServer
 
             public static Player Of(PersistedAccountData acc)
             {
+                return Of(acc, null);
+            }
+
+            public static Player Of(PersistedAccountData acc, LobbySessionInfo session)
+            {
                 if (acc is null)
                 {
                     return BotPlayer;
                 }
-                return new Player
+
+                Player player = new Player
                 {
                     accountId = acc.AccountId,
                     handle = acc.Handle,
@@ -142,6 +153,11 @@ namespace CentralServer.ApiServer
                     status = FriendManager.GetStatusString(SessionManager.GetClientConnection(acc.AccountId)),
                     factionData = TrustWarManager.PlayerTrustWarDetails.Of(acc),
                 };
+                if (session is not null)
+                {
+                    player.buildVersion = session.BuildVersion;
+                }
+                return player;
             }
         }
 
