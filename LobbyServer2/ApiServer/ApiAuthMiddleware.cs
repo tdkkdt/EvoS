@@ -51,7 +51,7 @@ public class ApiAuthMiddleware
                 && long.TryParse(httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier), out long accountId))
             {
                 PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
-                if (account != null && account.AccountComponent.AppliedEntitlements.ContainsKey("DEVELOPER_ACCESS"))
+                if (account != null && account.AccountComponent.IsDev())
                 {
                     httpContext.User.AddIdentity(new ClaimsIdentity(new List<Claim>
                     {

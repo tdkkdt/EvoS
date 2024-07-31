@@ -44,7 +44,7 @@ namespace EvoS.Framework.Network.Static
                 BotCanTaunt = false,
                 CharacterInfo = LobbyCharacterInfo.Of(account.CharacterData[characterType]),
                 ControllingPlayerId = 0,
-                EffectiveClientAccessLevel = account.AccountComponent.AppliedEntitlements.ContainsKey("DEVELOPER_ACCESS")
+                EffectiveClientAccessLevel = account.AccountComponent.IsDev()
                     ? ClientAccessLevel.Admin
                     : ClientAccessLevel.Full,
                 EmblemID = account.AccountComponent.SelectedForegroundBannerID == -1

@@ -189,7 +189,7 @@ namespace CentralServer.LobbyServer
             {
                 return;
             }
-            if (account.AccountComponent.AppliedEntitlements.ContainsKey("DEVELOPER_ACCESS") || EvosConfiguration.GetDevMode())
+            if (account.AccountComponent.IsDev() || EvosConfiguration.GetDevMode())
             {
                 Game game = GameManager.GetGameWithPlayer(AccountId);
                 if (game != null)
@@ -225,7 +225,7 @@ namespace CentralServer.LobbyServer
             {
                 return;
             }
-            if (account.AccountComponent.AppliedEntitlements.ContainsKey("DEVELOPER_ACCESS"))
+            if (account.AccountComponent.IsDev())
             {
                 account.AccountComponent.DisplayDevTag = request.active;
                 Send(new SetDevTagResponse()

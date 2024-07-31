@@ -357,7 +357,7 @@ namespace EvoS.DirectoryServer
         {
 
 #if DEBUG
-            account.AccountComponent.AppliedEntitlements.TryAdd("DEVELOPER_ACCESS", 1);
+            account.AccountComponent.SetIsDev(true);
 #endif
 
             // Check if WillFill is missing in CharacterData, if it is add it
@@ -434,7 +434,7 @@ namespace EvoS.DirectoryServer
                 account.AccountComponent.UnlockedRibbonIDs = new List<int>();
             }
 
-            if (account.AccountComponent.AppliedEntitlements.ContainsKey("DEVELOPER_ACCESS"))
+            if (account.AccountComponent.IsDev())
             {
                 //Give developers access to the Developer title
                 account.AccountComponent.UnlockedTitleIDs.Add(26);

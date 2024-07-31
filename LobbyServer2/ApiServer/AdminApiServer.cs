@@ -26,7 +26,7 @@ public class AdminApiServer : ApiServer
             {
                 long accountId = LoginManager.Register("admin", "admin", ignoreConditions: true);
                 PersistedAccountData account = LoginManager.CreateAccount(accountId, "admin");
-                account.AccountComponent.AppliedEntitlements.TryAdd("DEVELOPER_ACCESS", 1);
+                account.AccountComponent.SetIsDev(true);
                 log.Info("Created a debug admin account");
             }
             catch (Exception e)
@@ -71,6 +71,6 @@ public class AdminApiServer : ApiServer
 
     protected override bool LoginFilter(HttpContext httpContext, LoginModel authInfo, PersistedAccountData account)
     {
-        return account.AccountComponent.AppliedEntitlements.ContainsKey("DEVELOPER_ACCESS");
+        return account.AccountComponent.IsDev();
     }
 }

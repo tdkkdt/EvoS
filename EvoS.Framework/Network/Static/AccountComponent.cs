@@ -8,6 +8,8 @@ namespace EvoS.Framework.Network.NetworkMessages
     [EvosMessage(617)]
     public class AccountComponent
     {
+        private const string ENTITLEMENT_DEV = "DEVELOPER_ACCESS";
+        
         public AccountComponent()
         {
             LastCharacter = CharacterType.Scoundrel;
@@ -147,6 +149,24 @@ namespace EvoS.Framework.Network.NetworkMessages
             HasSeenSeasonFourChapterOne,
             HasViewedFreelancerTokenHighlight,
             NONE = 10000
+        }
+
+        public bool IsDev()
+        {
+            AppliedEntitlements.TryGetValue(ENTITLEMENT_DEV, out int value);
+            return value == 1;
+        }
+        
+        public void SetIsDev(bool isDev)
+        {
+            if (isDev)
+            {
+                AppliedEntitlements.TryAdd(ENTITLEMENT_DEV, 1);
+            }
+            else
+            {
+                AppliedEntitlements.Remove(ENTITLEMENT_DEV);
+            }
         }
     }
 }

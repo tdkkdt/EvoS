@@ -158,6 +158,7 @@ namespace CentralServer.ApiServer
             public DateTime lockedUntil { get; set; }
             public string lockedReason { get; set; }
             public string adminMessage { get; set; }
+            public bool isDev { get; set; }
 
             public static ActivePlayer Of(PersistedAccountData acc)
             {
@@ -175,7 +176,8 @@ namespace CentralServer.ApiServer
                     locked = acc.AdminComponent.Locked,
                     lockedUntil = acc.AdminComponent.LockedUntil.ToUniversalTime(),
                     lockedReason = acc.AdminComponent.AdminActions?.FindLast(x => x.ActionType == AdminComponent.AdminActionType.Lock)?.Description ?? "",
-                    adminMessage = adminMessage?.message
+                    adminMessage = adminMessage?.message,
+                    isDev = acc.AccountComponent.IsDev()
                 };
             }
         }
