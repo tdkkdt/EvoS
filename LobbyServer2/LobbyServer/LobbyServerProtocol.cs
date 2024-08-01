@@ -1912,17 +1912,30 @@ namespace CentralServer.LobbyServer
 
         private void HandleCrashReportArchiveNameRequest(CrashReportArchiveNameRequest request)
         {
-            Send(new CrashReportArchiveNameResponse
+            CrashReportArchiveNameResponse response = new CrashReportArchiveNameResponse
             {
                 Success = false,
                 ResponseId = request.RequestId
-            });
+            };
+            
+            LobbySessionInfo sessionInfo = SessionManager.GetSessionInfo(AccountId);
+            if (sessionInfo is not null)
+            {
+                BuildVersionInfo info = sessionInfo.BuildVersionInfo;
+                if (info.IsPatched)
+                {
+                    response.Success = true;
+                    response.ArchiveName = CrashReportManager.Add(AccountId).ToString();
+                }
+            }
+            Send(response);
         }
 
         private void HandleClientStatusReport(ClientStatusReport msg)
         {
             string shortDetails = msg.StatusDetails != null ? msg.StatusDetails.Split('\n', 2)[0] : "";
             log.Info($"ClientStatusReport {msg.Status}: {shortDetails} ({msg.UserMessage})");
+            CrashReportManager.ProcessClientStatusReport(AccountId, msg);
         }
 
         private void HandleSubscribeToCustomGamesRequest(SubscribeToCustomGamesRequest request)

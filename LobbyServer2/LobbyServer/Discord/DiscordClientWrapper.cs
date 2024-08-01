@@ -60,5 +60,28 @@ namespace CentralServer.LobbyServer.Discord
             return client.SendMessageAsync(
                 text, isTTS, embeds, username, avatarUrl, options, allowedMentions, components, flags, _threadId);
         }
+
+        public Task<ulong> SendFileAsync(
+            FileAttachment attachment,
+            string text = null,
+            bool isTTS = false,
+            IEnumerable<Embed> embeds = null,
+            string username = null,
+            string avatarUrl = null,
+            RequestOptions options = null,
+            ulong? threadIdOverride = null)
+        {
+            ulong? _threadId = threadIdOverride ?? threadId;
+            if (_threadId == 0) _threadId = null;
+            return client.SendFileAsync(
+                attachment,
+                text,
+                isTTS,
+                embeds,
+                username,
+                avatarUrl,
+                options,
+                threadId: _threadId);
+        }
     }
 }

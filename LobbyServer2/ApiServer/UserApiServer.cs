@@ -44,6 +44,13 @@ public class UserApiServer : ApiServer
         app.MapPut("/api/account/changePassword", ChangePassword).RequireAuthorization();
         app.MapGet("/api/ticket", GetTicket).RequireAuthorization();
         app.MapGet("/api/logout", LogOutEverywhere).RequireAuthorization();
+        app.MapPost("/api/archive/{id}", CrashReport).AllowAnonymous();
+        
+        app.UseWhen(
+            ctx => ctx.Request.Path.StartsWithSegments("/api/archive/"),
+            ab => ab.UseMiddleware<EnableRequestBodyBufferingMiddleware>()
+        );
+        
         app.UseAuthorization();
     }
 
@@ -221,5 +228,24 @@ public class UserApiServer : ApiServer
         }
 
         return Results.Json(new ServerMessageModel { Text = text, Severity = (severityOverride ?? severity).ToString().ToLower() });
+    }
+
+    protected IResult CrashReport(HttpContext httpContext, string id)
+    {
+        
+        if (!Guid.TryParse(id, out Guid guid) || httpContext.Request.ContentLength <= 0)
+        {
+            return Results.BadRequest();
+        }
+
+        long accountId = CrashReportManager.Pop(guid);
+        if (accountId <= 0)
+        {
+            return Results.NotFound();
+        }
+
+        CrashReportManager.ProcessArchive(accountId, httpContext.Request.Body);
+        
+        return Results.Ok();
     }
 }

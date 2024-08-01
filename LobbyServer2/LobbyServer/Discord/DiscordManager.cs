@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -156,6 +157,12 @@ namespace CentralServer.LobbyServer.Discord
                 AdminController.OnAdminScheduleShutdown += SendAdminScheduleShutdownAuditAsync;
             }
 
+            if (adminUserReportChannel is not null)
+            {
+                CrashReportManager.OnCrashReport += SendCrashReportAsync;
+                CrashReportManager.OnStatusReport += SendStatusReportAsync;
+            }
+
             await StartBot();
         }
 
@@ -205,6 +212,12 @@ namespace CentralServer.LobbyServer.Discord
             if (adminSystemReportChannel is not null)
             {
                 AdminController.OnAdminScheduleShutdown -= SendAdminScheduleShutdownAuditAsync;
+            }
+
+            if (adminUserReportChannel is not null)
+            {
+                CrashReportManager.OnCrashReport -= SendCrashReportAsync;
+                CrashReportManager.OnStatusReport -= SendStatusReportAsync;
             }
             cancelTokenSource.Cancel();
             cancelTokenSource.Dispose();
@@ -517,6 +530,70 @@ namespace CentralServer.LobbyServer.Discord
             catch (Exception e)
             {
                 Console.WriteLine($"Failed to send log to Discord: {e}");
+            }
+        }
+
+        private void SendCrashReportAsync(long accountId, Stream archive)
+        {
+            _ = SendCrashReport(accountId, archive);
+        }
+
+        public async Task SendCrashReport(long accountId, Stream archive)
+        {
+            if (adminUserReportChannel == null || !conf.AdminEnableUserReports)
+            {
+                return;
+            }
+            try
+            {
+                string handle = LobbyServerUtils.GetHandle(accountId);
+                string fileName = $"CrashDump_{DateTime.UtcNow:yyyy_MM_dd__HH_mm_ss}_{handle}.zip";
+                LobbySessionInfo sessionInfo = SessionManager.GetSessionInfo(accountId);
+                FileAttachment attachment = new FileAttachment(archive, fileName);
+                
+                await adminUserReportChannel.SendFileAsync(
+                    attachment,
+                    $"Crash report from {handle}\nSent from version {sessionInfo.BuildVersion}\n",
+                    username: "Atlas Reactor",
+                    threadIdOverride: conf.AdminLogThreadId);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Failed to send crash report to Discord: {e}");
+            }
+        }
+
+        private void SendStatusReportAsync(long accountId, ClientStatusReport report)
+        {
+            _ = SendStatusReport(accountId, report);
+        }
+
+        public async Task SendStatusReport(long accountId, ClientStatusReport report)
+        {
+            if (adminUserReportChannel == null || !conf.AdminEnableUserReports)
+            {
+                return;
+            }
+            try
+            {
+                string handle = LobbyServerUtils.GetHandle(accountId);
+                await adminUserReportChannel.SendMessageAsync(
+                    username: "Atlas Reactor",
+                    embeds: new[] { new EmbedBuilder
+                    {
+                        Description = $"Crash report from {handle}\n"
+                                      + $"Device identifier: {report.DeviceIdentifier}\n"
+                                      + $"File date time: {report.FileDateTime}\n"
+                                      + $"Status: {report.Status}\n"
+                                      + $"Status details: {report.StatusDetails}\n"
+                                      + $"User message: {report.UserMessage}\n",
+                        Color = DiscordUtils.GetLogColor(Level.Fatal)
+                    }.Build() },
+                    threadIdOverride: conf.AdminLogThreadId);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Failed to send status report to Discord: {e}");
             }
         }
 
