@@ -25,6 +25,17 @@ namespace EvoS.Framework.Network.Static
         public Region Region;
         public string LanguageCode;
 
+        [NonSerialized]
+        private BuildVersionInfo? _BuildVersionInfo;
+        public BuildVersionInfo BuildVersionInfo
+        {
+            get
+            {
+                _BuildVersionInfo ??= new BuildVersionInfo(BuildVersion);
+                return _BuildVersionInfo.Value;
+            }
+        }
+
         public void Serialize(NetworkWriter writer)
         {
             writer.Write(AccountId);

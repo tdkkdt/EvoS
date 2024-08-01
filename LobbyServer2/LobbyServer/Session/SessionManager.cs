@@ -53,12 +53,27 @@ namespace CentralServer.LobbyServer.Session
             .CreateGauge(
                 "evos_lobby_size",
                 "Number of people in the lobby.");
+        
+        private static readonly Gauge ClientVersions = Metrics
+            .CreateGauge(
+                "evos_lobby_client_branch",
+                "How many players currently online use which branch of the client.",
+                "branch");
 
         static SessionManager()
         {
             Metrics.DefaultRegistry.AddBeforeCollectCallback(() =>
             {
                 LobbySize.Set(GetOnlinePlayers().Count);
+                
+                Dictionary<string, int> branches = SessionInfos
+                    .Values
+                    .GroupBy(s => s.session.BuildVersionInfo.Branch)
+                    .ToDictionary(g => g.Key, g => g.Count());
+                foreach (var (branch, count) in branches)
+                {
+                    ClientVersions.WithLabels(branch).Set(count);
+                }
             });
         }
 
