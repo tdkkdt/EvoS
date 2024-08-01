@@ -70,6 +70,15 @@ namespace CentralServer.LobbyServer.Session
                     .Values
                     .GroupBy(s => s.session.BuildVersionInfo.Branch)
                     .ToDictionary(g => g.Key, g => g.Count());
+                
+                var branchesToClear = ClientVersions
+                    .GetAllLabelValues()
+                    .Where(label => !branches.ContainsKey(label[0]));
+                foreach (var branch in branchesToClear)
+                {
+                    ClientVersions.WithLabels(branch).Set(0);
+                }
+                
                 foreach (var (branch, count) in branches)
                 {
                     ClientVersions.WithLabels(branch).Set(count);
