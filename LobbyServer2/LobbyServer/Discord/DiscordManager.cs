@@ -38,6 +38,7 @@ namespace CentralServer.LobbyServer.Discord
         private readonly DiscordClientWrapper lobbyChannel;
         private readonly DiscordClientWrapper adminSystemReportChannel;
         private readonly DiscordClientWrapper adminUserReportChannel;
+        private readonly DiscordClientWrapper adminClientReportChannel;
         private readonly DiscordClientWrapper adminChatLogChannel;
         private readonly DiscordClientWrapper adminActionLogChannel;
         private readonly DiscordClientWrapper adminErrorLogChannel;
@@ -88,6 +89,16 @@ namespace CentralServer.LobbyServer.Discord
             else if (adminChannel is not null)
             {
                 adminUserReportChannel = adminChannel;
+            }
+
+            if (conf.AdminClientReportChannel.IsChannel())
+            {
+                log.Info("Discord admin client report channel is enabled");
+                adminClientReportChannel = new DiscordClientWrapper(conf.AdminClientReportChannel);
+            }
+            else if (adminUserReportChannel is not null)
+            {
+                adminClientReportChannel = adminUserReportChannel;
             }
 
             if (conf.AdminChatLogChannel.IsChannel())
@@ -157,7 +168,7 @@ namespace CentralServer.LobbyServer.Discord
                 AdminController.OnAdminScheduleShutdown += SendAdminScheduleShutdownAuditAsync;
             }
 
-            if (adminUserReportChannel is not null)
+            if (adminClientReportChannel is not null)
             {
                 CrashReportManager.OnCrashReport += SendCrashReportAsync;
                 CrashReportManager.OnStatusReport += SendStatusReportAsync;
@@ -214,7 +225,7 @@ namespace CentralServer.LobbyServer.Discord
                 AdminController.OnAdminScheduleShutdown -= SendAdminScheduleShutdownAuditAsync;
             }
 
-            if (adminUserReportChannel is not null)
+            if (adminClientReportChannel is not null)
             {
                 CrashReportManager.OnCrashReport -= SendCrashReportAsync;
                 CrashReportManager.OnStatusReport -= SendStatusReportAsync;
@@ -540,7 +551,7 @@ namespace CentralServer.LobbyServer.Discord
 
         public async Task SendCrashReport(long accountId, Stream archive)
         {
-            if (adminUserReportChannel == null || !conf.AdminEnableUserReports)
+            if (adminClientReportChannel == null || !conf.AdminEnableUserReports)
             {
                 return;
             }
@@ -551,11 +562,10 @@ namespace CentralServer.LobbyServer.Discord
                 LobbySessionInfo sessionInfo = SessionManager.GetSessionInfo(accountId);
                 FileAttachment attachment = new FileAttachment(archive, fileName);
                 
-                await adminUserReportChannel.SendFileAsync(
+                await adminClientReportChannel.SendFileAsync(
                     attachment,
                     $"Crash report from {handle}\nSent from version {sessionInfo.BuildVersion}\n",
-                    username: "Atlas Reactor",
-                    threadIdOverride: conf.AdminLogThreadId);
+                    username: "Atlas Reactor");
             }
             catch (Exception e)
             {
@@ -570,26 +580,28 @@ namespace CentralServer.LobbyServer.Discord
 
         public async Task SendStatusReport(long accountId, ClientStatusReport report)
         {
-            if (adminUserReportChannel == null || !conf.AdminEnableUserReports)
+            if (adminClientReportChannel == null || !conf.AdminEnableUserReports)
             {
                 return;
             }
             try
             {
                 string handle = LobbyServerUtils.GetHandle(accountId);
-                await adminUserReportChannel.SendMessageAsync(
+                await adminClientReportChannel.SendMessageAsync(
                     username: "Atlas Reactor",
                     embeds: new[] { new EmbedBuilder
                     {
-                        Description = $"Crash report from {handle}\n"
+                        Description = $"{report.Status} report from {handle}\n"
                                       + $"Device identifier: {report.DeviceIdentifier}\n"
                                       + $"File date time: {report.FileDateTime}\n"
-                                      + $"Status: {report.Status}\n"
                                       + $"Status details: {report.StatusDetails}\n"
                                       + $"User message: {report.UserMessage}\n",
-                        Color = DiscordUtils.GetLogColor(Level.Fatal)
-                    }.Build() },
-                    threadIdOverride: conf.AdminLogThreadId);
+                        Color = DiscordUtils.GetLogColor(
+                            report.Status is ClientStatusReport.ClientStatusReportType.Crash
+                                or ClientStatusReport.ClientStatusReportType.CrashUserMessage
+                                ? Level.Fatal
+                                : Level.Warn)
+                    }.Build() });
             }
             catch (Exception e)
             {

@@ -11,6 +11,7 @@ namespace CentralServer.LobbyServer.Discord
         public DiscordChannel LobbyChannel;
         public DiscordChannel AdminSystemReportChannel;
         public DiscordChannel AdminUserReportChannel;
+        public DiscordChannel AdminClientReportChannel;
         public DiscordChannel AdminChatLogChannel;
         public DiscordChannel AdminActionLogChannel;
         public DiscordChannel AdminErrorLogChannel;
