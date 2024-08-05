@@ -66,7 +66,12 @@ public class MatchmakerRanked : MatchmakerBase
             .Average();
         return waitingTime;
     }
-    
+
+    public override List<Match> GetMatchesRanked(List<MatchmakingGroup> queuedGroups, DateTime now)
+    {
+        return base.GetMatchesRanked(queuedGroups.Take(12).ToList(), now);
+    }
+
     protected override float RankMatch(Match match, DateTime now, bool infoLog = false)
     {
         float teamEloDifferenceFactor = 1 - Cap(Math.Abs(match.TeamA.Elo - match.TeamB.Elo) / Conf.MaxTeamEloDifference);
