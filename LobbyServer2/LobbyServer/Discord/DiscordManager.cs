@@ -564,7 +564,7 @@ namespace CentralServer.LobbyServer.Discord
                 
                 await adminClientReportChannel.SendFileAsync(
                     attachment,
-                    $"Crash report from {handle}\nSent from version {sessionInfo.BuildVersion}\n",
+                    $"Crash report from {handle}\nSent from version {sessionInfo?.BuildVersion}\n",
                     username: "Atlas Reactor");
             }
             catch (Exception e)
@@ -587,6 +587,7 @@ namespace CentralServer.LobbyServer.Discord
             try
             {
                 string handle = LobbyServerUtils.GetHandle(accountId);
+                LobbySessionInfo sessionInfo = SessionManager.GetSessionInfo(accountId);
                 await adminClientReportChannel.SendMessageAsync(
                     username: "Atlas Reactor",
                     embeds: new[] { new EmbedBuilder
@@ -594,6 +595,7 @@ namespace CentralServer.LobbyServer.Discord
                         Description = $"{report.Status} report from {handle}\n"
                                       + $"Device identifier: {report.DeviceIdentifier}\n"
                                       + $"File date time: {report.FileDateTime}\n"
+                                      + $"Sent from version {sessionInfo?.BuildVersion}\n"
                                       + $"Status details: {report.StatusDetails}\n"
                                       + $"User message: {report.UserMessage}\n",
                         Color = DiscordUtils.GetLogColor(
