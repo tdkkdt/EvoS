@@ -1,4 +1,5 @@
-﻿using WebSocketSharp;
+﻿using System.Collections.Generic;
+using WebSocketSharp;
 
 namespace CentralServer.LobbyServer.Discord
 {
@@ -31,6 +32,8 @@ namespace CentralServer.LobbyServer.Discord
         public bool LobbyEnableServerStatus;
         public int LobbyChannelUpdatePeriodSeconds = 300;
         public bool LobbyChannelUpdateOnChangeOnly = true;
+
+        public List<string> ClientStatusReportBlacklist = new();
     }
 
     public class DiscordChannel

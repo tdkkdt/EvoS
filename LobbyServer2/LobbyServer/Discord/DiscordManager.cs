@@ -569,7 +569,7 @@ namespace CentralServer.LobbyServer.Discord
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Failed to send crash report to Discord: {e}");
+                log.Error($"Failed to send crash report to Discord: {e}");
             }
         }
 
@@ -583,6 +583,18 @@ namespace CentralServer.LobbyServer.Discord
             if (adminClientReportChannel == null || !conf.AdminEnableUserReports)
             {
                 return;
+            }
+
+            if (!conf.ClientStatusReportBlacklist.IsNullOrEmpty())
+            {
+                foreach (string entry in conf.ClientStatusReportBlacklist)
+                {
+                    if (report.StatusDetails.Contains(entry))
+                    {
+                        log.Info($"Client Status Report matched \"{entry}\", not sending to Discord");
+                        return;
+                    }
+                }
             }
             try
             {
@@ -607,7 +619,7 @@ namespace CentralServer.LobbyServer.Discord
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Failed to send status report to Discord: {e}");
+                log.Error($"Failed to send status report to Discord: {e}");
             }
         }
 
