@@ -495,13 +495,13 @@ namespace CentralServer.LobbyServer
 
         private void HandleGroupKickRequest(GroupKickRequest request)
         {
-            GroupInfo group = GroupManager.GetGroup(AccountId);
+            GroupInfo group = GroupManager.GetPlayerGroup(AccountId);
             GroupKickResponse response = new GroupKickResponse
             {
                 ResponseId = request.RequestId,
                 MemberName = request.MemberName,
             };
-            if (group.IsSolo())
+            if (group is null || group.IsSolo())
             {
                 response.LocalizedFailure = GroupMessages.NotInGroupMember;
                 response.Success = false;
