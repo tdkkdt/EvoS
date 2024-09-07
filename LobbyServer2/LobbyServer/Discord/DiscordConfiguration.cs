@@ -13,6 +13,7 @@ namespace CentralServer.LobbyServer.Discord
         public DiscordChannel AdminSystemReportChannel;
         public DiscordChannel AdminUserReportChannel;
         public DiscordChannel AdminClientReportChannel;
+        public DiscordChannel AdminClientErrorChannel;
         public DiscordChannel AdminChatLogChannel;
         public DiscordChannel AdminActionLogChannel;
         public DiscordChannel AdminErrorLogChannel;

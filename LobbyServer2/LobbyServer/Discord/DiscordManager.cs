@@ -12,9 +12,11 @@ using Discord;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
+using EvoS.Framework.DataAccess.Daos;
 using EvoS.Framework.Misc;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
+using LobbyGameClientMessages;
 using log4net;
 using log4net.Core;
 using static EvoS.Framework.Network.Static.GameSubType;
@@ -39,6 +41,7 @@ namespace CentralServer.LobbyServer.Discord
         private readonly DiscordClientWrapper adminSystemReportChannel;
         private readonly DiscordClientWrapper adminUserReportChannel;
         private readonly DiscordClientWrapper adminClientReportChannel;
+        private readonly DiscordClientWrapper adminClientErrorChannel;
         private readonly DiscordClientWrapper adminChatLogChannel;
         private readonly DiscordClientWrapper adminActionLogChannel;
         private readonly DiscordClientWrapper adminErrorLogChannel;
@@ -99,6 +102,12 @@ namespace CentralServer.LobbyServer.Discord
             else if (adminUserReportChannel is not null)
             {
                 adminClientReportChannel = adminUserReportChannel;
+            }
+
+            if (conf.AdminClientErrorChannel.IsChannel())
+            {
+                log.Info("Discord admin client error channel is enabled");
+                adminClientErrorChannel = new DiscordClientWrapper(conf.AdminClientErrorChannel);
             }
 
             if (conf.AdminChatLogChannel.IsChannel())
@@ -170,8 +179,10 @@ namespace CentralServer.LobbyServer.Discord
 
             if (adminClientReportChannel is not null)
             {
-                CrashReportManager.OnCrashReport += SendCrashReportAsync;
+                CrashReportManager.OnArchive += SendCrashReportAsync;
                 CrashReportManager.OnStatusReport += SendStatusReportAsync;
+                CrashReportManager.OnErrorReport += SendErrorReportAsync;
+                CrashReportManager.OnNewError += SendNewErrorReportAsync;
             }
 
             await StartBot();
@@ -227,8 +238,10 @@ namespace CentralServer.LobbyServer.Discord
 
             if (adminClientReportChannel is not null)
             {
-                CrashReportManager.OnCrashReport -= SendCrashReportAsync;
+                CrashReportManager.OnArchive -= SendCrashReportAsync;
                 CrashReportManager.OnStatusReport -= SendStatusReportAsync;
+                CrashReportManager.OnErrorReport -= SendErrorReportAsync;
+                CrashReportManager.OnNewError -= SendNewErrorReportAsync;
             }
             cancelTokenSource.Cancel();
             cancelTokenSource.Dispose();
@@ -558,13 +571,13 @@ namespace CentralServer.LobbyServer.Discord
             try
             {
                 string handle = LobbyServerUtils.GetHandle(accountId);
-                string fileName = $"CrashDump_{DateTime.UtcNow:yyyy_MM_dd__HH_mm_ss}_{handle}.zip";
+                string fileName = $"Dump_{DateTime.UtcNow:yyyy_MM_dd__HH_mm_ss}_{handle}.zip";
                 LobbySessionInfo sessionInfo = SessionManager.GetSessionInfo(accountId);
                 FileAttachment attachment = new FileAttachment(archive, fileName);
                 
                 await adminClientReportChannel.SendFileAsync(
                     attachment,
-                    $"Crash report from {handle}\nSent from version {sessionInfo?.BuildVersion}\n",
+                    $"Report from {handle}\nSent from version {sessionInfo?.BuildVersion}\n",
                     username: "Atlas Reactor");
             }
             catch (Exception e)
@@ -620,6 +633,79 @@ namespace CentralServer.LobbyServer.Discord
             catch (Exception e)
             {
                 log.Error($"Failed to send status report to Discord: {e}");
+            }
+        }
+
+        private void SendErrorReportAsync(
+            long accountId,
+            uint stackTraceHash,
+            uint count,
+            string clientVersion,
+            ClientErrorDao.Entry error)
+        {
+            _ = SendErrorReport(accountId, stackTraceHash, count, clientVersion, error);
+        }
+
+        public async Task SendErrorReport(
+            long accountId,
+            uint stackTraceHash,
+            uint count,
+            string clientVersion,
+            ClientErrorDao.Entry error)
+        {
+            if (adminClientErrorChannel == null || !conf.AdminEnableUserReports)
+            {
+                return;
+            }
+            
+            try
+            {
+                string handle = LobbyServerUtils.GetHandle(accountId);
+                await adminClientErrorChannel.SendMessageAsync(
+                    username: "Atlas Reactor",
+                    embeds: new[] { new EmbedBuilder
+                    {
+                        Description = $"{handle} has encountered error `{stackTraceHash}`{
+                            (count > 1 ? $" {count} times" : "")} on version `{clientVersion}`",
+                        Color = DiscordUtils.GetLogColor(Level.Warn),
+                        Footer = error is not null
+                            ? new EmbedFooterBuilder { Text = $"{error.LogString}\n{error.StackTrace}" }
+                            : null
+                    }.Build() });
+            }
+            catch (Exception e)
+            {
+                log.Error($"Failed to send error report to Discord: {e}");
+            }
+        }
+
+        private void SendNewErrorReportAsync(long accountId, ClientErrorReport error)
+        {
+            _ = SendNewErrorReport(accountId, error);
+        }
+
+        public async Task SendNewErrorReport(long accountId, ClientErrorReport error)
+        {
+            if (adminClientErrorChannel == null || !conf.AdminEnableUserReports)
+            {
+                return;
+            }
+            
+            try
+            {
+                string handle = LobbyServerUtils.GetHandle(accountId);
+                await adminClientErrorChannel.SendMessageAsync(
+                    username: "Atlas Reactor",
+                    text: $"New error encountered by {handle}",
+                    embeds: new[] { new EmbedBuilder
+                    {
+                        Description = $"ID `{error.StackTraceHash}`\n{error.LogString}\n{error.StackTrace}",
+                        Color = DiscordUtils.GetLogColor(Level.Warn)
+                    }.Build() });
+            }
+            catch (Exception e)
+            {
+                log.Error($"Failed to send new error report to Discord: {e}");
             }
         }
 

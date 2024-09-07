@@ -95,7 +95,6 @@ namespace CentralServer.LobbyServer
             RegisterHandler<PlayerGroupInfoUpdateRequest>(HandlePlayerGroupInfoUpdateRequest);
             RegisterHandler<CheckAccountStatusRequest>(HandleCheckAccountStatusRequest);
             RegisterHandler<CheckRAFStatusRequest>(HandleCheckRAFStatusRequest);
-            RegisterHandler<ClientErrorSummary>(HandleClientErrorSummary);
             RegisterHandler<PreviousGameInfoRequest>(HandlePreviousGameInfoRequest);
             RegisterHandler<PurchaseTintRequest>(HandlePurchaseTintRequest);
             RegisterHandler<LeaveGameRequest>(HandleLeaveGameRequest);
@@ -115,7 +114,6 @@ namespace CentralServer.LobbyServer
             RegisterHandler<UseGGPackRequest>(HandleUseGGPackRequest);
             RegisterHandler<UpdateUIStateRequest>(HandleUpdateUIStateRequest);
             RegisterHandler<GroupChatRequest>(HandleGroupChatRequest);
-            RegisterHandler<ClientFeedbackReport>(HandleClientFeedbackReport);
             RegisterHandler<RejoinGameRequest>(HandleRejoinGameRequest);
             RegisterHandler<JoinGameRequest>(HandleJoinGameRequest);
             RegisterHandler<BalancedTeamRequest>(HandleBalancedTeamRequest);
@@ -131,8 +129,15 @@ namespace CentralServer.LobbyServer
             RegisterHandler<PaymentMethodsRequest>(HandlePaymentMethodsRequest);
             RegisterHandler<StoreOpenedMessage>(HandleStoreOpenedMessage);
             RegisterHandler<UIActionNotification>(HandleUIActionNotification);
+            
             RegisterHandler<CrashReportArchiveNameRequest>(HandleCrashReportArchiveNameRequest);
             RegisterHandler<ClientStatusReport>(HandleClientStatusReport);
+            RegisterHandler<ClientErrorSummary>(HandleClientErrorSummary);
+            RegisterHandler<ClientErrorReport>(HandleClientErrorReport);
+            RegisterHandler<ErrorReportSummaryResponse>(HandleErrorReportSummaryResponse);
+            RegisterHandler<ClientFeedbackReport>(HandleClientFeedbackReport);
+            RegisterHandler<ClientPerformanceReport>(HandleClientPerformanceReport);
+            
             RegisterHandler<SubscribeToCustomGamesRequest>(HandleSubscribeToCustomGamesRequest);
             RegisterHandler<UnsubscribeFromCustomGamesRequest>(HandleUnsubscribeFromCustomGamesRequest);
             RegisterHandler<CreateGameRequest>(HandleCreateGameRequest);
@@ -843,10 +848,6 @@ namespace CentralServer.LobbyServer
                 ResponseId = request.RequestId
             };
             Send(response);
-        }
-
-        public void HandleClientErrorSummary(ClientErrorSummary request)
-        {
         }
 
         public void HandlePreviousGameInfoRequest(PreviousGameInfoRequest request)
@@ -1938,6 +1939,41 @@ namespace CentralServer.LobbyServer
             CrashReportManager.ProcessClientStatusReport(AccountId, msg);
         }
 
+        public void HandleClientErrorSummary(ClientErrorSummary msg)
+        {
+            foreach (var (key, count) in msg.ReportCount)
+            {
+                log.Info($"ClientErrorSummary {key}: {count}");
+            }
+            CrashReportManager.ProcessClientErrorSummary(AccountId, msg);
+        }
+
+        private void HandleClientErrorReport(ClientErrorReport msg)
+        {
+            log.Info($"ClientErrorReport {msg.StackTraceHash}: {msg.LogString} {msg.StackTrace} {msg.Time}");
+            CrashReportManager.ProcessClientErrorReport(AccountId, msg);
+        }
+
+        private void HandleErrorReportSummaryResponse(ErrorReportSummaryResponse response)
+        {
+            log.Info($"ErrorReportSummaryResponse {response.ClientErrorReport.StackTraceHash}: {
+                response.ClientErrorReport.LogString} {response.ClientErrorReport.StackTrace
+                } {response.ClientErrorReport.Time}");
+            CrashReportManager.ProcessErrorReportSummaryResponse(AccountId, response);
+        }
+
+        private void HandleClientFeedbackReport(ClientFeedbackReport message)
+        {
+            string context = CurrentGame is not null ? LobbyServerUtils.GameIdString(CurrentGame.GameInfo) : "";
+            DB.Get().UserFeedbackDao.Save(new UserFeedbackDao.UserFeedback(AccountId, message, context));
+            DiscordManager.Get().SendPlayerFeedback(AccountId, message);
+        }
+
+        private void HandleClientPerformanceReport(ClientPerformanceReport msg)
+        {
+            log.Info($"ClientPerformanceReport {msg.PerformanceInfo}");
+        }
+
         private void HandleSubscribeToCustomGamesRequest(SubscribeToCustomGamesRequest request)
         {
             CustomGameManager.Subscribe(this);
@@ -2090,13 +2126,6 @@ namespace CentralServer.LobbyServer
                 ConsoleMessageType = ConsoleMessageType.SystemMessage,
                 LocalizedText = text
             });
-        }
-
-        private void HandleClientFeedbackReport(ClientFeedbackReport message)
-        {
-            string context = CurrentGame is not null ? LobbyServerUtils.GameIdString(CurrentGame.GameInfo) : "";
-            DB.Get().UserFeedbackDao.Save(new UserFeedbackDao.UserFeedback(AccountId, message, context));
-            DiscordManager.Get().SendPlayerFeedback(AccountId, message);
         }
 
         private void HandleFriendUpdate(FriendUpdateRequest request)
