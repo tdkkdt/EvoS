@@ -598,17 +598,12 @@ namespace CentralServer.LobbyServer.Discord
                 return;
             }
 
-            if (!conf.ClientStatusReportBlacklist.IsNullOrEmpty())
+            if (ShouldIgnoreError(report.StatusDetails, out string match))
             {
-                foreach (string entry in conf.ClientStatusReportBlacklist)
-                {
-                    if (report.StatusDetails.Contains(entry))
-                    {
-                        log.Info($"Client Status Report matched \"{entry}\", not sending to Discord");
-                        return;
-                    }
-                }
+                log.Info($"Client Status Report matched \"{match}\", not sending to Discord");
+                return;
             }
+            
             try
             {
                 string handle = LobbyServerUtils.GetHandle(accountId);
@@ -657,6 +652,18 @@ namespace CentralServer.LobbyServer.Discord
             {
                 return;
             }
+
+            if (error is null)
+            {
+                log.Info("Client Error Report with no details, not sending to Discord");
+                return;
+            }
+
+            if (ShouldIgnoreError(error.LogString, out string match))
+            {
+                log.Info($"Client Error Report matched \"{match}\", not sending to Discord");
+                return;
+            }
             
             try
             {
@@ -668,9 +675,7 @@ namespace CentralServer.LobbyServer.Discord
                         Description = $"{handle} has encountered error `{stackTraceHash}`{
                             (count > 1 ? $" {count} times" : "")} on version `{clientVersion}`",
                         Color = DiscordUtils.GetLogColor(Level.Warn),
-                        Footer = error is not null
-                            ? new EmbedFooterBuilder { Text = $"{error.LogString}\n{error.StackTrace}" }
-                            : null
+                        Footer = new EmbedFooterBuilder { Text = $"{error.LogString}\n{error.StackTrace}" }
                     }.Build() });
             }
             catch (Exception e)
@@ -688,6 +693,12 @@ namespace CentralServer.LobbyServer.Discord
         {
             if (adminClientErrorChannel == null || !conf.AdminEnableUserReports)
             {
+                return;
+            }
+
+            if (ShouldIgnoreError(error.LogString, out string match))
+            {
+                log.Info($"Client New Error Report matched \"{match}\", not sending to Discord");
                 return;
             }
             
@@ -860,6 +871,26 @@ namespace CentralServer.LobbyServer.Discord
                     teamB.Add(player);
                 }
             }
+        }
+
+        private bool ShouldIgnoreError(string error, out string match)
+        {
+            match = null;
+            if (conf.ClientStatusReportBlacklist.IsNullOrEmpty())
+            {
+                return false;
+            }
+            
+            foreach (string entry in conf.ClientStatusReportBlacklist)
+            {
+                if (error.Contains(entry))
+                {
+                    match = entry;
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }
