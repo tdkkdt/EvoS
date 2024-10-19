@@ -78,7 +78,11 @@ public abstract class Game
 
     protected void OnGameEnded(BridgeServerProtocol server, LobbyGameSummary summary, LobbyGameSummaryOverrides overrides)
     {
-        GameInfo.GameResult = summary?.GameResult ?? GameResult.TieGame;
+        if (GameInfo is not null) // we can end up here before the game started assembling
+        {
+            GameInfo.GameResult = summary?.GameResult ?? GameResult.TieGame;
+        }
+
         GameSummary = summary;
 
         if (GameSummary != null)
