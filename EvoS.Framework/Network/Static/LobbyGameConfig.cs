@@ -27,7 +27,9 @@ namespace EvoS.Framework.Network.Static
         private int SelectedSubTypeIndex => BitOperations.Log2(InstanceSubTypeBit);
 
         [JsonIgnore]
-        public GameSubType SelectedSubType => SelectedSubTypeIndex < SubTypes.Count ? SubTypes[SelectedSubTypeIndex] : null;
+        public GameSubType SelectedSubType => SubTypes is not null && SelectedSubTypeIndex < SubTypes.Count
+            ? SubTypes[SelectedSubTypeIndex]
+            : null;
 
         public LobbyGameConfig Clone()
         {
