@@ -726,17 +726,6 @@ namespace CentralServer.LobbyServer.Discord
             string map = Maps.GetMapName[gameInfo.GameConfig.Map];
             string gameType = gameInfo.GameConfig.GameType.ToString();
 
-            if (gameInfo.GameConfig.SubTypes != null)
-            {
-                foreach (GameSubType subType in gameInfo.GameConfig.SubTypes)
-                {
-                    if (subType.Mods != null && subType.Mods.Contains(SubTypeMods.RankedFreelancerSelection))
-                    {
-                        gameType = "Tournament";
-                    }
-                }
-            }
-
             EmbedBuilder eb = new EmbedBuilder
             {
                 Title = $"Game Result for {gameType} {map ?? gameInfo.GameConfig.Map}",
