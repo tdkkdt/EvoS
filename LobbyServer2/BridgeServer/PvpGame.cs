@@ -131,7 +131,7 @@ public class PvpGame: Game
             SelectSubPhaseBan1Timeout = TimeSpan.FromSeconds(60),
             SelectSubPhaseBan2Timeout = TimeSpan.FromSeconds(30),
             SelectSubPhaseFreelancerSelectTimeout = TimeSpan.FromSeconds(30),
-            SelectSubPhaseTradeTimeout = TimeSpan.FromSeconds(30),
+            SelectSubPhaseTradeTimeout = TimeSpan.FromSeconds(15),
             ActiveHumanPlayers = TeamInfo.TeamPlayerInfo.Count(p => p.IsHumanControlled),
             ActivePlayers = TeamInfo.TeamPlayerInfo.Count,
             CreateTimestamp = DateTime.UtcNow.Ticks,

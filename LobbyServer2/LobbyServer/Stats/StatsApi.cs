@@ -100,7 +100,7 @@ namespace CentralServer.LobbyServer.Stats
                 string gameType = gameInfo.GameConfig.GameType.ToString();
 
                 GameSubType subType = gameInfo.GameConfig.SelectedSubType;
-                if (subType.Mods != null)
+                if (subType?.Mods != null)
                 {
                     if (subType.Mods.Contains(SubTypeMods.RankedFreelancerSelection)
                         && gameInfo.GameConfig.GameType == GameType.Custom)
