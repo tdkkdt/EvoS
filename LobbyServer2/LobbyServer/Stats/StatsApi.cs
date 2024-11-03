@@ -73,7 +73,10 @@ namespace CentralServer.LobbyServer.Stats
                         }
                     }
                 }
-                catch { }
+                catch (Exception e)
+                {
+                    log.Error("Failed to fetch mentor status", e);
+                }
             }
             return account;
         }
@@ -285,7 +288,7 @@ namespace CentralServer.LobbyServer.Stats
             }
             catch (Exception e)
             {
-                log.Error($"Failed to post game data: {e.Message}");
+                log.Error("Failed to post game data", e);
             }
         }
     }
