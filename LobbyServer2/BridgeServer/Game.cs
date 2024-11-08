@@ -1214,7 +1214,16 @@ public abstract class Game
             foreach (RankedResolutionPlayerState playersInDeck in RankedResolutionPhaseData.PlayersOnDeck)
             {
                 LobbyServerPlayerInfo player = GetPlayerInfo(playersInDeck.PlayerId - 1, TeamInfo.TeamPlayerInfo);
-                if (playersInDeck.Intention == CharacterType.None)
+                CharacterType characterType = playersInDeck.Intention;
+                // Let bans be random if they do not select a freelancer
+                if (playersInDeck.Intention == CharacterType.None
+                    && (PhaseSubType == FreelancerResolutionPhaseSubType.PICK_BANS1
+                        || PhaseSubType == FreelancerResolutionPhaseSubType.PICK_BANS2))
+                {
+                    // can only use one ban at time , so usedCharacterTypes does not need to be updated here so the value outside foreach can be used
+                    characterType = AssignRandomCharacterForDraft(player, usedCharacterTypes);
+                }
+                else if (playersInDeck.Intention == CharacterType.None)
                 {
                     // Cancel Match AFK Player
                     CancelMatch(player.Handle);
@@ -1224,7 +1233,6 @@ public abstract class Game
                 // Selected is when did not lock in or clicked ban button
                 if (playersInDeck.OnDeckness == RankedResolutionPlayerState.ReadyState.Selected)
                 {
-                    CharacterType characterType = playersInDeck.Intention;
                     //Player selected fill but did not lock in, or edge case where "MAYBE" we still have fill
                     if (characterType == CharacterType.PendingWillFill
                         || characterType == CharacterType.TestFreelancer1
@@ -1247,7 +1255,7 @@ public abstract class Game
                 }
             }
 
-            // Update any players who have a character selected, but that character is already selected or banned, reset there selection
+            // Update any players who have a character selected, but that character is already selected or banned, reset their selection
             for (int i = 0; i < RankedResolutionPhaseData.UnselectedPlayerStates.Count; i++)
             {
                 RankedResolutionPlayerState player = RankedResolutionPhaseData.UnselectedPlayerStates[i];
