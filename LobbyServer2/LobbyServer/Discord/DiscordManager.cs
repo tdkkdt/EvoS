@@ -534,6 +534,28 @@ namespace CentralServer.LobbyServer.Discord
             }
         }
 
+        public void SendAdminLogMessageAsync(string message)
+        {
+            _ = SendAdminLogMessage(message);
+        }
+
+        public async Task SendAdminLogMessage(string message)
+        {
+            if (adminSystemReportChannel == null || !conf.AdminEnableAdminAudit)
+            {
+                return;
+            }
+
+            try
+            {
+                await adminSystemReportChannel.SendMessageAsync(message, username: "Atlas Reactor");
+            }
+            catch (Exception e)
+            {
+                log.Error("Failed to send admin log message to discord webhook", e);
+            }
+        }
+
         public async Task SendLogEvent(Level severity, string msg)
         {
             if (adminErrorLogChannel == null || !conf.AdminEnableLog)

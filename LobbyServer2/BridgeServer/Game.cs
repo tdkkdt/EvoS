@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using CentralServer.LobbyServer;
 using CentralServer.LobbyServer.Character;
 using CentralServer.LobbyServer.Discord;
+using CentralServer.LobbyServer.Friend;
 using CentralServer.LobbyServer.Gamemode;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
@@ -472,15 +473,30 @@ public abstract class Game
             {
                 client.SendSystemMessage(LocalizationPayload.Create(
                     "PlayerDisconnected", "Disconnect", LocalizationArg_Handle.Create(dodgerHandle)));
+
+                LogDodge(dodgerHandle);
             }
             else
             {
                 client.SendSystemMessage(LocalizationPayload.Create("FailedStartGameServer", "Frontend"));
             }
-
         }
 
         Terminate();
+    }
+
+    private void LogDodge(string dodgerHandle)
+    {
+        string statusString = "unknown";
+        long? accountId = SessionManager.GetOnlinePlayerByHandleOrUsername(dodgerHandle);
+        if (accountId.HasValue)
+        {
+            LobbyServerProtocol conn = SessionManager.GetClientConnection(accountId.Value);
+            statusString = FriendManager.GetStatusString(conn);
+        }
+
+        DiscordManager.Get().SendAdminLogMessageAsync($"Game {ProcessCode} was cancelled because of {dodgerHandle
+        } (status: {statusString})");
     }
 
     public virtual void Terminate()
