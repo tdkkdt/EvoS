@@ -487,6 +487,11 @@ public abstract class Game
 
     private void LogDodge(string dodgerHandle)
     {
+        if (GameInfo?.GameConfig.GameType == GameType.Custom)
+        {
+            return;
+        }
+        
         string statusString = "unknown";
         long? accountId = SessionManager.GetOnlinePlayerByHandleOrUsername(dodgerHandle);
         if (accountId.HasValue)
