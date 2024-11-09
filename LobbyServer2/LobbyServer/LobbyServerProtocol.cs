@@ -2716,6 +2716,12 @@ namespace CentralServer.LobbyServer
                     }
                     
                     log.Info($"{account.Handle} attempted to remove {friendAccount.Handle} from friend list but they aren't friends");
+                    if (LobbyConfiguration.AreAllOnlineFriends())
+                    {
+                        SendSystemMessage("We are all friends here. You cannot deny that.");
+                        return;
+                    }
+                    
                     Send(
                         FriendUpdateResponse.of(
                             request, 
