@@ -3,10 +3,12 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using CentralServer.LobbyServer.Session;
+using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.Network.NetworkMessages;
 using EvoS.Framework.Network.Static;
+using log4net;
 
 namespace CentralServer.LobbyServer.Friend
 {
@@ -19,6 +21,8 @@ namespace CentralServer.LobbyServer.Friend
     
     class FriendManager
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(FriendManager));
+        
         private static readonly Dictionary<string, PlayerOnlineStatus> StatusMap = Enum
             .GetValues<PlayerOnlineStatus>()
             .ToDictionary((PlayerOnlineStatus e) => e.ToString());
@@ -52,7 +56,7 @@ namespace CentralServer.LobbyServer.Friend
                             {
                                 FriendAccountId = acc.AccountId,
                                 FriendHandle = acc.Handle,
-                                FriendStatus = socialComponent?.IsBlocked(acc.AccountId) == true ? FriendStatus.Blocked : FriendStatus.Friend,
+                                FriendStatus = GetFriendStatus(socialComponent, acc),
                                 IsOnline = conn != null,
                                 StatusString = GetStatusString(conn),
                                 // FriendNote = 
@@ -69,12 +73,48 @@ namespace CentralServer.LobbyServer.Friend
             return friendList;
         }
 
-        public static List<long> GetFriends(long accountId)
+        private static FriendStatus GetFriendStatus(SocialComponent socialComponent, PersistedAccountData otherAccount)
         {
-            // TODO We are all friends here for now
-            return SessionManager.GetOnlinePlayers()
-                .Where(id => id != accountId)
-                .ToList();
+            if (socialComponent is null)
+            {
+                return FriendStatus.Unknown;
+            }
+            
+            if (socialComponent.IsBlocked(otherAccount.AccountId))
+            {
+                return FriendStatus.Blocked;
+            }
+
+            if (socialComponent.IncomingFriendRequests.Contains(otherAccount.AccountId))
+            {
+                return FriendStatus.RequestReceived;
+            }
+
+            if (socialComponent.OutgoingFriendRequests.Contains(otherAccount.AccountId))
+            {
+                return FriendStatus.RequestSent;
+            }
+            
+            return FriendStatus.Friend;
+        }
+
+        public static HashSet<long> GetFriends(long accountId)
+        {
+            SocialComponent socialComponent = DB.Get().AccountDao.GetAccount(accountId)?.SocialComponent;
+            HashSet<long> result = socialComponent?.FriendInfo.Keys.ToHashSet() ?? new();
+
+            if (socialComponent is not null)
+            {
+                result.UnionWith(socialComponent.GetIncomingFriendRequests());
+                result.UnionWith(socialComponent.GetOutgoingFriendRequests());
+            }
+            
+            if (LobbyConfiguration.AreAllOnlineFriends())
+            {
+                result.UnionWith(SessionManager.GetOnlinePlayers().Where(id => id != accountId));
+            }
+
+            return result;
         }
 
         public static string GetStatusString(LobbyServerProtocol client)
@@ -158,6 +198,119 @@ namespace CentralServer.LobbyServer.Friend
                 PendingUpdate.Clear();
                 return result;
             }
+        }
+
+        public static bool AddFriendRequest(long requester, long requestee)
+        {
+            PersistedAccountData requesterAccount = DB.Get().AccountDao.GetAccount(requester);
+            PersistedAccountData requesteeAccount = DB.Get().AccountDao.GetAccount(requestee);
+
+            if (requesterAccount is null || requesteeAccount is null)
+            {
+                log.Info($"Add Friend Request failed: {requester} > {requestee}; {requesterAccount?.Handle} > {requesteeAccount?.Handle}");
+                return false;
+            }
+
+            bool updated = requesteeAccount.SocialComponent.AddIncomingFriendRequest(requester);
+            updated |= requesterAccount.SocialComponent.AddOutgoingFriendRequest(requestee);
+
+            if (!updated)
+            {
+                log.Info($"Add Friend Request failed: {requesterAccount.Handle} > {requesteeAccount.Handle}; no update");
+                return false;
+            }
+            
+            Save(requesteeAccount, requesterAccount);
+
+            log.Info($"Add Friend Request: {requesterAccount.Handle} > {requesteeAccount.Handle}");
+            return true;
+        }
+    
+        public static bool RemoveFriendRequest(long requester, long requestee)
+        {
+            PersistedAccountData requesterAccount = DB.Get().AccountDao.GetAccount(requester);
+            PersistedAccountData requesteeAccount = DB.Get().AccountDao.GetAccount(requestee);
+
+            if (requesterAccount is null || requesteeAccount is null)
+            {
+                log.Info($"Remove Friend Request failed: {requester} > {requestee}; {requesterAccount?.Handle} > {requesteeAccount?.Handle}");
+                return false;
+            }
+
+            bool updated = requesteeAccount.SocialComponent.RemoveIncomingFriendRequest(requester);
+            updated |= requesterAccount.SocialComponent.RemoveOutgoingFriendRequest(requestee);
+
+            if (!updated)
+            {
+                log.Info($"Remove Friend Request failed: {requesterAccount.Handle} > {requesteeAccount.Handle}; no update");
+                return false;
+            }
+            
+            Save(requesteeAccount, requesterAccount);
+
+            log.Info($"Remove Friend Request: {requesterAccount.Handle} > {requesteeAccount.Handle}");
+            return true;
+        }
+
+        public static bool AddFriend(long accountIdA, long accountIdB)
+        {
+            PersistedAccountData accountA = DB.Get().AccountDao.GetAccount(accountIdA);
+            PersistedAccountData accountB = DB.Get().AccountDao.GetAccount(accountIdB);
+
+            if (accountA is null || accountB is null)
+            {
+                log.Info($"Add Friend failed: {accountIdA} + {accountIdB}; {accountA?.Handle} + {accountB?.Handle}");
+                return false;
+            }
+
+            bool updated = accountA.SocialComponent.FriendInfo.TryAdd(accountIdB, SocialComponent.FriendData.of(accountB));
+            updated |= accountB.SocialComponent.FriendInfo.TryAdd(accountIdA, SocialComponent.FriendData.of(accountA));
+
+            if (!updated)
+            {
+                log.Info($"Add Friend failed: {accountA.Handle} + {accountB.Handle}; no update");
+                return false;
+            }
+                    
+            Save(accountA, accountB);
+
+            log.Info($"Add Friend: {accountA.Handle} + {accountB.Handle}");
+            return true;
+        }
+    
+        public static bool RemoveFriend(long accountIdA, long accountIdB)
+        {
+            PersistedAccountData accountA = DB.Get().AccountDao.GetAccount(accountIdA);
+            PersistedAccountData accountB = DB.Get().AccountDao.GetAccount(accountIdB);
+
+            if (accountA is null || accountB is null)
+            {
+                log.Info($"Remove Friend failed: {accountIdA} - {accountIdB}; {accountA?.Handle} - {accountB?.Handle}");
+                return false;
+            }
+
+            bool updated = accountA.SocialComponent.FriendInfo.Remove(accountIdB);
+            updated |= accountB.SocialComponent.FriendInfo.Remove(accountIdA);
+
+            if (!updated)
+            {
+                log.Info($"Remove Friend failed: {accountA.Handle} - {accountB.Handle}; no update");
+                return false;
+            }
+                    
+            Save(accountA, accountB);
+
+            log.Info($"Remove Friend: {accountA.Handle} - {accountB.Handle}");
+            return true;
+        }
+
+        private static void Save(PersistedAccountData accountA, PersistedAccountData accountB)
+        {
+            DB.Get().AccountDao.UpdateSocialComponent(accountA);
+            DB.Get().AccountDao.UpdateSocialComponent(accountB);
+            
+            SessionManager.GetClientConnection(accountA.AccountId)?.RefreshFriendList();
+            SessionManager.GetClientConnection(accountB.AccountId)?.RefreshFriendList();
         }
     }
 }

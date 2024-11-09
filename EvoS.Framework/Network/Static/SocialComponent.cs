@@ -25,6 +25,9 @@ namespace EvoS.Framework.Network.Static
 
         [NonSerialized] public HashSet<long> BlockedAccounts;
 
+        [NonSerialized] public HashSet<long> IncomingFriendRequests;
+        [NonSerialized] public HashSet<long> OutgoingFriendRequests;
+
         public object Clone()
         {
             return MemberwiseClone();
@@ -115,6 +118,38 @@ namespace EvoS.Framework.Network.Static
         {
             return BlockedAccounts != null && BlockedAccounts.Remove(accountId);
         }
+        
+        public HashSet<long> GetIncomingFriendRequests()
+        {
+            IncomingFriendRequests ??= new();
+            return IncomingFriendRequests;
+        }
+        
+        public HashSet<long> GetOutgoingFriendRequests()
+        {
+            OutgoingFriendRequests ??= new();
+            return OutgoingFriendRequests;
+        }
+        
+        public bool AddIncomingFriendRequest(long accountId)
+        {
+            return GetIncomingFriendRequests().Add(accountId);
+        }
+
+        public bool AddOutgoingFriendRequest(long accountId)
+        {
+            return GetOutgoingFriendRequests().Add(accountId);
+        }
+
+        public bool RemoveIncomingFriendRequest(long accountId)
+        {
+            return GetIncomingFriendRequests().Remove(accountId);
+        }
+
+        public bool RemoveOutgoingFriendRequest(long accountId)
+        {
+            return GetOutgoingFriendRequests().Remove(accountId);
+        }
 
         [EvosMessage(556)]
         public Dictionary<long, FriendData> FriendInfo;
@@ -140,6 +175,21 @@ namespace EvoS.Framework.Network.Static
             public int LastSeenForegroundID;
             public int LastSeenRibbonID;
             public string LastSeenNote;
+
+            public static FriendData of(PersistedAccountData acc)
+            {
+                return new FriendData
+                {
+                    LastSeenBackbroundID = acc.AccountComponent.SelectedBackgroundBannerID,
+                    LastSeenForegroundID = acc.AccountComponent.SelectedForegroundBannerID,
+                    LastSeenTitleID = acc.AccountComponent.SelectedTitleID,
+                    LastSeenTitleLevel = acc.AccountComponent.TitleLevels.GetValueOrDefault(
+                        acc.AccountComponent.SelectedTitleID,
+                        0),
+                    LastSeenRibbonID = acc.AccountComponent.SelectedRibbonID,
+                    LastSeenNote = string.Empty
+                };
+            }
         }
     }
 }

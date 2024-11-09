@@ -2573,7 +2573,7 @@ namespace CentralServer.LobbyServer
                             LocalizationPayload.Create("PlayerNotFound", "Invite",
                                 LocalizationArg_Handle.Create(request.FriendHandle))))
                 ));
-                log.Info($"Attempted to {request.FriendOperation} {request.FriendHandle}, but such a user was not found");
+                log.Info($"Attempted to {request.FriendOperation} {request.FriendHandle}#{request.FriendAccountId}, but such a user was not found");
                 return;
             }
 
@@ -2587,61 +2587,184 @@ namespace CentralServer.LobbyServer
                 return;
             }
 
+            SocialComponent socialComponent = account.SocialComponent;
             switch (request.FriendOperation)
             {
                 case FriendOperation.Block:
+                {
+                    bool updated = socialComponent.Block(friendAccountId);
+                    log.Info($"{account.Handle} blocked {friendAccount.Handle}{(updated ? "" : ", but they were already blocked")}");
+                    if (updated)
                     {
-                        bool updated = account.SocialComponent.Block(friendAccountId);
-                        log.Info($"{account.Handle} blocked {friendAccount.Handle}{(updated ? "" : ", but they were already blocked")}");
-                        if (updated)
-                        {
-                            DB.Get().AccountDao.UpdateSocialComponent(account);
-                            Send(FriendUpdateResponse.of(request));
-                            RefreshFriendList();
-                        }
-                        else
-                        {
-                            Send(FriendUpdateResponse.of(
-                                request,
-                                LocalizationPayload.Create("FailedFriendBlock", "FriendList",
-                                    LocalizationArg_LocalizationPayload.Create(
-                                        LocalizationPayload.Create("PlayerAlreadyBlocked", "FriendUpdateResponse",
-                                            LocalizationArg_Handle.Create(request.FriendHandle))))
-                            ));
-                        }
-                        return;
-                    }
-                case FriendOperation.Unblock:
-                    {
-                        bool updated = account.SocialComponent.Unblock(friendAccountId);
-                        log.Info($"{account.Handle} unblocked {friendAccount.Handle}{(updated ? "" : ", but they weren't blocked")}");
-                        if (updated)
-                        {
-                            DB.Get().AccountDao.UpdateSocialComponent(account);
-                        }
-
+                        DB.Get().AccountDao.UpdateSocialComponent(account);
                         Send(FriendUpdateResponse.of(request));
                         RefreshFriendList();
+                    }
+                    else
+                    {
+                        Send(FriendUpdateResponse.of(
+                            request,
+                            LocalizationPayload.Create("FailedFriendBlock", "FriendList",
+                                LocalizationArg_LocalizationPayload.Create(
+                                    LocalizationPayload.Create("PlayerAlreadyBlocked", "FriendUpdateResponse",
+                                        LocalizationArg_Handle.Create(request.FriendHandle))))
+                        ));
+                    }
+                    return;
+                }
+                case FriendOperation.Unblock:
+                {
+                    bool updated = socialComponent.Unblock(friendAccountId);
+                    log.Info($"{account.Handle} unblocked {friendAccount.Handle}{(updated ? "" : ", but they weren't blocked")}");
+                    if (updated)
+                    {
+                        DB.Get().AccountDao.UpdateSocialComponent(account);
+                    }
+
+                    Send(FriendUpdateResponse.of(request));
+                    RefreshFriendList();
+                    return;
+                }
+                case FriendOperation.Add:
+                {
+                    if (friendAccountId == AccountId)
+                    {
+                        log.Info($"{account.Handle} attempted to add themselves to friend list");
+                        Send(
+                            FriendUpdateResponse.of(
+                                request, 
+                                LocalizationPayload.Create(
+                                    "CannotFriendYourself",
+                                    "FriendUpdateResponse")));
                         return;
                     }
-                case FriendOperation.Remove:
+                    
+                    if (socialComponent.FriendInfo.ContainsKey(friendAccountId))
                     {
-                        if (account.SocialComponent.IsBlocked(friendAccountId))
-                        {
-                            goto case FriendOperation.Unblock;
-                        }
-                        else
-                        {
-                            goto default;
-                        }
+                        log.Info($"{account.Handle} attempted to add {friendAccount.Handle} to friend list but they are already friends");
+                        Send(
+                            FriendUpdateResponse.of(
+                                request, 
+                                LocalizationPayload.Create(
+                                    "PlayerAlreadyYourFriend",
+                                    "FriendUpdateResponse",
+                                    LocalizationArg_Handle.Create(friendAccount.Handle))));
+                        return;
                     }
-                default:
+
+                    if (friendAccount.SocialComponent.GetOutgoingFriendRequests().Contains(AccountId))
                     {
-                        log.Warn($"{account.Handle} attempted to {request.FriendOperation} {friendAccount.Handle}, " +
-                                 $"but this operation is not supported yet");
+                        log.Info($"{account.Handle} requested to add {friendAccount.Handle} to friend list while having an incoming friend request from them");
+                        Send(
+                            FriendManager.AddFriend(AccountId, friendAccountId)
+                                ? FriendUpdateResponse.of(request)
+                                : FriendUpdateResponse.of(request, LocalizationPayload.Create("ServerError@Global")));
+                        return;
+                    }
+
+                    log.Info($"{account.Handle} requested to add {friendAccount.Handle} to friend list");
+                    if (!FriendManager.AddFriendRequest(AccountId, friendAccountId))
+                    {
                         Send(FriendUpdateResponse.of(request, LocalizationPayload.Create("ServerError@Global")));
                         return;
                     }
+
+                    Send(FriendUpdateResponse.of(request));
+                    return;
+                }
+                case FriendOperation.Remove:
+                {
+                    if (socialComponent.FriendInfo.ContainsKey(friendAccountId))
+                    {
+                        log.Info($"{account.Handle} removed {friendAccount.Handle} from friend list");
+                        if (!FriendManager.RemoveFriend(AccountId, friendAccountId))
+                        {
+                            Send(FriendUpdateResponse.of(request, LocalizationPayload.Create("ServerError@Global")));
+                            return;
+                        }
+                        
+                        Send(FriendUpdateResponse.of(request));
+                        return;
+                    }
+                    
+                    if (socialComponent.GetOutgoingFriendRequests().Contains(friendAccountId))
+                    {
+                        if (!FriendManager.RemoveFriendRequest(AccountId, friendAccountId))
+                        {
+                            log.Info($"{account.Handle} attempted to cancel their friend request to {friendAccount.Handle} but the request was not found");
+                            Send(FriendUpdateResponse.of(request, LocalizationPayload.Create("ServerError@Global")));
+                            return;
+                        }
+                        
+                        log.Info($"{account.Handle} cancelled their friend request to {friendAccount.Handle}");
+                        Send(FriendUpdateResponse.of(request));
+                        return;
+                    }
+                    
+                    if (socialComponent.GetIncomingFriendRequests().Contains(friendAccountId))
+                    {
+                        if (!FriendManager.RemoveFriendRequest(friendAccountId, AccountId))
+                        {
+                            log.Info($"{account.Handle} attempted to cancel friend request from {friendAccount.Handle} but the request was not found");
+                            Send(FriendUpdateResponse.of(request, LocalizationPayload.Create("ServerError@Global")));
+                            return;
+                        }
+                        
+                        log.Info($"{account.Handle} cancelled friend request from {friendAccount.Handle}");
+                        Send(FriendUpdateResponse.of(request));
+                        return;
+                    }
+                    
+                    log.Info($"{account.Handle} attempted to remove {friendAccount.Handle} from friend list but they aren't friends");
+                    Send(
+                        FriendUpdateResponse.of(
+                            request, 
+                            LocalizationPayload.Create(
+                                "NotFriendsWithPlayer",
+                                "FriendUpdateResponse",
+                                LocalizationArg_Handle.Create(friendAccount.Handle))));
+                    return;
+                }
+                case FriendOperation.Accept:
+                {
+                    if (!FriendManager.RemoveFriendRequest(friendAccountId, AccountId))
+                    {
+                        log.Info($"{account.Handle} attempted to accept friend request from {friendAccount.Handle} but the request was not found");
+                        Send(FriendUpdateResponse.of(request, LocalizationPayload.Create("ServerError@Global")));
+                        return;
+                    }
+
+                    if (!FriendManager.AddFriend(friendAccountId, AccountId))
+                    {
+                        log.Info($"{account.Handle} failed to accept friend request from {friendAccount.Handle}");
+                        Send(FriendUpdateResponse.of(request, LocalizationPayload.Create("ServerError@Global")));
+                        return;
+                    }
+
+                    log.Info($"{account.Handle} accepted friend request from {friendAccount.Handle}");
+                    Send(FriendUpdateResponse.of(request));
+                    return;
+                }
+                case FriendOperation.Reject:
+                {
+                    if (!FriendManager.RemoveFriendRequest(friendAccountId, AccountId))
+                    {
+                        log.Info($"{account.Handle} attempted to reject friend request from {friendAccount.Handle} but the request was not found");
+                        Send(FriendUpdateResponse.of(request, LocalizationPayload.Create("ServerError@Global")));
+                        return;
+                    }
+                    
+                    log.Info($"{account.Handle} rejected friend request from {friendAccount.Handle}");
+                    Send(FriendUpdateResponse.of(request));
+                    return;
+                }
+                default:
+                {
+                    log.Warn($"{account.Handle} attempted to {request.FriendOperation} {friendAccount.Handle}, " +
+                             $"but this operation is not supported yet");
+                    Send(FriendUpdateResponse.of(request, LocalizationPayload.Create("ServerError@Global")));
+                    return;
+                }
             }
         }
     }

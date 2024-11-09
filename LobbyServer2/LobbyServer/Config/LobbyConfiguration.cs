@@ -35,6 +35,7 @@ namespace EvoS.Framework
         public int TrustWarGamePlayedPoints = 5;
         public int TrustWarGameWonPoints = 10;
         public GroupConfiguration GroupConfig = new GroupConfiguration();
+        public bool AllOnlineAreFriends = true;
 
         private static LobbyConfiguration GetInstance()
         {
@@ -162,6 +163,11 @@ namespace EvoS.Framework
         public static GroupConfiguration GetGroupConfiguration()
         {
             return GetInstance().GroupConfig;
+        }
+
+        public static bool AreAllOnlineFriends()
+        {
+            return GetInstance().AllOnlineAreFriends;
         }
     }
 }
