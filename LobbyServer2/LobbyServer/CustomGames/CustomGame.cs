@@ -697,4 +697,9 @@ public class CustomGame : Game
         GameInfo.GameServerProcessCode = Server?.ProcessCode;
         // GameInfo.GameServerProcessCode = this.ProcessCode; // TODO CUSTOM GAMES Actual server process code doesn't match the one on the client and in ServerManager, might cause issues
     }
+
+    protected override void LogDodge(string dodgerHandle)
+    {
+        // no need to report in custom
+    }
 }

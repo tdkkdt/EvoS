@@ -45,6 +45,8 @@ public abstract class Game
     public string ProcessCode => GameInfo?.GameServerProcessCode;
     public GameStatus GameStatus => GameInfo?.GameStatus ?? GameStatus.None;
 
+    private bool DodgeReported;
+
     // Draft
     private RankedResolutionPhaseData RankedResolutionPhaseData = new();
     private TimeSpan TimeLeftInSubPhase = new();
@@ -485,12 +487,14 @@ public abstract class Game
         Terminate();
     }
 
-    private void LogDodge(string dodgerHandle)
+    protected virtual void LogDodge(string dodgerHandle)
     {
-        if (GameInfo?.GameConfig.GameType == GameType.Custom)
+        if (DodgeReported)
         {
             return;
         }
+
+        DodgeReported = true;
         
         string statusString = "unknown";
         long? accountId = SessionManager.GetOnlinePlayerByHandleOrUsername(dodgerHandle);
