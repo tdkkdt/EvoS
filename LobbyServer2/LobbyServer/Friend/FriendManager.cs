@@ -207,7 +207,7 @@ namespace CentralServer.LobbyServer.Friend
 
             if (requesterAccount is null || requesteeAccount is null)
             {
-                log.Info($"Add Friend Request failed: {requester} > {requestee}; {requesterAccount?.Handle} > {requesteeAccount?.Handle}");
+                log.Error($"Add Friend Request failed: {requester} > {requestee}; {requesterAccount?.Handle} > {requesteeAccount?.Handle}");
                 return false;
             }
 
@@ -233,7 +233,7 @@ namespace CentralServer.LobbyServer.Friend
 
             if (requesterAccount is null || requesteeAccount is null)
             {
-                log.Info($"Remove Friend Request failed: {requester} > {requestee}; {requesterAccount?.Handle} > {requesteeAccount?.Handle}");
+                log.Error($"Remove Friend Request failed: {requester} > {requestee}; {requesterAccount?.Handle} > {requesteeAccount?.Handle}");
                 return false;
             }
 
@@ -259,7 +259,7 @@ namespace CentralServer.LobbyServer.Friend
 
             if (accountA is null || accountB is null)
             {
-                log.Info($"Add Friend failed: {accountIdA} + {accountIdB}; {accountA?.Handle} + {accountB?.Handle}");
+                log.Error($"Add Friend failed: {accountIdA} + {accountIdB}; {accountA?.Handle} + {accountB?.Handle}");
                 return false;
             }
 
@@ -285,7 +285,7 @@ namespace CentralServer.LobbyServer.Friend
 
             if (accountA is null || accountB is null)
             {
-                log.Info($"Remove Friend failed: {accountIdA} - {accountIdB}; {accountA?.Handle} - {accountB?.Handle}");
+                log.Error($"Remove Friend failed: {accountIdA} - {accountIdB}; {accountA?.Handle} - {accountB?.Handle}");
                 return false;
             }
 
