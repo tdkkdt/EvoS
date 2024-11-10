@@ -45,6 +45,12 @@ namespace EvoS.Framework.Network.Static
             return friendData;
         }
 
+        public FriendData GetFriendInfoOrNull(long friendAccountId)
+        {
+            FriendInfo.TryGetValue(friendAccountId, out var friendData);
+            return friendData;
+        }
+
         public void UpdateLastSeenVisuals(long friendAccountId, int titleId, int titleLevel, int bgId, int fgId,
             int ribbonId, string note)
         {

@@ -2764,6 +2764,33 @@ namespace CentralServer.LobbyServer
                     Send(FriendUpdateResponse.of(request));
                     return;
                 }
+                case FriendOperation.Note:
+                {
+                    if (!FriendManager.AreFriends(AccountId, friendAccountId))
+                    {
+                        log.Error($"Failed to save {account.Handle}'s note for {friendAccount.Handle}: not a friend");
+                        Send(
+                            FriendUpdateResponse.of(
+                                request, 
+                                LocalizationPayload.Create(
+                                    "NotFriendsWithPlayer",
+                                    "FriendUpdateResponse",
+                                    LocalizationArg_Handle.Create(friendAccount.Handle))));
+                        return;
+                    }
+                    
+                    if (!FriendManager.SetFriendNote(AccountId, friendAccountId, request.StringData))
+                    {
+                        log.Info($"Failed to save {account.Handle}'s note for {friendAccount.Handle}");
+                        Send(FriendUpdateResponse.of(request, LocalizationPayload.Create("ServerError@Global")));
+                        return;
+                    }
+                    
+                    log.Info($"{account.Handle} note for {friendAccount.Handle}: {
+                        FriendManager.GetFriendNote(AccountId, friendAccountId)}");
+                    Send(FriendUpdateResponse.of(request));
+                    return;
+                }
                 default:
                 {
                     log.Warn($"{account.Handle} attempted to {request.FriendOperation} {friendAccount.Handle}, " +

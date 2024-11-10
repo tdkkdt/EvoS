@@ -52,6 +52,8 @@ namespace CentralServer.LobbyServer.Friend
                         acc =>
                         {
                             LobbyServerProtocol conn = SessionManager.GetClientConnection(acc.AccountId);
+                            SocialComponent.FriendData data = null;
+                            socialComponent?.FriendInfo.TryGetValue(acc.AccountId, out data);
                             return new FriendInfo
                             {
                                 FriendAccountId = acc.AccountId,
@@ -59,7 +61,7 @@ namespace CentralServer.LobbyServer.Friend
                                 FriendStatus = GetFriendStatus(socialComponent, acc),
                                 IsOnline = conn != null,
                                 StatusString = GetStatusString(conn),
-                                // FriendNote = 
+                                FriendNote = data?.LastSeenNote,
                                 BannerID = acc.AccountComponent.SelectedBackgroundBannerID,
                                 EmblemID = acc.AccountComponent.SelectedForegroundBannerID,
                                 TitleID = acc.AccountComponent.SelectedTitleID,
@@ -311,6 +313,64 @@ namespace CentralServer.LobbyServer.Friend
             
             SessionManager.GetClientConnection(accountA.AccountId)?.RefreshFriendList();
             SessionManager.GetClientConnection(accountB.AccountId)?.RefreshFriendList();
+        }
+
+        public static bool SetFriendNote(long accountId, long friendAccountId, string note)
+        {
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
+            if (account is null)
+            {
+                log.Error($"Set Friend Note failed: {accountId} not found");
+                return false;
+            }
+            
+            if (!AreFriends(accountId, friendAccountId))
+            {
+                log.Error($"Set Friend Note failed: {account} is not friends with {friendAccountId}");
+                return false;
+            }
+            
+            account.SocialComponent.UpdateNote(friendAccountId, note);
+            DB.Get().AccountDao.UpdateSocialComponent(account);
+
+            return true;
+        }
+
+        public static string GetFriendNote(long accountId, long friendAccountId)
+        {
+            PersistedAccountData account = DB.Get().AccountDao.GetAccount(accountId);
+            if (account is null)
+            {
+                log.Error($"Get Friend Note failed: {accountId} not found");
+                return null;
+            }
+            
+            return account.SocialComponent.GetFriendInfoOrNull(friendAccountId)?.LastSeenNote;
+        }
+
+        public static bool AreFriends(long accountIdA, long accountIdB)
+        {
+            PersistedAccountData accountA = DB.Get().AccountDao.GetAccount(accountIdA);
+            PersistedAccountData accountB = DB.Get().AccountDao.GetAccount(accountIdB);
+
+            if (accountA is null || accountB is null)
+            {
+                log.Error($"Are Friends failed: {accountIdA} = {accountIdB}; {accountA?.Handle} = {accountB?.Handle}");
+                return false;
+            }
+
+            bool areFriendsA = accountA.SocialComponent.FriendInfo.ContainsKey(accountIdB);
+            bool areFriendsB = accountB.SocialComponent.FriendInfo.ContainsKey(accountIdA);
+
+            if (areFriendsA != areFriendsB)
+            {
+                log.Error($"Are Friends: {accountIdA} = {accountIdB}; friendship is not mutual, fixing");
+                RemoveFriendRequest(accountIdA, accountIdB);
+                RemoveFriendRequest(accountIdB, accountIdA);
+                AddFriend(accountIdA, accountIdB);
+            }
+
+            return areFriendsA || areFriendsB;
         }
     }
 }
