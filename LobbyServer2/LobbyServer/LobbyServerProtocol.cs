@@ -2614,15 +2614,7 @@ namespace CentralServer.LobbyServer
                 }
                 case FriendOperation.Unblock:
                 {
-                    bool updated = socialComponent.Unblock(friendAccountId);
-                    log.Info($"{account.Handle} unblocked {friendAccount.Handle}{(updated ? "" : ", but they weren't blocked")}");
-                    if (updated)
-                    {
-                        DB.Get().AccountDao.UpdateSocialComponent(account);
-                    }
-
-                    Send(FriendUpdateResponse.of(request));
-                    RefreshFriendList();
+                    Unblock(request, account, friendAccount);
                     return;
                 }
                 case FriendOperation.Add:
@@ -2674,6 +2666,17 @@ namespace CentralServer.LobbyServer
                 }
                 case FriendOperation.Remove:
                 {
+                    if (socialComponent.IsBlocked(friendAccountId)) // UI bug
+                    {
+                        if (!Unblock(request, account, friendAccount))
+                        {
+                            Send(FriendUpdateResponse.of(request, LocalizationPayload.Create("ServerError@Global")));
+                            return;
+                        }
+
+                        return;
+                    }
+                    
                     if (socialComponent.FriendInfo.ContainsKey(friendAccountId))
                     {
                         log.Info($"{account.Handle} removed {friendAccount.Handle} from friend list");
@@ -2799,6 +2802,20 @@ namespace CentralServer.LobbyServer
                     return;
                 }
             }
+        }
+
+        private bool Unblock(FriendUpdateRequest request, PersistedAccountData account, PersistedAccountData friendAccount)
+        {
+            bool updated = account.SocialComponent.Unblock(friendAccount.AccountId);
+            log.Info($"{account.Handle} unblocked {friendAccount.Handle}{(updated ? "" : ", but they weren't blocked")}");
+            if (updated)
+            {
+                DB.Get().AccountDao.UpdateSocialComponent(account);
+            }
+
+            Send(FriendUpdateResponse.of(request));
+            RefreshFriendList();
+            return updated;
         }
     }
 }
