@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using BitFaster.Caching.Lru;
 using EvoS.Framework.Auth;
 using EvoS.Framework.DataAccess.Mock;
 
@@ -11,35 +12,36 @@ namespace EvoS.Framework.DataAccess.Daos
     public class LoginDaoCached: LoginDao
     {
         private readonly LoginDao dao;
-        private readonly ConcurrentDictionary<long, LoginDao.LoginEntry> cache = new ConcurrentDictionary<long, LoginDao.LoginEntry>();
-        private readonly ConcurrentDictionary<string, LoginDao.LoginEntry> usernameCache = new ConcurrentDictionary<string, LoginDao.LoginEntry>();
-        private readonly ConcurrentDictionary<LinkedAccount.AccountType, ConcurrentDictionary<string, LoginDao.LoginEntry>> linkedAccountCache = 
-            new ConcurrentDictionary<LinkedAccount.AccountType, ConcurrentDictionary<string, LoginDao.LoginEntry>>();
+        
+        private const int Capacity = 2048;
+        private readonly FastConcurrentLru<long, LoginDao.LoginEntry> cache = new(Capacity);
+        private readonly FastConcurrentLru<string, long> usernameCache = new(Capacity);
+        private readonly ConcurrentDictionary<LinkedAccount.AccountType, FastConcurrentLru<string, long>> linkedAccountCache = new();
 
         public LoginDaoCached(LoginDao dao)
         {
             this.dao = dao;
             foreach (LinkedAccount.AccountType type in Enum.GetValues(typeof(LinkedAccount.AccountType)))
             {
-                linkedAccountCache.TryAdd(type, new ConcurrentDictionary<string, LoginDao.LoginEntry>());
+                linkedAccountCache.TryAdd(type, new(Capacity));
             }
         }
 
         private void Cache(LoginDao.LoginEntry account)
         {
-            cache.AddOrUpdate(account.AccountId, account, (k, v) => account);
-            usernameCache.AddOrUpdate(account.Username, account, (k, v) => account);
+            cache.AddOrUpdate(account.AccountId, account);
+            usernameCache.AddOrUpdate(account.Username, account.AccountId);
             foreach (LinkedAccount linkedAccount in account.LinkedAccounts)
             {
-                linkedAccountCache[linkedAccount.Type].AddOrUpdate(linkedAccount.Id, account, (k, v) => account);
+                linkedAccountCache[linkedAccount.Type].AddOrUpdate(linkedAccount.Id, account.AccountId);
             }
         }
 
         public LoginDao.LoginEntry Find(string username)
         {
-            if (usernameCache.TryGetValue(username, out var account))
+            if (usernameCache.TryGet(username, out var accountId))
             {
-                return account;
+                return Find(accountId);
             }
 
             var nonCachedAccount = dao.Find(username);
@@ -52,7 +54,7 @@ namespace EvoS.Framework.DataAccess.Daos
 
         public LoginDao.LoginEntry Find(long accountId)
         {
-            if (cache.TryGetValue(accountId, out var account))
+            if (cache.TryGet(accountId, out var account))
             {
                 return account;
             }
@@ -72,7 +74,8 @@ namespace EvoS.Framework.DataAccess.Daos
                 Regex regex = new Regex(Regex.Escape(username));
                 return usernameCache
                     .Where(x => regex.IsMatch(x.Key))
-                    .Select(x => x.Value)
+                    .Select(x => cache.TryGet(x.Value, out var account) ? account : null)
+                    .Where(x => x is not null)
                     .ToList();
             }
             
@@ -85,7 +88,9 @@ namespace EvoS.Framework.DataAccess.Daos
         {
             if (dao is LoginMockDao)
             {
-                return usernameCache.Values.ToList();
+                return usernameCache
+                    .Select(x => cache.TryGet(x.Value, out var account) ? account : null)
+                    .ToList();
             }
             
             List<LoginDao.LoginEntry> daoEntries = dao.FindAll();
@@ -101,8 +106,10 @@ namespace EvoS.Framework.DataAccess.Daos
         
         public LoginDao.LoginEntry FindByLinkedAccount(LinkedAccount linkedAccount)
         {
-            if (linkedAccountCache[linkedAccount.Type].TryGetValue(linkedAccount.Id, out var account))
-                return account;
+            if (linkedAccountCache[linkedAccount.Type].TryGet(linkedAccount.Id, out var accountId))
+            {
+                return Find(accountId);
+            }
             
             var nonCachedAccount = dao.FindByLinkedAccount(linkedAccount);
             if (nonCachedAccount != null)

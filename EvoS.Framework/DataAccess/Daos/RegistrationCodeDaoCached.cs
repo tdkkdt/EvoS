@@ -1,7 +1,7 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using BitFaster.Caching.Lru;
 using EvoS.Framework.DataAccess.Mock;
 
 namespace EvoS.Framework.DataAccess.Daos
@@ -9,8 +9,9 @@ namespace EvoS.Framework.DataAccess.Daos
     public class RegistrationCodeDaoCached: RegistrationCodeDao
     {
         private readonly RegistrationCodeDao dao;
-        private readonly ConcurrentDictionary<string, RegistrationCodeDao.RegistrationCodeEntry> cache = 
-            new ConcurrentDictionary<string, RegistrationCodeDao.RegistrationCodeEntry>();
+    
+        private const int Capacity = 128;
+        private readonly FastConcurrentLru<string, RegistrationCodeDao.RegistrationCodeEntry> cache = new(Capacity);
 
         public RegistrationCodeDaoCached(RegistrationCodeDao dao)
         {
@@ -19,12 +20,12 @@ namespace EvoS.Framework.DataAccess.Daos
 
         private void Cache(RegistrationCodeDao.RegistrationCodeEntry entry)
         {
-            cache.AddOrUpdate(entry.Code, entry, (k, v) => entry);
+            cache.AddOrUpdate(entry.Code, entry);
         }
 
         public RegistrationCodeDao.RegistrationCodeEntry Find(string code)
         {
-            if (cache.TryGetValue(code, out var entry))
+            if (cache.TryGet(code, out var entry))
             {
                 return entry;
             }
@@ -41,7 +42,8 @@ namespace EvoS.Framework.DataAccess.Daos
         {
             if (dao is RegistrationCodeMockDao)
             {
-                return cache.Values
+                return cache
+                    .Select(x => x.Value)
                     .Where(x => x.IssuedAt < dateTime)
                     .OrderByDescending(x => x.IssuedAt)
                     .Take(limit)
@@ -57,7 +59,8 @@ namespace EvoS.Framework.DataAccess.Daos
         {
             if (dao is RegistrationCodeMockDao)
             {
-                return cache.Values
+                return cache
+                    .Select(x => x.Value)
                     .OrderByDescending(x => x.IssuedAt)
                     .Skip(offset)
                     .Take(limit)

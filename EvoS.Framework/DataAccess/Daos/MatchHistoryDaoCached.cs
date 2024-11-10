@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using BitFaster.Caching.Lru;
 using EvoS.Framework.Network.Static;
 using Microsoft.IdentityModel.Tokens;
 
@@ -9,9 +10,10 @@ namespace EvoS.Framework.DataAccess.Daos
     public class MatchHistoryDaoCached: MatchHistoryDao
     {
         private readonly MatchHistoryDao dao;
-        private readonly ConcurrentDictionary<long, ConcurrentQueue<PersistedCharacterMatchData>> cache = new();
-        private readonly ConcurrentDictionary<long, bool> cachedAccounts = new();
-        private readonly ConcurrentDictionary<long, object> accountLocks = new();
+    
+        private const int Capacity = 1024;
+        private readonly FastConcurrentLru<long, ConcurrentQueue<PersistedCharacterMatchData>> cache = new(Capacity);
+        private readonly FastConcurrentLru<long, object> accountLocks = new(Capacity);
 
         public MatchHistoryDaoCached(MatchHistoryDao dao)
         {
@@ -24,11 +26,16 @@ namespace EvoS.Framework.DataAccess.Daos
 
             foreach (IGrouping<long, MatchHistoryDao.MatchEntry> accountToMatches in byAccount)
             {
-                ConcurrentQueue<PersistedCharacterMatchData> matches = cache
-                    .GetOrAdd(accountToMatches.Key, _ => new ConcurrentQueue<PersistedCharacterMatchData>());
-
-                lock (matches)
+                long accountId = accountToMatches.Key;
+                object _lock = accountLocks.GetOrAdd(accountId, _ => new());
+                lock (_lock)
                 {
+                    if (!cache.TryGet(accountId, out var matches))
+                    {
+                        Fetch(accountId);
+                        matches = cache.GetOrAdd(accountId, _ => new());
+                    }
+                    
                     foreach (MatchHistoryDao.MatchEntry match in accountToMatches)
                     {
                         matches.Enqueue(match.Data);
@@ -43,7 +50,7 @@ namespace EvoS.Framework.DataAccess.Daos
 
         private void OverrideCache(long accountId, List<PersistedCharacterMatchData> matchDataList)
         {
-            cache[accountId] = new ConcurrentQueue<PersistedCharacterMatchData>(matchDataList.AsEnumerable().Reverse());
+            cache.AddOrUpdate(accountId, new ConcurrentQueue<PersistedCharacterMatchData>(matchDataList.AsEnumerable().Reverse()));
         }
 
         public List<PersistedCharacterMatchData> Find(long accountId)
@@ -51,34 +58,30 @@ namespace EvoS.Framework.DataAccess.Daos
             object _lock = accountLocks.GetOrAdd(accountId, _ => new());
             lock (_lock)
             {
-                bool hasCachedValue = cache.TryGetValue(accountId, out var cachedMatches);
-                if (cachedAccounts.ContainsKey(accountId))
+                bool hasCachedValue = cache.TryGet(accountId, out var cachedMatches);
+                if (hasCachedValue)
                 {
-                    return hasCachedValue ? cachedMatches.Reverse().ToList() : new();
+                    return cachedMatches.Reverse().ToList();
                 }
 
-                List<PersistedCharacterMatchData> dbMatches = dao.Find(accountId);
-                if (!dbMatches.IsNullOrEmpty())
-                {
-                    OverrideCache(accountId, dbMatches);
-                }
-                cachedAccounts[accountId] = true;
-                return dbMatches;
+                return Fetch(accountId);
             }
         }
-        
+
+        private List<PersistedCharacterMatchData> Fetch(long accountId)
+        {
+            List<PersistedCharacterMatchData> dbMatches = dao.Find(accountId);
+            if (!dbMatches.IsNullOrEmpty())
+            {
+                OverrideCache(accountId, dbMatches);
+            }
+            return dbMatches ?? new();
+        }
+
         public void Save(ICollection<MatchHistoryDao.MatchEntry> matchEntries)
         {
-            foreach (long accountId in matchEntries.Select(m => m.AccountId).Distinct())
-            {
-                if (!cachedAccounts.ContainsKey(accountId))
-                {
-                    Find(accountId);
-                }
-            }
-
-            dao.Save(matchEntries);
             AddToCache(matchEntries);
+            dao.Save(matchEntries);
         }
     }
 }

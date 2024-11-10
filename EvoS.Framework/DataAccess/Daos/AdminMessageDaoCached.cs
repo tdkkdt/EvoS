@@ -1,14 +1,15 @@
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using BitFaster.Caching.Lru;
 
 namespace EvoS.Framework.DataAccess.Daos
 {
     public class AdminMessageDaoCached: AdminMessageDao
     {
         private readonly AdminMessageDao dao;
-        private readonly ConcurrentDictionary<long, List<AdminMessageDao.AdminMessage>> cache =
-            new ConcurrentDictionary<long, List<AdminMessageDao.AdminMessage>>();
+        
+        private const int Capacity = 128;
+        private readonly FastConcurrentLru<long, List<AdminMessageDao.AdminMessage>> cache = new(Capacity);
 
         public AdminMessageDaoCached(AdminMessageDao dao)
         {
@@ -32,7 +33,7 @@ namespace EvoS.Framework.DataAccess.Daos
 
         public AdminMessageDao.AdminMessage FindPending(long accountId)
         {
-            if (cache.TryGetValue(accountId, out var cachedMessages))
+            if (cache.TryGet(accountId, out var cachedMessages))
             {
                 return cachedMessages
                     .Where(m => !m.viewed)
@@ -49,7 +50,7 @@ namespace EvoS.Framework.DataAccess.Daos
 
         public List<AdminMessageDao.AdminMessage> Find(long accountId)
         {
-            if (cache.TryGetValue(accountId, out var cachedMessages))
+            if (cache.TryGet(accountId, out var cachedMessages))
             {
                 return cachedMessages
                     .OrderBy(m => m.viewed)

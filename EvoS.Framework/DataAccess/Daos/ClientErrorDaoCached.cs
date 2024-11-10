@@ -1,11 +1,13 @@
-using System.Collections.Concurrent;
+using BitFaster.Caching.Lru;
 
 namespace EvoS.Framework.DataAccess.Daos;
 
 public class ClientErrorDaoCached: ClientErrorDao
 {
     private readonly ClientErrorDao dao;
-    private readonly ConcurrentDictionary<long, ClientErrorDao.Entry> cache = new();
+    
+    private const int Capacity = 2048;
+    private readonly FastConcurrentLru<long, ClientErrorDao.Entry> cache = new(Capacity);
 
     public ClientErrorDaoCached(ClientErrorDao dao)
     {
@@ -14,12 +16,12 @@ public class ClientErrorDaoCached: ClientErrorDao
 
     private void Cache(ClientErrorDao.Entry entry)
     {
-        cache.AddOrUpdate(entry.Key, entry, (k, v) => entry);
+        cache.AddOrUpdate(entry.Key, entry);
     }
 
     public ClientErrorDao.Entry GetEntry(uint key)
     {
-        if (cache.TryGetValue(key, out var entry))
+        if (cache.TryGet(key, out var entry))
         {
             return entry;
         }

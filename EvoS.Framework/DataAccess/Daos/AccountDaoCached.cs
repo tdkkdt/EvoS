@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Concurrent;
+using BitFaster.Caching.Lru;
 using EvoS.Framework.Network.Static;
 
 namespace EvoS.Framework.DataAccess.Daos
@@ -7,7 +7,9 @@ namespace EvoS.Framework.DataAccess.Daos
     public class AccountDaoCached: AccountDao
     {
         private readonly AccountDao dao;
-        private readonly ConcurrentDictionary<long, PersistedAccountData> cache = new ConcurrentDictionary<long, PersistedAccountData>();
+        
+        private const int Capacity = 1024;
+        private readonly FastConcurrentLru<long, PersistedAccountData> cache = new(Capacity);
 
         public AccountDaoCached(AccountDao dao)
         {
@@ -16,12 +18,12 @@ namespace EvoS.Framework.DataAccess.Daos
 
         private void Cache(PersistedAccountData account)
         {
-            cache.AddOrUpdate(account.AccountId, account, (k, v) => account);
+            cache.AddOrUpdate(account.AccountId, account);
         }
 
         public PersistedAccountData GetAccount(long accountId)
         {
-            if (cache.TryGetValue(accountId, out var account))
+            if (cache.TryGet(accountId, out var account))
             {
                 return account;
             }
