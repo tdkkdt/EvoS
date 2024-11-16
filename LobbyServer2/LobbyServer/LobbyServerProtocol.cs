@@ -2654,6 +2654,12 @@ namespace CentralServer.LobbyServer
                         return;
                     }
 
+                    if (account.SocialComponent.GetOutgoingFriendRequests().Contains(friendAccountId))
+                    {
+                        log.Info($"{account.Handle} requested to add {friendAccount.Handle} to friend list while already having an outgoing friend request to them. Ignoring");
+                        return;
+                    }
+
                     log.Info($"{account.Handle} requested to add {friendAccount.Handle} to friend list");
                     if (!FriendManager.AddFriendRequest(AccountId, friendAccountId))
                     {
