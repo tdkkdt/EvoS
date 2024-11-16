@@ -111,18 +111,23 @@ namespace EvoS.Framework.Network.Static
 
         public bool IsBlocked(long accountId)
         {
-            return BlockedAccounts != null && BlockedAccounts.Contains(accountId);
+            return GetBlockedAccounts().Contains(accountId);
+        }
+
+        public HashSet<long> GetBlockedAccounts()
+        {
+            BlockedAccounts ??= new HashSet<long>();
+            return BlockedAccounts;
         }
 
         public bool Block(long accountId)
         {
-            BlockedAccounts ??= new HashSet<long>();
-            return BlockedAccounts.Add(accountId);
+            return GetBlockedAccounts().Add(accountId);
         }
 
         public bool Unblock(long accountId)
         {
-            return BlockedAccounts != null && BlockedAccounts.Remove(accountId);
+            return GetBlockedAccounts().Remove(accountId);
         }
         
         public HashSet<long> GetIncomingFriendRequests()

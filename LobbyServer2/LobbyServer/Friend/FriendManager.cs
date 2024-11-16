@@ -109,6 +109,7 @@ namespace CentralServer.LobbyServer.Friend
             {
                 result.UnionWith(socialComponent.GetIncomingFriendRequests());
                 result.UnionWith(socialComponent.GetOutgoingFriendRequests());
+                result.UnionWith(socialComponent.GetBlockedAccounts());
             }
             
             if (LobbyConfiguration.AreAllOnlineFriends())
