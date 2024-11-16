@@ -2561,7 +2561,7 @@ namespace CentralServer.LobbyServer
         private void HandleFriendUpdate(FriendUpdateRequest request)
         {
             long friendAccountId = LobbyServerUtils.ResolveAccountId(request.FriendAccountId, request.FriendHandle);
-            if (friendAccountId == 0 || friendAccountId == AccountId)
+            if (friendAccountId == 0)
             {
                 string failure = FriendManager.GetFailTerm(request.FriendOperation);
                 string context = failure != null ? "FriendList" : "Global";
@@ -2578,6 +2578,18 @@ namespace CentralServer.LobbyServer
             }
 
             PersistedAccountData account = DB.Get().AccountDao.GetAccount(AccountId);
+            if (friendAccountId == AccountId)
+            {
+                log.Info($"{account.Handle} attempted to {request.FriendOperation} themselves");
+                Send(
+                    FriendUpdateResponse.of(
+                        request, 
+                        LocalizationPayload.Create(
+                            "CannotFriendYourself",
+                            "FriendUpdateResponse")));
+                return;
+            }
+            
             PersistedAccountData friendAccount = DB.Get().AccountDao.GetAccount(friendAccountId);
 
             if (account == null || friendAccount == null)
@@ -2619,18 +2631,6 @@ namespace CentralServer.LobbyServer
                 }
                 case FriendOperation.Add:
                 {
-                    if (friendAccountId == AccountId)
-                    {
-                        log.Info($"{account.Handle} attempted to add themselves to friend list");
-                        Send(
-                            FriendUpdateResponse.of(
-                                request, 
-                                LocalizationPayload.Create(
-                                    "CannotFriendYourself",
-                                    "FriendUpdateResponse")));
-                        return;
-                    }
-                    
                     if (socialComponent.FriendInfo.ContainsKey(friendAccountId))
                     {
                         log.Info($"{account.Handle} attempted to add {friendAccount.Handle} to friend list but they are already friends");
