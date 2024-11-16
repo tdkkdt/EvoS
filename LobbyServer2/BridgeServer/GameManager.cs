@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using CentralServer.LobbyServer;
+using CentralServer.Utils;
 using EvoS.Framework.Constants.Enums;
 using log4net;
 using Prometheus;
@@ -25,6 +26,7 @@ public class GameManager
     {
         Metrics.DefaultRegistry.AddBeforeCollectCallback(() =>
         {
+            GameNum.Zero();
             foreach (GameType gameType in GameTypesForStats)
             {
                 foreach (var (subType, runningGamesNum) in GetRunningGamesNum(gameType))
