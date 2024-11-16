@@ -17,7 +17,8 @@ public class GameManager
         .CreateGauge(
             "evos_lobby_games",
             "Number of ongoing games.",
-            "gameType");
+            "gameType",
+            "subType");
 
     private static readonly GameType[] GameTypesForStats = { GameType.PvP, GameType.Custom, GameType.Coop };
     static GameManager()
@@ -26,7 +27,10 @@ public class GameManager
         {
             foreach (GameType gameType in GameTypesForStats)
             {
-                GameNum.WithLabels(gameType.ToString()).Set(GetRunningGamesNum(gameType));
+                foreach (var (subType, runningGamesNum) in GetRunningGamesNum(gameType))
+                {
+                    GameNum.WithLabels(gameType.ToString(), subType).Set(runningGamesNum);
+                }
             }
             GameNum.WithLabels("Total").Set(GetRunningGamesNum());
         });
@@ -120,9 +124,12 @@ public class GameManager
         return Games.Values.ToList();
     }
 
-    public static int GetRunningGamesNum(GameType gameType)
+    public static Dictionary<string, int> GetRunningGamesNum(GameType gameType)
     {
-        return Games.Values.Count(g => g.GameInfo?.GameConfig?.GameType == gameType && g.GameStatus == GameStatus.Started);
+        return Games.Values
+            .Where(g => g.GameInfo?.GameConfig?.GameType == gameType && g.GameStatus == GameStatus.Started)
+            .GroupBy(g => g.GameInfo.GameConfig.SelectedSubType?.LocalizedName)
+            .ToDictionary(g => g.Key, g => g.Count());
     }
 
     public static int GetRunningGamesNum()
