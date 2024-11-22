@@ -282,6 +282,15 @@ namespace CentralServer.LobbyServer.Matchmaking
                                 .ToList();
                         }
 
+                        string queueString = string.Join(
+                            ", ",
+                            queuedGroups
+                                .Select(
+                                    g =>
+                                        $"[{string.Join(", ", GroupManager.GetGroup(g.GroupID).Members)
+                                        }] ({DateTime.UtcNow - g.QueueTime})"));
+                        log.Info($"Queue snapshot: {queueString}");
+
                         List<Matchmaker.Match> matches = Matchmakers[subType.LocalizedName]
                             .GetMatchesRanked(queuedGroups, DateTime.UtcNow);
                         if (matches.Count > 0)
