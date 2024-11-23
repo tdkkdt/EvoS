@@ -101,5 +101,10 @@ namespace EvoS.Framework
         {
             return address.GetSubnet(subnet).Equals(otherAddress.GetSubnet(subnet));
         }
+
+        public static string FormatMinutesSeconds(this TimeSpan timeSpan)
+        {
+            return $"{Math.Truncate(timeSpan.TotalMinutes)}:{timeSpan.Seconds:00}";
+        }
     }
 }

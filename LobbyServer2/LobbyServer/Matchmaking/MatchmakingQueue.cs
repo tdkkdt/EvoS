@@ -7,6 +7,7 @@ using CentralServer.BridgeServer;
 using CentralServer.LobbyServer.Gamemode;
 using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Session;
+using CentralServer.LobbyServer.Utils;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
@@ -266,6 +267,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 {
                     while (true)
                     {
+                        DateTime matchmakingIterationStartTime = DateTime.UtcNow;
                         List<Matchmaker.MatchmakingGroup> queuedGroups;
                         lock (GroupManager.Lock)
                         {
@@ -282,19 +284,26 @@ namespace CentralServer.LobbyServer.Matchmaking
                                 .ToList();
                         }
 
-                        string queueString = string.Join(
-                            ", ",
-                            queuedGroups
-                                .Select(
-                                    g =>
-                                        $"[{string.Join(", ", GroupManager.GetGroup(g.GroupID).Members)
-                                        }] ({DateTime.UtcNow - g.QueueTime})"));
-                        log.Info($"Queue snapshot: {queueString}");
-
                         List<Matchmaker.Match> matches = Matchmakers[subType.LocalizedName]
-                            .GetMatchesRanked(queuedGroups, DateTime.UtcNow);
+                            .GetMatchesRanked(queuedGroups, matchmakingIterationStartTime);
                         if (matches.Count > 0)
                         {
+                            string queueString = string.Join(
+                                ", ",
+                                queuedGroups
+                                    .Select(
+                                        g =>
+                                            $"[{string.Join(
+                                                ", ",
+                                                GroupManager
+                                                    .GetGroup(g.GroupID)
+                                                    .Members
+                                                    .Select(LobbyServerUtils.GetHandle)
+                                                )}] ({
+                                                (matchmakingIterationStartTime - g.QueueTime).FormatMinutesSeconds()
+                                            })"));
+                            log.Info($"Queue snapshot: {queueString}");
+                            
                             Matchmaker.Match match = matches[0];
                             lock (GroupManager.Lock)
                             {
