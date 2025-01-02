@@ -24,39 +24,34 @@ public abstract class MatchmakerBase: Matchmaker
 
     protected override IEnumerable<Match> FindMatches(List<MatchmakingGroup> queuedGroups)
     {
-        return FindMatches(new MatchScratch(_subType), queuedGroups, new HashSet<long>(), _eloKey);
+        return FindMatches(new MatchScratch(_subType), queuedGroups, 0, _eloKey);
     }
-    
+
     private IEnumerable<Match> FindMatches(
         MatchScratch matchScratch,
         List<MatchmakingGroup> queuedGroups,
-        HashSet<long> processed,
-        string eloKey)
-    {
-        foreach (MatchmakingGroup groupInfo in queuedGroups)
-        {
-            if (matchScratch.Push(groupInfo))
-            {
-                if (matchScratch.IsMatch())
-                {
-                    long hash = matchScratch.GetHash();
-                    if (processed.Add(hash))
-                    {
+        int qi,
+        string eloKey
+    ) {
+        for (var i = qi; i < queuedGroups.Count; i++) {
+            var groupInfo = queuedGroups[i];
+            var maxTeamIndex = matchScratch.Count > 0 ? matchScratch.TeamsCount : 1;
+            for (var teamIndex = 0; teamIndex < maxTeamIndex; teamIndex++) {
+                if (matchScratch.Push(teamIndex, groupInfo)) {
+                    if (matchScratch.IsMatch()) {
                         yield return matchScratch.ToMatch(_accountDao, eloKey);
                     }
-                }
-                else
-                {
-                    foreach (Match match in FindMatches(matchScratch, queuedGroups, processed, eloKey))
-                    {
-                        yield return match;
+                    else {
+                        foreach (Match match in FindMatches(matchScratch, queuedGroups, i + 1, eloKey)) {
+                            yield return match;
+                        }
                     }
+                    matchScratch.Pop(teamIndex);
                 }
-                matchScratch.Pop();
             }
         }
     }
-    
+
     class MatchScratch
     {
         class Team
@@ -120,6 +115,8 @@ public abstract class MatchmakerBase: Matchmaker
                     $"groups {string.Join(",", _groups.Select(g => g.GroupID))} " +
                     $"<{string.Join(",", _groups.SelectMany(g => g.Members))}>";
             }
+
+            public int Count => _size;
         }
         
         private readonly Team _teamA;
@@ -151,31 +148,23 @@ public abstract class MatchmakerBase: Matchmaker
             return (long)Math.Min(a, b) << 32 | (uint)Math.Max(a, b);
         }
 
-        public bool Push(MatchmakingGroup groupInfo)
-        {
-            if (_usedGroupIds.Contains(groupInfo.GroupID))
-            {
+        public bool Push(int teamIndex, MatchmakingGroup groupInfo) {
+            var team = teamIndex == 0 ? _teamA : _teamB;
+            if (_usedGroupIds.Contains(groupInfo.GroupID) || !team.Push(groupInfo)) {
                 return false;
             }
-            if (_teamA.Push(groupInfo) || _teamB.Push(groupInfo))
-            {
-                _usedGroupIds.Add(groupInfo.GroupID);
-                return true;
-            }
-            return false;
+            _usedGroupIds.Add(groupInfo.GroupID);
+            return true;
         }
 
-        public void Pop()
-        {
-            if (_teamB.Pop(out long groupId) || _teamA.Pop(out groupId))
-            {
-                _usedGroupIds.Remove(groupId);
-                return;
+        public void Pop(int teamIndex) {
+            var team = teamIndex == 0 ? _teamA : _teamB;
+            if (!team.Pop(out var groupId)) {
+                throw new Exception("Matchmaking failure");
             }
-            
-            throw new Exception("Matchmaking failure");
+            _usedGroupIds.Remove(groupId);
         }
-
+        
         public bool IsMatch()
         {
             return _teamA.IsFull && _teamB.IsFull;
@@ -185,5 +174,9 @@ public abstract class MatchmakerBase: Matchmaker
         {
             return $"{_teamA} vs {_teamB}";
         }
+
+        public int Count => _teamA.Count + _teamB.Count;
+
+        public int TeamsCount =>  2;
     }
 }
