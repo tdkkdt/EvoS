@@ -59,11 +59,10 @@ public abstract class Matchmaker
             private readonly string _eloKey;
             public List<MatchmakingGroup> Groups { get; }
             public Dictionary<long, PersistedAccountData> Accounts { get; }
-            public List<long> AccountIds => Accounts.Values.Select(acc => acc.AccountId).ToList();
+            public List<long> AccountIds { get; }
             public float Elo { get; }
-            public float MinElo => Accounts.Values.Select(GetElo).Min();
-            public float MaxElo => Accounts.Values.Select(GetElo).Max();
-
+            public float MinElo { get; }
+            public float MaxElo { get; }
             public Team(AccountDao dao, List<MatchmakingGroup> groups, string eloKey)
             {
                 _eloKey = eloKey;
@@ -72,7 +71,11 @@ public abstract class Matchmaker
                     .SelectMany(g => g.Members)
                     .Select(dao.GetAccount)
                     .ToDictionary(acc => acc.AccountId);
-                Elo = Accounts.Values.Select(GetElo).Sum() / Accounts.Count;
+                AccountIds = new List<long>(Accounts.Keys);
+                var elos = Accounts.Values.Select(GetElo).ToList();
+                Elo = elos.Sum() / Accounts.Count;
+                MinElo = elos.Count == 0 ? 0 : elos.Min();
+                MaxElo = elos.Count == 0 ? 0: elos.Max();
             }
 
             private float GetElo(PersistedAccountData acc)
@@ -107,6 +110,7 @@ public abstract class Matchmaker
         public Team TeamA { get; }
         public Team TeamB { get; }
         public IEnumerable<MatchmakingGroup> Groups => TeamA.Groups.Concat(TeamB.Groups);
+        public int TotalGroupsCount => TeamA.Groups.Count + TeamB.Groups.Count;
 
         public Match(AccountDao accountDao, List<MatchmakingGroup> teamA, List<MatchmakingGroup> teamB, string eloKey)
         {

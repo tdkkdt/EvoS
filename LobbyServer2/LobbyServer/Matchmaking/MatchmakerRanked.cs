@@ -54,13 +54,14 @@ public class MatchmakerRanked : MatchmakerBase
 
         float eloDiff = Math.Abs(match.TeamA.Elo - match.TeamB.Elo);
         bool result = eloDiff <= maxEloDiff;
-        log.Debug($"{(result ? "A": "Disa")}llowed {match}, elo diff {eloDiff}/{maxEloDiff}, reference queue time {TimeSpan.FromSeconds(waitingTime)}");
+        // do you really want to write these logs for every match?
+        // log.Debug($"{(result ? "A": "Disa")}llowed {match}, elo diff {eloDiff}/{maxEloDiff}, reference queue time {TimeSpan.FromSeconds(waitingTime)}");
         return result;
     }
 
     private static double GetReferenceTime(Match match, DateTime now)
     {
-        int cutoff = int.Max(1, Convert.ToInt32(MathF.Floor(match.Groups.Count() / 2.0f))); // don't want to keep the first ones to queue waiting for too long
+        int cutoff = Math.Max(1, match.TotalGroupsCount / 2); // don't want to keep the first ones to queue waiting for too long
         double waitingTime = match.Groups
             .Select(g => (now - g.QueueTime).TotalSeconds)
             .Order()
@@ -71,17 +72,18 @@ public class MatchmakerRanked : MatchmakerBase
 
     public override List<ScoredMatch> GetMatchesRanked(List<MatchmakingGroup> queuedGroups, DateTime now)
     {
-        return base.GetMatchesRanked(queuedGroups.Take(12).ToList(), now);
+        return base.GetMatchesRanked(queuedGroups.ToList(), now);
     }
 
     protected override float RankMatch(Match match, DateTime now, bool infoLog = false)
     {
-        float teamEloDifferenceFactor = 1 - Cap(Math.Abs(match.TeamA.Elo - match.TeamB.Elo) / Conf.MaxTeamEloDifference);
-        float teammateEloDifferenceAFactor = 1 - Cap((match.TeamA.MaxElo - match.TeamA.MinElo) / Conf.TeammateEloDifferenceWeightCap);
-        float teammateEloDifferenceBFactor = 1 - Cap((match.TeamB.MaxElo - match.TeamB.MinElo) / Conf.TeammateEloDifferenceWeightCap);
+        var currentConf = Conf;
+        float teamEloDifferenceFactor = 1 - Cap(Math.Abs(match.TeamA.Elo - match.TeamB.Elo) / currentConf.MaxTeamEloDifference);
+        float teammateEloDifferenceAFactor = 1 - Cap((match.TeamA.MaxElo - match.TeamA.MinElo) / currentConf.TeammateEloDifferenceWeightCap);
+        float teammateEloDifferenceBFactor = 1 - Cap((match.TeamB.MaxElo - match.TeamB.MinElo) / currentConf.TeammateEloDifferenceWeightCap);
         float teammateEloDifferenceFactor = (teammateEloDifferenceAFactor + teammateEloDifferenceBFactor) * 0.5f;
         double waitTime = Math.Sqrt(match.Groups.Select(g => Math.Pow((now - g.QueueTime).TotalSeconds, 2)).Average());
-        float waitTimeFactor = Cap((float)(waitTime / Conf.WaitingTimeWeightCap.TotalSeconds));
+        float waitTimeFactor = Cap((float)(waitTime / currentConf.WaitingTimeWeightCap.TotalSeconds));
         // TODO team composition does not matter for ranked
         float teamCompositionFactor = (GetTeamCompositionFactor(match.TeamA) + GetTeamCompositionFactor(match.TeamB)) * 0.5f;
         float teamBlockFactor = (GetBlocksFactor(match.TeamA) + GetBlocksFactor(match.TeamB)) * 0.5f;
@@ -98,39 +100,31 @@ public class MatchmakerRanked : MatchmakerBase
         // TODO if you are waiting for 20 minutes, you must be in the next game
         // TODO overrides like "we must have this player in the next match" & "we must start next match by specific time"
 
-        float teamEloDifferenceFactorWeighted = teamEloDifferenceFactor * Conf.TeamEloDifferenceWeight;
-        float teammateEloDifferenceFactorWeighted = teammateEloDifferenceFactor * Conf.TeammateEloDifferenceWeight;
-        float waitTimeFactorWeighted = waitTimeFactor * Conf.WaitingTimeWeight;
-        float teamCompositionFactorWeighted = teamCompositionFactor * Conf.TeamCompositionWeight;
-        float teamBlockFactorWeighted = teamBlockFactor * Conf.TeamBlockWeight;
-        float teamConfidenceBalanceFactorWeighted = teamConfidenceBalanceFactor * Conf.TeamConfidenceBalanceWeight;
-        float tieBreakerFactorWeighted = tieBreakerFactor * Conf.TieBreakerWeight;
         float score =
-            teamEloDifferenceFactorWeighted
-            + teammateEloDifferenceFactorWeighted
-            + waitTimeFactorWeighted
-            + teamCompositionFactorWeighted
-            + teamBlockFactorWeighted
-            + teamConfidenceBalanceFactorWeighted
-            + tieBreakerFactorWeighted;
+            teamEloDifferenceFactor * currentConf.TeamEloDifferenceWeight
+            + teammateEloDifferenceFactor * currentConf.TeammateEloDifferenceWeight
+            + waitTimeFactor * currentConf.WaitingTimeWeight
+            + teamCompositionFactor * currentConf.TeamCompositionWeight
+            + teamBlockFactor * currentConf.TeamBlockWeight
+            + teamConfidenceBalanceFactor * currentConf.TeamConfidenceBalanceWeight;
         
-        string msg = $"Score {score:0.00} " +
-                  $"(tElo:{teamEloDifferenceFactorWeighted:0.00} [{teamEloDifferenceFactor:0.00}], " +
-                  $"tmElo:{teammateEloDifferenceFactorWeighted:0.00} [{teammateEloDifferenceFactor:0.00}], " +
-                  $"q:{waitTimeFactorWeighted:0.00} [{waitTimeFactor:0.00}], " +
-                  $"tComp:{teamCompositionFactorWeighted:0.00} [{teamCompositionFactor:0.00}], " +
-                  $"blocks:{teamBlockFactorWeighted:0.00} [{teamBlockFactor:0.00}], " +
-                  $"tConf:{teamConfidenceBalanceFactorWeighted:0.00} [{teamConfidenceBalanceFactor:0.00}], " +
-                  $"tieBr:{tieBreakerFactorWeighted:0.00} [{tieBreakerFactor:0.00}]" +
-                  $") {match}";
-        if (infoLog)
-        {
-            log.Info(msg);
-        }
-        else
-        {
-            log.Debug(msg);
-        }
+        // do you really want to write these logs for every match?
+        // string msg = $"Score {score:0.00} " +
+        //           $"(tElo:{teamEloDifferenceFactor:0.00}, " +
+        //           $"tmElo:{teammateEloDifferenceFactor:0.00}, " +
+        //           $"q:{waitTimeFactor:0.00}, " +
+        //           $"tComp:{teamCompositionFactor:0.00}, " +
+        //           $"blocks:{teamBlockFactor:0.00}, " +
+        //           $"tConf:{teamConfidenceBalanceFactor:0.00}" +
+        //           $") {match}";
+        // if (infoLog)
+        // {
+        //     log.Info(msg);
+        // }
+        // else
+        // {
+        //     log.Debug(msg);
+        // }
 
         return score;
     }
