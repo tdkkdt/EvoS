@@ -591,6 +591,7 @@ namespace CentralServer.LobbyServer
             {
                 return;
             }
+            log.Info($"DEBUG_AdminSlashCommandNotification: dev={account.AccountComponent.IsDev()} devMode={EvosConfiguration.GetDevMode()}");
             if (account.AccountComponent.IsDev() || EvosConfiguration.GetDevMode())
             {
                 Game game = GameManager.GetGameWithPlayer(AccountId);
@@ -616,6 +617,10 @@ namespace CentralServer.LobbyServer
                             game.Server.AdminClearCooldown();
                             break;
                     }
+                }
+                else
+                {
+                    log.Info("DEBUG_AdminSlashCommandNotification: game not found");
                 }
             }
         }
