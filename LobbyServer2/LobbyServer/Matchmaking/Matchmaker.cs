@@ -132,8 +132,30 @@ public abstract class Matchmaker
             return $"{team1} [{prediction * 100:0}%] vs {team2} [{(1 - prediction) * 100:0}%]";
         }
     }
+
+    public class ScoredMatch : IComparable<ScoredMatch>
+    {
+        public ScoredMatch(Match match, float score)
+        {
+            Match = match;
+            Score = score;
+        }
+
+        public Match Match { get; }
+        public float Score { get; }
         
-    public virtual List<Match> GetMatchesRanked(List<MatchmakingGroup> queuedGroups, DateTime now)
+        public int CompareTo(ScoredMatch other)
+        {
+            return Score.CompareTo(other.Score);
+        }
+
+        public override string ToString()
+        {
+            return $"{Score} {Match}";
+        }
+    }
+        
+    public virtual List<ScoredMatch> GetMatchesRanked(List<MatchmakingGroup> queuedGroups, DateTime now)
     {
         if (queuedGroups.Count == 0)
         {
@@ -146,7 +168,6 @@ public abstract class Matchmaker
             log.Debug($"Found {possibleMatches.Count} possible matches in " +
                       $"{_gameType}#{_subType.LocalizedName}: " +
                       $"({string.Join(",", queuedGroups.Select(g => g.Players.ToString()))})");
-            // TODO log queue with order & wait time
             List<Match> filteredMatches = FilterMatches(possibleMatches, now);
             log.Info($"Found {filteredMatches.Count} allowed matches in " +
                      $"{_gameType}#{_subType.LocalizedName} after filtering");
@@ -160,9 +181,9 @@ public abstract class Matchmaker
             }
             if (filteredMatches.Count > 0)
             {
-                List<Match> matches = RankMatches(filteredMatches, now);
+                List<ScoredMatch> matches = RankMatches(filteredMatches, now);
                 log.Info($"Best match: {matches[0]}");
-                RankMatch(matches[0], now, true);
+                RankMatch(matches[0].Match, now, true);
                 return matches;
             }
         }
@@ -192,10 +213,11 @@ public abstract class Matchmaker
         return true;
     }
 
-    protected virtual List<Match> RankMatches(List<Match> matches, DateTime now)
+    protected virtual List<ScoredMatch> RankMatches(List<Match> matches, DateTime now)
     {
         return matches
-            .OrderByDescending(m => RankMatch(m, now))
+            .Select(m => new ScoredMatch(m, RankMatch(m, now)))
+            .OrderByDescending(m => m.Score)
             .ToList();
     }
 

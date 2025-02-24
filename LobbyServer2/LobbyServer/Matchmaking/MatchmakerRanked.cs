@@ -17,6 +17,8 @@ public class MatchmakerRanked : MatchmakerBase
     private readonly Func<MatchmakingConfiguration> _conf;
     protected MatchmakingConfiguration Conf => _conf();
     
+    private readonly Random rand = new Random();
+    
     public MatchmakerRanked(
         AccountDao accountDao,
         GameType gameType,
@@ -67,7 +69,7 @@ public class MatchmakerRanked : MatchmakerBase
         return waitingTime;
     }
 
-    public override List<Match> GetMatchesRanked(List<MatchmakingGroup> queuedGroups, DateTime now)
+    public override List<ScoredMatch> GetMatchesRanked(List<MatchmakingGroup> queuedGroups, DateTime now)
     {
         return base.GetMatchesRanked(queuedGroups.Take(12).ToList(), now);
     }
@@ -80,9 +82,11 @@ public class MatchmakerRanked : MatchmakerBase
         float teammateEloDifferenceFactor = (teammateEloDifferenceAFactor + teammateEloDifferenceBFactor) * 0.5f;
         double waitTime = Math.Sqrt(match.Groups.Select(g => Math.Pow((now - g.QueueTime).TotalSeconds, 2)).Average());
         float waitTimeFactor = Cap((float)(waitTime / Conf.WaitingTimeWeightCap.TotalSeconds));
+        // TODO team composition does not matter for ranked
         float teamCompositionFactor = (GetTeamCompositionFactor(match.TeamA) + GetTeamCompositionFactor(match.TeamB)) * 0.5f;
         float teamBlockFactor = (GetBlocksFactor(match.TeamA) + GetBlocksFactor(match.TeamB)) * 0.5f;
         float teamConfidenceBalanceFactor = GetTeamConfidenceBalanceFactor(match);
+        float tieBreakerFactor = GetTieBreakerFactor(match);
         
         // TODO balance max - min elo in the team
         // TODO recently canceled matches factor
@@ -92,23 +96,32 @@ public class MatchmakerRanked : MatchmakerBase
         // TODO non-linearity?
         
         // TODO if you are waiting for 20 minutes, you must be in the next game
-        // TODO overrides line "we must have this player in the next match" & "we must start next match by specific time"
+        // TODO overrides like "we must have this player in the next match" & "we must start next match by specific time"
 
+        float teamEloDifferenceFactorWeighted = teamEloDifferenceFactor * Conf.TeamEloDifferenceWeight;
+        float teammateEloDifferenceFactorWeighted = teammateEloDifferenceFactor * Conf.TeammateEloDifferenceWeight;
+        float waitTimeFactorWeighted = waitTimeFactor * Conf.WaitingTimeWeight;
+        float teamCompositionFactorWeighted = teamCompositionFactor * Conf.TeamCompositionWeight;
+        float teamBlockFactorWeighted = teamBlockFactor * Conf.TeamBlockWeight;
+        float teamConfidenceBalanceFactorWeighted = teamConfidenceBalanceFactor * Conf.TeamConfidenceBalanceWeight;
+        float tieBreakerFactorWeighted = tieBreakerFactor * Conf.TieBreakerWeight;
         float score =
-            teamEloDifferenceFactor * Conf.TeamEloDifferenceWeight
-            + teammateEloDifferenceFactor * Conf.TeammateEloDifferenceWeight
-            + waitTimeFactor * Conf.WaitingTimeWeight
-            + teamCompositionFactor * Conf.TeamCompositionWeight
-            + teamBlockFactor * Conf.TeamBlockWeight
-            + teamConfidenceBalanceFactor * Conf.TeamConfidenceBalanceWeight;
+            teamEloDifferenceFactorWeighted
+            + teammateEloDifferenceFactorWeighted
+            + waitTimeFactorWeighted
+            + teamCompositionFactorWeighted
+            + teamBlockFactorWeighted
+            + teamConfidenceBalanceFactorWeighted
+            + tieBreakerFactorWeighted;
         
         string msg = $"Score {score:0.00} " +
-                  $"(tElo:{teamEloDifferenceFactor:0.00}, " +
-                  $"tmElo:{teammateEloDifferenceFactor:0.00}, " +
-                  $"q:{waitTimeFactor:0.00}, " +
-                  $"tComp:{teamCompositionFactor:0.00}, " +
-                  $"blocks:{teamBlockFactor:0.00}, " +
-                  $"tConf:{teamConfidenceBalanceFactor:0.00}" +
+                  $"(tElo:{teamEloDifferenceFactorWeighted:0.00} [{teamEloDifferenceFactor:0.00}], " +
+                  $"tmElo:{teammateEloDifferenceFactorWeighted:0.00} [{teammateEloDifferenceFactor:0.00}], " +
+                  $"q:{waitTimeFactorWeighted:0.00} [{waitTimeFactor:0.00}], " +
+                  $"tComp:{teamCompositionFactorWeighted:0.00} [{teamCompositionFactor:0.00}], " +
+                  $"blocks:{teamBlockFactorWeighted:0.00} [{teamBlockFactor:0.00}], " +
+                  $"tConf:{teamConfidenceBalanceFactorWeighted:0.00} [{teamConfidenceBalanceFactor:0.00}], " +
+                  $"tieBr:{tieBreakerFactorWeighted:0.00} [{tieBreakerFactor:0.00}]" +
                   $") {match}";
         if (infoLog)
         {
@@ -186,5 +199,10 @@ public class MatchmakerRanked : MatchmakerBase
     {
         acc.ExperienceComponent.EloValues.GetElo(_eloKey, out _, out int eloConfLevel);
         return eloConfLevel;
+    }
+
+    private float GetTieBreakerFactor(Match match)
+    {
+        return rand.NextSingle();
     }
 }

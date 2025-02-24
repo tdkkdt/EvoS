@@ -11,6 +11,8 @@ namespace CentralServer.LobbyServer.Matchmaking;
 public class MatchmakerFifo : MatchmakerBase
 {
     private static readonly ILog log = LogManager.GetLogger(typeof(MatchmakerFifo));
+
+    private const float Score = 1000f;
     
     public MatchmakerFifo(
         AccountDao accountDao,
@@ -28,7 +30,7 @@ public class MatchmakerFifo : MatchmakerBase
     {
     }
         
-    public override List<Match> GetMatchesRanked(List<MatchmakingGroup> queuedGroups, DateTime now)
+    public override List<ScoredMatch> GetMatchesRanked(List<MatchmakingGroup> queuedGroups, DateTime now)
     {
         if (queuedGroups.Count == 0)
         {
@@ -42,6 +44,6 @@ public class MatchmakerFifo : MatchmakerBase
         }
         
         log.Info($"Best match: {bestMatch}");
-        return new() { bestMatch };
+        return new() { new ScoredMatch(bestMatch, Score) };
     }
 }

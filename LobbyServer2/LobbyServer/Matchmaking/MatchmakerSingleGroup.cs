@@ -13,6 +13,8 @@ public class MatchmakerSingleGroup : Matchmaker
     private static readonly ILog log = LogManager.GetLogger(typeof(MatchmakerSingleGroup));
 
     private readonly AccountDao _accountDao;
+
+    private const float Score = 1000f;
     
     public MatchmakerSingleGroup(AccountDao accountDao, GameType gameType, GameSubType subType) 
         : base(gameType, subType)
@@ -25,7 +27,7 @@ public class MatchmakerSingleGroup : Matchmaker
     {
     }
         
-    public override List<Match> GetMatchesRanked(List<MatchmakingGroup> queuedGroups, DateTime now)
+    public override List<ScoredMatch> GetMatchesRanked(List<MatchmakingGroup> queuedGroups, DateTime now)
     {
         MatchmakingGroup group = queuedGroups
             .OrderBy(g => g.QueueTime)
@@ -38,6 +40,6 @@ public class MatchmakerSingleGroup : Matchmaker
         Match bestMatch = new Match(_accountDao, new() { group }, new(), string.Empty);
         
         log.Info($"Best match: {bestMatch}");
-        return new() { bestMatch };
+        return new() { new ScoredMatch(bestMatch, Score) };
     }
 }

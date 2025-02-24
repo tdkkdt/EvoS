@@ -257,109 +257,160 @@ namespace CentralServer.LobbyServer.Matchmaking
 
             SendQueueStatusNotifications();
         }
-
-        private void TryMatch()
+        
+        public class ScoredMatchWithSubType : IComparable<ScoredMatchWithSubType>
         {
+            public ScoredMatchWithSubType(Matchmaker.ScoredMatch scoredMatch, int subTypeIndex)
+            {
+                ScoredMatch = scoredMatch;
+                SubTypeIndex = subTypeIndex;
+            }
+
+            public Matchmaker.ScoredMatch ScoredMatch { get; }
+            public int SubTypeIndex { get; }
+            public Matchmaker.Match Match => ScoredMatch.Match;
+            public float Score => ScoredMatch.Score;
+        
+            public int CompareTo(ScoredMatchWithSubType other)
+            {
+                return Score.CompareTo(other.Score);
+            }
+        }
+
+        private Dictionary<int, List<Matchmaker.MatchmakingGroup>> GetQueuedGroupsBySubtype()
+        {
+            Dictionary<int, List<Matchmaker.MatchmakingGroup>> queuedGroupsBySubtype =
+                new Dictionary<int, List<Matchmaker.MatchmakingGroup>>();
+
+            for (int i = 0; i < MatchmakingQueueInfo.GameConfig.SubTypes.Count; i++)
+            {
+                List<Matchmaker.MatchmakingGroup> queuedGroups;
+                lock (GroupManager.Lock)
+                {
+                    queuedGroups = GetQueuedGroups(i)
+                        .Select(groupId =>
+                        {
+                            if (!GetQueueTime(groupId, out DateTime queueTime))
+                            {
+                                log.Error($"Cannon fetch queue time for group {groupId}");
+                            }
+
+                            return new Matchmaker.MatchmakingGroup(groupId, queueTime);
+                        })
+                        .ToList();
+                }
+                queuedGroupsBySubtype[i] = queuedGroups;
+            }
+
+            return queuedGroupsBySubtype;
+        }
+
+        private List<ScoredMatchWithSubType> FindMatches(
+            Dictionary<int, List<Matchmaker.MatchmakingGroup>> queuedGroupsBySubtype)
+        {
+            DateTime matchmakingIterationStartTime = DateTime.UtcNow;
+            List<ScoredMatchWithSubType> matches = new List<ScoredMatchWithSubType>();
             for (int i = 0; i < MatchmakingQueueInfo.GameConfig.SubTypes.Count; i++)
             {
                 GameSubType subType = MatchmakingQueueInfo.GameConfig.SubTypes[i];
                 using (M(MatchmakingTime, subType).NewTimer())
                 {
-                    while (true)
-                    {
-                        DateTime matchmakingIterationStartTime = DateTime.UtcNow;
-                        List<Matchmaker.MatchmakingGroup> queuedGroups;
-                        lock (GroupManager.Lock)
-                        {
-                            queuedGroups = GetQueuedGroups(i)
-                                .Select(groupId =>
-                                {
-                                    if (!GetQueueTime(groupId, out DateTime queueTime))
-                                    {
-                                        log.Error($"Cannon fetch queue time for group {groupId}");
-                                    }
-
-                                    return new Matchmaker.MatchmakingGroup(groupId, queueTime);
-                                })
-                                .ToList();
-                        }
-
-                        List<Matchmaker.Match> matches = Matchmakers[subType.LocalizedName]
-                            .GetMatchesRanked(queuedGroups, matchmakingIterationStartTime);
-                        if (matches.Count > 0)
-                        {
-                            string queueString = string.Join(
-                                ", ",
-                                queuedGroups
-                                    .Select(
-                                        g =>
-                                            $"[{string.Join(
-                                                ", ",
-                                                GroupManager
-                                                    .GetGroup(g.GroupID)
-                                                    .Members
-                                                    .Select(LobbyServerUtils.GetHandle)
-                                                )}] ({
-                                                (matchmakingIterationStartTime - g.QueueTime).FormatMinutesSeconds()
-                                            })"));
-                            log.Info($"Queue snapshot: {queueString}");
-                            
-                            Matchmaker.Match match = matches[0];
-                            lock (GroupManager.Lock)
-                            {
-                                HashSet<long> stillQueued = GetQueuedGroups(i).ToHashSet();
-                                if (match.Groups.Any(g =>
-                                        !stillQueued.Contains(g.GroupID)
-                                        || !g.Is(GroupManager.GetGroup(g.GroupID))))
-                                {
-                                    log.Info("One of the players in the best match "
-                                             + $"left {MatchmakingQueueInfo.GameType} queue ({subType.LocalizedName}). "
-                                             + "Retrying.");
-                                    continue;
-                                }
-                            }
-                            StartMatch(match, i);
-
-                            DateTime now = DateTime.UtcNow;
-                            foreach (Matchmaker.MatchmakingGroup matchmakingGroup in match.Groups)
-                            {
-                                double timeInQueueSeconds = (now - matchmakingGroup.QueueTime).TotalSeconds;
-                                for (int j = 0; j < matchmakingGroup.Players; j++)
-                                {
-                                    M(TimeInQueue, subType).Observe(timeInQueueSeconds);
-                                }
-                            }
-
-                            float prediction = Elo.GetPrediction(match.TeamA.Elo, match.TeamB.Elo);
-                            if (!float.IsNaN(prediction))
-                            {
-                                M(PredictedChances, subType).Observe(MathF.Max(prediction, 1 - prediction));
-                            }
-                        }
-
-                        break;
+                    int subTypeIndex = i;
+                    List<ScoredMatchWithSubType> subQueueMatches = Matchmakers[subType.LocalizedName]
+                        .GetMatchesRanked(queuedGroupsBySubtype[i], matchmakingIterationStartTime)
+                        .Select(m => new ScoredMatchWithSubType(m, subTypeIndex))
+                        .ToList();
+                    matches.AddRange(subQueueMatches);
+                    
+                    if (subQueueMatches.Count > 0) {
+                        string queueString = string.Join(
+                            ", ",
+                            queuedGroupsBySubtype[i]
+                                .Select(
+                                    g =>
+                                        $"[{string.Join(
+                                            ", ",
+                                            GroupManager
+                                                .GetGroup(g.GroupID)
+                                                .Members
+                                                .Select(LobbyServerUtils.GetHandle)
+                                        )}] ({
+                                        (matchmakingIterationStartTime - g.QueueTime).FormatMinutesSeconds()
+                                    })"));
+                        log.Info($"Queue snapshot {MatchmakingQueueInfo.GameType} {subType.LocalizedName}: {queueString}");
                     }
                 }
             }
+
+            return matches;
         }
 
-        private void StartMatch(Matchmaker.Match match, int subTypeIndex)
+        private void StartBestMatch(List<ScoredMatchWithSubType> matches)
+        {
+            foreach (var match in matches.OrderByDescending(m => m))
+            {
+                GameSubType subType = MatchmakingQueueInfo.GameConfig.SubTypes[match.SubTypeIndex];
+                
+                lock (GroupManager.Lock)
+                {
+                    HashSet<long> stillQueued = GetQueuedGroups(match.SubTypeIndex).ToHashSet();
+                    if (match.Match.Groups.Any(g =>
+                            !stillQueued.Contains(g.GroupID)
+                            || !g.Is(GroupManager.GetGroup(g.GroupID))))
+                    {
+                        log.Info("One of the players in the best match "
+                                 + $"left {MatchmakingQueueInfo.GameType} queue ({subType.LocalizedName}). "
+                                 + "Retrying.");
+                        continue;
+                    }
+                }
+                
+                StartMatch(match);
+
+                DateTime now = DateTime.UtcNow;
+                foreach (Matchmaker.MatchmakingGroup matchmakingGroup in match.Match.Groups)
+                {
+                    double timeInQueueSeconds = (now - matchmakingGroup.QueueTime).TotalSeconds;
+                    for (int i = 0; i < matchmakingGroup.Players; i++)
+                    {
+                        M(TimeInQueue, subType).Observe(timeInQueueSeconds);
+                    }
+                }
+
+                float prediction = Elo.GetPrediction(match.Match.TeamA.Elo, match.Match.TeamB.Elo);
+                if (!float.IsNaN(prediction))
+                {
+                    M(PredictedChances, subType).Observe(MathF.Max(prediction, 1 - prediction));
+                }
+
+                break;
+            }
+        }
+
+        private void TryMatch()
+        {
+            Dictionary<int, List<Matchmaker.MatchmakingGroup>> queuedGroupsBySubtype = GetQueuedGroupsBySubtype();
+            List<ScoredMatchWithSubType> matches = FindMatches(queuedGroupsBySubtype);
+            StartBestMatch(matches);
+        }
+
+        private void StartMatch(ScoredMatchWithSubType match)
         {
             if (!CheckGameServerAvailable())
             {
                 log.Warn("No available game server to start a match");
                 return;
             }
-            foreach (Matchmaker.MatchmakingGroup groupInfo in match.Groups)
+            foreach (Matchmaker.MatchmakingGroup groupInfo in match.Match.Groups)
             {
                 RemoveGroup(groupInfo.GroupID);
             }
             _ = MatchmakingManager.StartGameAsync(
-                match.TeamA.AccountIds, 
-                match.TeamB.AccountIds, 
+                match.Match.TeamA.AccountIds, 
+                match.Match.TeamB.AccountIds, 
                 GameType,
                 MatchmakingQueueInfo.GameConfig.SubTypes,
-                subTypeIndex);
+                match.SubTypeIndex);
         }
         
         public bool CheckGameServerAvailable()
