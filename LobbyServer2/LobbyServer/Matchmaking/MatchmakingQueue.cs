@@ -410,7 +410,8 @@ namespace CentralServer.LobbyServer.Matchmaking
                 match.Match.TeamB.AccountIds, 
                 GameType,
                 MatchmakingQueueInfo.GameConfig.SubTypes,
-                match.SubTypeIndex);
+                match.SubTypeIndex)
+                .LogError();
         }
         
         public bool CheckGameServerAvailable()

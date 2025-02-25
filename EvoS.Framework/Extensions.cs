@@ -2,12 +2,16 @@
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 using EvoS.Framework.Constants.Enums;
+using log4net;
 
 namespace EvoS.Framework
 {
     public static class Extensions
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(Extensions));
+        
         public static MemoryStream ReadStream(this Stream source)
         {
             var ms = new MemoryStream();
@@ -105,6 +109,20 @@ namespace EvoS.Framework
         public static string FormatMinutesSeconds(this TimeSpan timeSpan)
         {
             return $"{Math.Truncate(timeSpan.TotalMinutes)}:{timeSpan.Seconds:00}";
+        }
+
+        public static async Task LogError(this Task task)
+        {
+            log.Debug($"Starting task: {task}");
+            try
+            {
+                await task;
+                log.Debug($"Task finished: {task}");
+            }
+            catch (Exception e)
+            {
+                log.Error($"Task failed: {task}", e);
+            }
         }
     }
 }
