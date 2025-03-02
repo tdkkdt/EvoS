@@ -74,9 +74,9 @@ public class MatchmakerTest : EvosTest
             new(i++, new List<long> {12}, now - TimeSpan.FromMinutes(8)),
         };
         
-        List<Matchmaker.Match> matchesRanked = matchmaker.GetMatchesRanked(queuedGroups, now);
+        List<Matchmaker.ScoredMatch> matchesRanked = matchmaker.GetMatchesRanked(queuedGroups, now);
 
-        foreach (Matchmaker.Match match in matchesRanked)
+        foreach (Matchmaker.ScoredMatch match in matchesRanked)
         {
             log.Info($"{match}");
         }
@@ -102,7 +102,7 @@ public class MatchmakerTest : EvosTest
             new(i++, new List<long> {9}, now - TimeSpan.FromSeconds(50)),
         };
         
-        List<Matchmaker.Match> matchesRanked = matchmaker.GetMatchesRanked(queuedGroups, now);
+        List<Matchmaker.ScoredMatch> matchesRanked = matchmaker.GetMatchesRanked(queuedGroups, now);
         Assert.Empty(matchesRanked);
         matchesRanked = matchmaker.GetMatchesRanked(queuedGroups,  now + TimeSpan.FromMinutes(10));
         Assert.Single(matchesRanked);
@@ -129,7 +129,7 @@ public class MatchmakerTest : EvosTest
             new(i++, new List<long> {9}, now - TimeSpan.FromMinutes(50)),
         };
         
-        List<Matchmaker.Match> matchesRanked = matchmaker.GetMatchesRanked(queuedGroups, now);
+        List<Matchmaker.ScoredMatch> matchesRanked = matchmaker.GetMatchesRanked(queuedGroups, now);
         Assert.Empty(matchesRanked);
     }
     
@@ -152,7 +152,7 @@ public class MatchmakerTest : EvosTest
             queuedGroups.Add( new(i, new List<long> {i}, now));
         }
         
-        List<Matchmaker.Match> matchesRanked = matchmaker.GetMatchesRanked(queuedGroups, now);
+        List<Matchmaker.ScoredMatch> matchesRanked = matchmaker.GetMatchesRanked(queuedGroups, now);
         Assert.Equal(combinations, matchesRanked.Count);
     }
 
@@ -203,10 +203,10 @@ public class MatchmakerTest : EvosTest
             new(i++, new List<long> {5}, now - TimeSpan.FromMinutes(1)),
         };
         
-        List<Matchmaker.Match> matchesRanked = matchmaker.GetMatchesRanked(queuedGroups, now);
+        List<Matchmaker.ScoredMatch> matchesRanked = matchmaker.GetMatchesRanked(queuedGroups, now);
         Assert.NotEmpty(matchesRanked);
-        Assert.NotEmpty(matchesRanked[0].TeamA.AccountIds);
-        Assert.Equal(4, matchesRanked[0].TeamA.AccountIds[0]);
+        Assert.NotEmpty(matchesRanked[0].Match.TeamA.AccountIds);
+        Assert.Equal(4, matchesRanked[0].Match.TeamA.AccountIds[0]);
     }
 
     private static Matchmaker MakeMatchmaker(MatchmakingConfiguration conf)
