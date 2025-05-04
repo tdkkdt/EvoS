@@ -22,7 +22,7 @@ namespace CentralServer.BridgeServer
                 ServerPool.TryAdd(gameServer.ProcessCode, gameServer);
 
                 log.Info($"{(isReconnection ? "A server reconnected" : "New game server connected")} " +
-                         $"with address {gameServer.Address}:{gameServer.Port} (IsPrivate={gameServer.IsPrivate})");
+                         $"with address {gameServer.URI} (IsPrivate={gameServer.IsPrivate})");
 
                 gameServer.OnGameEnded += async (server, _, _) => await DisconnectServer(server);
                 if (isReconnection || gameServer.IsPrivate)

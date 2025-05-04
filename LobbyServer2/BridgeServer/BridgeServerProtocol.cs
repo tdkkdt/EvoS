@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Utils;
+using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.Misc;
 using EvoS.Framework.Network.Static;
@@ -20,11 +21,13 @@ namespace CentralServer.BridgeServer
         public event Action<BridgeServerProtocol, LobbyServerPlayerInfo, LobbySessionInfo> OnPlayerDisconnect = delegate {};
         public event Action<BridgeServerProtocol> OnServerDisconnect = delegate {};
 
-        public string Address;
-        public int Port;
+        private string ProtocolStr;
+        private string Address;
+        private int Port;
+        private string AddressForLog;
         private LobbySessionInfo SessionInfo;
 
-        public string URI => "ws://" + Address + ":" + Port;
+        public string URI => ProtocolStr + "://" + Address + ":" + Port;
         public string BuildVersion => SessionInfo?.BuildVersion ?? "";
         public bool IsPrivate { get; private set; }
         public bool IsReserved { get; private set; }
@@ -39,7 +42,7 @@ namespace CentralServer.BridgeServer
         
         protected override string GetConnContext()
         {
-            return $"S {Address}:{Port}";
+            return $"S {AddressForLog}:{Port}";
         }
 
         public BridgeServerProtocol()
@@ -73,9 +76,7 @@ namespace CentralServer.BridgeServer
 
         private void HandleRegisterGameServerRequest(RegisterGameServerRequest request, int callbackId)
         {
-            string data = request.SessionInfo.ConnectionAddress;
-            Address = data.Split(":")[0];
-            Port = Convert.ToInt32(data.Split(":")[1]);
+            ParseConnectionAddress(request.SessionInfo.ConnectionAddress);
             SessionInfo = request.SessionInfo;
             ProcessCode = SessionInfo.ProcessCode;
             Name = SessionInfo.UserName ?? "ATLAS";
@@ -87,6 +88,28 @@ namespace CentralServer.BridgeServer
                 Success = true
             },
                 callbackId);
+        }
+
+        private void ParseConnectionAddress(string address)
+        {
+            string[] parts = address.Split("://");
+            
+            string hostPort;
+            if (parts.Length == 1)
+            {
+                ProtocolStr = "ws";
+                hostPort = address;
+            }
+            else
+            {
+                ProtocolStr = parts[0];
+                hostPort = parts[1];
+            }
+
+            string[] hostPortParts = hostPort.Split(":");
+            Address = hostPortParts[0];
+            Port = Convert.ToInt32(hostPortParts[1]);
+            AddressForLog = Address.Truncate(16);
         }
 
         private void HandleServerGameSummaryNotification(ServerGameSummaryNotification notify)

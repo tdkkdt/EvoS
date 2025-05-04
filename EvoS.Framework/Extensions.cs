@@ -124,5 +124,7 @@ namespace EvoS.Framework
                 log.Error($"Task failed: {task}", e);
             }
         }
+        
+        public static string Truncate(this string value, int length) => value[..int.Min(length, value.Length)];
     }
 }
