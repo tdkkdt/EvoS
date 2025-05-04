@@ -36,6 +36,7 @@ public class PvpGame: Game
         // Assign players to game
         SetGameStatus(GameStatus.FreelancerSelecting);
         GetClients().ForEach(client => SendGameAssignmentNotification(client));
+        GetClients().ForEach(client => client.OnGameAssigned(this));
 
         await HandleRankedResolutionPhase();
 

@@ -2539,10 +2539,13 @@ namespace CentralServer.LobbyServer
         public void OnStartGame(Game game)
         {
             IsReady = false;
-            SendSystemMessage(
-                (game.Server.Name != "" ? $"You are playing on {game.Server.Name} server. " : "") +
-                (game.Server.BuildVersion != "" ? $"Build {game.Server.BuildVersion}. " : "") +
-                $"Game {LobbyServerUtils.GameIdString(game.GameInfo)}.");
+        }
+
+        public void OnGameAssigned(Game game)
+        {
+            var serverName = game.Server.Name.IsNullOrEmpty() ? "an unknown server" : game.Server.Name;
+            var serverVersion = game.Server.BuildVersion.IsNullOrEmpty() ? "" : $" v{game.Server.BuildVersion}";
+            SendSystemMessage($"You are about to join {serverName}{serverVersion} for game {LobbyServerUtils.GameIdString(game.GameInfo)}.");
         }
 
         public void SendSystemMessage(string text)
