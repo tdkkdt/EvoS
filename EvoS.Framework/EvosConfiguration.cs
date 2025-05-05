@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using CentralServer.LobbyServer.Config;
 using EvoS.Framework.Auth;
 using YamlDotNet.Serialization;
 using EvoS.Framework.Misc;
@@ -16,6 +17,7 @@ namespace EvoS.Framework
         public TimeSpan LobbyServerTimeOut = TimeSpan.FromSeconds(20);
         public string GameServerExecutable = "";
         public string GameServerExecutableArgs = "";
+        public GameServerPickOrder GameServerPickOrder = GameServerPickOrder.RANDOM;
         public string SteamWebApiKey = "";
         public bool AutoRegisterNewUsers = true;
         public HashSet<LinkedAccount.AccountType> LinkedAccountAllowedTypes = new HashSet<LinkedAccount.AccountType>();
@@ -62,6 +64,8 @@ namespace EvoS.Framework
         public static string GetGameServerExecutable() => Instance.GameServerExecutable;
 
         public static string GetGameServerExecutableArgs() => Instance.GameServerExecutableArgs;
+
+        public static GameServerPickOrder GetGameServerPickOrder() => Instance.GameServerPickOrder;
 
         /// <summary>
         /// You can get one from https://steamcommunity.com/dev/registerkey

@@ -2,9 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using CentralServer.LobbyServer.Matchmaking;
+using CentralServer.LobbyServer.Config;
 using EvoS.Framework;
 using log4net;
+using MoreLinq;
 
 namespace CentralServer.BridgeServer
 {
@@ -47,28 +48,47 @@ namespace CentralServer.BridgeServer
 
         public static BridgeServerProtocol GetServer(bool custom = false)
         {
-            int num = 0;
             lock (ServerPool)
             {
-                Random rnd = new Random();
-                foreach (BridgeServerProtocol server in ServerPool.Values.OrderBy((item) => rnd.Next()))
+                if (custom && !IsReserveFilled())
+                {
+                    log.Info("Failed to find a server: all servers are reserved");
+                    return null;
+                }
+                
+                foreach (BridgeServerProtocol server in GetServersInPickOrder())
                 {
                     if (server.IsAvailable())
                     {
-                        if (!custom || num >= LobbyConfiguration.GetServerReserveSize())
-                        {
-                            server.ReserveForGame();
-                            return server;
-                        }
-
-                        num++;
+                        server.ReserveForGame();
+                        return server;
                     }
                 }
             }
             
-            log.Info($"Failed to find a server for the game ({num} servers available)");
-
+            log.Info("Failed to find a server for the game");
             return null;
+        }
+
+        private static IEnumerable<BridgeServerProtocol> GetServersInPickOrder()
+        {
+            switch (EvosConfiguration.GetGameServerPickOrder())
+            {
+                case GameServerPickOrder.RANDOM:
+                    return ServerPool.Values.Shuffle();
+                case GameServerPickOrder.ALPHABETICAL:
+                    return ServerPool.Values.OrderBy(server => server.Name);
+                case GameServerPickOrder.ALPHABETICAL_REVERSED:
+                    return ServerPool.Values.OrderByDescending(server => server.Name);
+                default:
+                    log.Error("Unknown game server pick order: " + EvosConfiguration.GetGameServerPickOrder());
+                    goto case GameServerPickOrder.RANDOM;
+            }
+        }
+
+        private static bool IsReserveFilled()
+        {
+            return ServerPool.Values.Count(server => server.IsAvailable()) > LobbyConfiguration.GetServerReserveSize();
         }
 
         public static bool IsAnyServerAvailable()
