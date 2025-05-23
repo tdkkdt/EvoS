@@ -1,14 +1,34 @@
 {
-  "MaxTeamEloDifferenceStart": 20,
-  "MaxTeamEloDifference": 70,
-  "MaxTeamEloDifferenceWaitTime": "00:05:00",
-  "MaxTeammateEloDifference": 400,
-  "TeamEloDifferenceWeight": 3,
-  "TeammateEloDifferenceWeight": 1,
-  "TeamCompositionWeight": 2,
-  "TeamBlockWeight": 2,
-  "WaitingTimeWeight": 5,
-  "WaitingTimeWeightCap": "00:15:00",
-  "TeammateEloDifferenceWeightCap": 250
+  "subTypes": {
+    "default": {
+      "FallbackTime": "00:05:00",
+      "MaxTeamEloDifferenceStart": 20,
+      "MaxTeamEloDifference": 1000,
+      "MaxTeamEloDifferenceWaitTime": "00:10:00",
+      "MaxTeammateEloDifference": 400,
+      "TeamEloDifferenceWeight": 4,
+      "TeammateEloDifferenceWeight": 0.4,
+      "TeamCompositionWeight": 2,
+      "TeamBlockWeight": 2,
+      "WaitingTimeWeight": 6,
+      "TeamConfidenceBalanceWeight": 0.2,
+      "WaitingTimeWeightCap": "00:15:00",
+      "TeammateEloDifferenceWeightCap": 250
+    },
+    "AllFourCharacters@SubTypes": {
+      "FallbackTime": "00:00:30",
+      "MaxTeamEloDifferenceStart": 100,
+      "MaxTeamEloDifference": 9999,
+      "MaxTeamEloDifferenceWaitTime": "00:01:00",
+      "MaxTeammateEloDifference": 0,
+      "TeamEloDifferenceWeight": 4,
+      "TeammateEloDifferenceWeight": 0,
+      "TeamCompositionWeight": 0,
+      "TeamBlockWeight": 0,
+      "WaitingTimeWeight": 6,
+      "TeamConfidenceBalanceWeight": 0,
+      "WaitingTimeWeightCap": "00:01:00",
+      "TeammateEloDifferenceWeightCap": 9999
+    }
+  }
 }
-        

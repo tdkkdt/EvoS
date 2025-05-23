@@ -28,7 +28,7 @@ namespace CentralServer.LobbyServer.Matchmaking
 
         private readonly string EloKey;
         private readonly bool RankedMatchmaking;
-        private MatchmakingConfiguration Conf = new(); // TODO move to MatchmakerRanked
+        private MatchmakingConfigBundle Conf = new(); // TODO move to MatchmakerRanked
         private readonly Dictionary<string, Matchmaker> Matchmakers;
         
         private readonly ConcurrentDictionary<long, DateTime> QueuedGroups = new();
@@ -116,9 +116,13 @@ namespace CentralServer.LobbyServer.Matchmaking
             return QueuedGroups.TryGetValue(groupId, out time);
         }
 
-        public MatchmakingConfiguration GetConf()
+        public MatchmakingConfiguration GetConf(string subType)
         {
-            return Conf;
+            if (Conf.subTypes.TryGetValue(subType, out var config))
+            {
+                return config;
+            }
+            return Conf.Default;
         }
 
         public MatchmakingQueue(GameType gameType, bool isRanked)
@@ -165,7 +169,7 @@ namespace CentralServer.LobbyServer.Matchmaking
         private Matchmaker MatchmakerFactory(GameSubType st)
         {
             return RankedMatchmaking
-                ? new MatchmakerRanked(GameType, st, EloKey, GetConf)
+                ? new MatchmakerRanked(GameType, st, EloKey, () => GetConf(st.LocalizedName))
                 : st.Mods is not null && st.Mods.Contains(GameSubType.SubTypeMods.AntiSocial)
                     ? new MatchmakerSingleGroup(GameType, st)
                     : new MatchmakerFifo(GameType, st);
@@ -188,7 +192,7 @@ namespace CentralServer.LobbyServer.Matchmaking
             try
             {
                 reader = new JsonTextReader(new StreamReader(ConfigPath + gameType + ".json"));
-                Conf = new JsonSerializer().Deserialize<MatchmakingConfiguration>(reader);
+                Conf = new JsonSerializer().Deserialize<MatchmakingConfigBundle>(reader);
             }
             catch (Exception e)
             {
@@ -455,7 +459,7 @@ namespace CentralServer.LobbyServer.Matchmaking
                 gameSummary,
                 gameSubType,
                 EloKey,
-                Conf,
+                GetConf(gameSubType.LocalizedName),
                 DateTime.UtcNow,
                 DB.Get().AccountDao.GetAccount,
                 DB.Get().MatchHistoryDao.Find);
