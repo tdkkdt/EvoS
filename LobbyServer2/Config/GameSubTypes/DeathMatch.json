@@ -7,6 +7,78 @@
         "IsActive": true
       },
       {
+        "Map": "SkywaySnow_Deathmatch",
+        "IsActive": false
+      },
+      {
+        "Map": "CargoShip_Deathmatch",
+        "IsActive": true
+      },
+      {
+        "Map": "Casino01_Deathmatch",
+        "IsActive": true
+      },
+      {
+        "Map": "EvosLab_Deathmatch",
+        "IsActive": true
+      },
+      {
+        "Map": "Oblivion_Deathmatch",
+        "IsActive": true
+      },
+      {
+        "Map": "Reactor_Deathmatch",
+        "IsActive": true
+      },
+      {
+        "Map": "RobotFactory_Deathmatch",
+        "IsActive": true
+      }
+    ],
+    "TeamAPlayers": 4,
+    "TeamBPlayers": 4,
+    "TeamABots": 0,
+    "TeamBBots": 0,
+    "TeamComposition": {
+      "Rules": {
+        "A1": {
+          "Roles": [
+            "Tank",
+            "Assassin",
+            "Support"
+          ]
+        },
+        "B1": {
+          "Roles": [
+            "Tank",
+            "Assassin",
+            "Support"
+          ]
+        }
+      }
+    },
+    "RewardBucket": "NoRewards",
+    "PersistedStatBucket": "DoNotPersist",
+    "Mods": [
+      "AllowPlayingLockedCharacters",
+      "HumansHaveFirstSlots"
+    ],
+    "GameOverrides": {
+      "TurnTimeSpan": "00:00:20"
+    }
+  },
+  {
+    "LocalizedName": "RankedCustom@SubTypes",
+    "GameMapConfigs": [
+      {
+        "Map": "Skyway_Deathmatch",
+        "IsActive": true
+      },
+      {
+        "Map": "SkywaySnow_Deathmatch",
+        "IsActive": false
+      },
+      {
         "Map": "CargoShip_Deathmatch",
         "IsActive": true
       },
@@ -77,6 +149,10 @@
         "IsActive": true
       },
       {
+        "Map": "SkywaySnow_Deathmatch",
+        "IsActive": false
+      },
+      {
         "Map": "EvosLab_Deathmatch",
         "IsActive": true
       },
@@ -85,7 +161,15 @@
         "IsActive": true
       },
       {
+        "Map": "Oblivion_Deathmatch",
+        "IsActive": true
+      },
+      {
         "Map": "Reactor_Deathmatch",
+        "IsActive": true
+      },
+      {
+        "Map": "Casino01_Deathmatch",
         "IsActive": true
       }
     ],
@@ -101,7 +185,7 @@
     "TeamBPlayers": "4",
     "TeamBBots": "3",
     "GameOverrides": {
-      "TurnTimeSpan": "00:00:40"
+      "TurnTimeSpan": "00:01:00"
     }
   }
 ]

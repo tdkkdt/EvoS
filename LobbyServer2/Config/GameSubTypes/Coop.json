@@ -7,6 +7,10 @@
         "IsActive": true
       },
       {
+        "Map": "SkywaySnow_Deathmatch",
+        "IsActive": false
+      },
+      {
         "Map": "CargoShip_Deathmatch",
         "IsActive": true
       },
@@ -63,13 +67,16 @@
       "TurnTimeSpan": "00:00:20"
     }
   },
-
   {
     "LocalizedName": "SingleGroupVsBots@SubTypes",
     "GameMapConfigs": [
       {
         "Map": "Skyway_Deathmatch",
         "IsActive": true
+      },
+      {
+        "Map": "SkywaySnow_Deathmatch",
+        "IsActive": false
       },
       {
         "Map": "CargoShip_Deathmatch",
@@ -142,6 +149,10 @@
         "IsActive": true
       },
       {
+        "Map": "SkywaySnow_Deathmatch",
+        "IsActive": false
+      },
+      {
         "Map": "EvosLab_Deathmatch",
         "IsActive": true
       },
@@ -150,7 +161,15 @@
         "IsActive": true
       },
       {
+        "Map": "Oblivion_Deathmatch",
+        "IsActive": true
+      },
+      {
         "Map": "Reactor_Deathmatch",
+        "IsActive": true
+      },
+      {
+        "Map": "Casino01_Deathmatch",
         "IsActive": true
       }
     ],
@@ -167,7 +186,7 @@
     "TeamBPlayers": "4",
     "TeamBBots": "4",
     "GameOverrides": {
-      "TurnTimeSpan": "00:00:40"
+      "TurnTimeSpan": "00:01:00"
     }
   }
 ]
