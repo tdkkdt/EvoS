@@ -35,10 +35,9 @@ namespace EvoS.Framework
         public string AdminApiKey = "";
         public int AdminApiPort = 3001;
         public string TicketAuthKey = "";
+        public string ClientIpHeader = "";
         public ushort MetricsPort = 1234;
         public bool AllowUsernamePasswordAuth = true;
-        public List<string> Proxies = new List<string>();
-        public List<string> LightProxies = new List<string>();
         
         public bool PingOnGroupRequest = true;
 
@@ -108,14 +107,13 @@ namespace EvoS.Framework
 
         public static ushort GetMetricsPort() => Instance.MetricsPort;
 
+        public static string GetClientIpHeader() => Instance.ClientIpHeader;
+
         public static string GetTicketAuthKey() => Instance.TicketAuthKey;
 
         public static bool GetAllowUsernamePasswordAuth() => Instance.AllowUsernamePasswordAuth;
 
         public static bool GetAllowTicketAuth() => !GetUserApiKey().IsNullOrEmpty() && !GetTicketAuthKey().IsNullOrEmpty();
-
-        public static List<string> GetProxies() => Instance.Proxies;
-        public static List<string> GetLightProxies() => Instance.LightProxies;
 
         public enum DBType
         {

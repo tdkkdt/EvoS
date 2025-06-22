@@ -5,6 +5,7 @@ import {EvosCard, StackWrapper} from "../generic/BasicComponents";
 import Shutdown from "../controls/Shutdown";
 import ServerMessage from "../controls/ServerMessage";
 import {EvosServerMessageType} from "../../lib/Evos";
+import Proxy from "../controls/Proxy";
 
 export default function AdminPage() {
     return (
@@ -14,6 +15,9 @@ export default function AdminPage() {
             </EvosCard>
             <EvosCard variant="outlined">
                 <Shutdown />
+            </EvosCard>
+            <EvosCard variant="outlined">
+                <Proxy />
             </EvosCard>
             <EvosCard variant="outlined">
                 <Broadcast />

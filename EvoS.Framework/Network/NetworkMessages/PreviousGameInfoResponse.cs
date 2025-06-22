@@ -9,5 +9,10 @@ namespace EvoS.Framework.Network.NetworkMessages
     public class PreviousGameInfoResponse : WebSocketResponseMessage
     {
         public LobbyGameInfo PreviousGameInfo;
+
+        public PreviousGameInfoResponse Clone()
+        {
+            return (PreviousGameInfoResponse) MemberwiseClone();
+        }
     }
 }

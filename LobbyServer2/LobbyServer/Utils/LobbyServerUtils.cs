@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using EvoS.Framework;
+using CentralServer.Proxy;
 using EvoS.Framework.DataAccess;
 using EvoS.Framework.DataAccess.Daos;
 using EvoS.Framework.Network.Static;
@@ -58,8 +58,8 @@ namespace CentralServer.LobbyServer.Utils
         public static IPAddress GetIpAddress(HttpContext context, ICollection<IPAddress> proxies)
         {
             IPAddress ipAddress = context.Connection.RemoteIpAddress;
-                
-            if (proxies.Contains(ipAddress))
+
+            if (proxies is not null && proxies.Contains(ipAddress))
             {
                 if (!context.Request.Headers.TryGetValue("X-Forwarded-For", out StringValues forwardedFor))
                 {
@@ -89,11 +89,18 @@ namespace CentralServer.LobbyServer.Utils
 
         public static IPAddress GetIpAddress(HttpContext context)
         {
-            HashSet<IPAddress> proxies =
-                EvosConfiguration.GetProxies().Select(IPAddress.Parse)
-                .Concat(EvosConfiguration.GetLightProxies().Select(IPAddress.Parse))
-                .ToHashSet();
-            return GetIpAddress(context, proxies);
+            return GetIpAddress(context, ProxyConfiguration.GetProxies()?.Keys);
+        }
+
+        public static ProxyConfiguration.Proxy DetectProxy(IPAddress clientIpAddress)
+        {
+            ProxyConfiguration.Proxy proxy = null;
+            if (clientIpAddress is not null)
+            {
+                ProxyConfiguration.GetProxies()?.TryGetValue(clientIpAddress, out proxy);
+            }
+
+            return proxy;
         }
     }
 }

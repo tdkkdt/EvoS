@@ -356,3 +356,10 @@ export function shutdownServer(abort: AbortController, authHeader: string, proce
         { processCode: processCode},
         { headers: { 'Authorization': authHeader }, signal: abort.signal });
 }
+
+export function reloadProxyConfig(abort: AbortController, authHeader: string) {
+    return axios.post(
+        baseUrl + "/api/admin/proxy/reload",
+        {},
+        { headers: { 'Authorization': authHeader }, signal: abort.signal });
+}

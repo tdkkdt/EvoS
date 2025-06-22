@@ -15,5 +15,10 @@ namespace EvoS.Framework.Network.NetworkMessages
         public GameResult GameResult;
         public bool Reconnection;
         public bool Observer;
+        
+        public GameAssignmentNotification Clone()
+        {
+            return (GameAssignmentNotification) MemberwiseClone();
+        }
     }
 }

@@ -17,6 +17,10 @@ namespace EvoS.Framework.Network.NetworkMessages
         public TierPlacement TierChangeMax;
         [EvosMessage(738)]
         public Dictionary<int, ForbiddenDevKnowledge> DevOnly;
-    }
 
+        public GameInfoNotification Clone()
+        {
+            return (GameInfoNotification)MemberwiseClone();
+        }
+    }
 }

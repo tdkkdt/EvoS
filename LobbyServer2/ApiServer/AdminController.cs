@@ -11,6 +11,7 @@ using CentralServer.LobbyServer.CustomGames;
 using CentralServer.LobbyServer.Matchmaking;
 using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Utils;
+using CentralServer.Proxy;
 using EvoS.DirectoryServer.Account;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
@@ -528,6 +529,18 @@ namespace CentralServer.ApiServer
                 }
             }
             return Results.NotFound();
+        }
+
+        public static IResult ReloadProxyConfig(ClaimsPrincipal user)
+        {
+            if (!ValidateAdmin(user, out IResult error, out long adminAccountId, out string adminHandle))
+            {
+                return error;
+            }
+
+            bool result = ProxyConfiguration.Invalidate();
+            
+            return result ? Results.Ok() : Results.NotFound();
         }
     }
 }

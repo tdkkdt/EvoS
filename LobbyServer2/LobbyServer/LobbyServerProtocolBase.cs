@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using CentralServer.LobbyServer.Chat;
@@ -12,6 +13,7 @@ using CentralServer.LobbyServer.Group;
 using CentralServer.LobbyServer.Quest;
 using CentralServer.LobbyServer.TrustWar;
 using CentralServer.LobbyServer.Utils;
+using CentralServer.Proxy;
 using EvoS.Framework;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.DataAccess;
@@ -38,11 +40,47 @@ namespace CentralServer.LobbyServer
         public BotDifficulty EnemyDifficulty;
         public bool SessionCleaned = false; // tracks clean up methods execution for reconnection
 
+        protected ProxyConfiguration.Proxy Proxy = null;
+        
         private static readonly Lazy<string> CachedPatchNotes = new(FetchGithubPatchNotes);
 
         protected override string GetConnContext()
         {
             return "C " + AccountId;
+        }
+
+        private IPAddress GetIpAddress()
+        {
+            var headerName = EvosConfiguration.GetClientIpHeader();
+            if (!headerName.IsNullOrEmpty())
+            {
+                var headerValue = Context.Headers[headerName];
+                if (headerValue is null)
+                {
+                    log.Error($"Expected header {headerName} not present!");
+                }
+                else if (!IPAddress.TryParse(headerValue, out var ipAddress))
+                {
+                    log.Error($"Header {headerName} has incorrect value {headerValue}!");
+                }
+                else
+                {
+                    return ipAddress;
+                }
+            }
+
+            return Context.UserEndPoint.Address;
+        }
+
+        protected override void HandleOpen()
+        {
+            IPAddress clientIpAddress = GetIpAddress();
+            log.Info($"Connecting from {clientIpAddress}");
+            Proxy = LobbyServerUtils.DetectProxy(clientIpAddress);
+            if (Proxy != null)
+            {
+                log.Info($"Detected proxy {Proxy.GetName()}");
+            }
         }
 
         protected override WebSocketMessage DeserializeMessage(byte[] data, out int callbackId)
@@ -68,6 +106,12 @@ namespace CentralServer.LobbyServer
                 log.Warn($"Attempted to send {message.GetType()} to a disconnected socket");
                 return;
             }
+
+            if (Proxy is not null && ProxyPatcher.Mapping.TryGetValue(message.GetType(), out var patcher))
+            {
+                message = patcher(message, Proxy);
+            }
+
             MemoryStream stream = new MemoryStream();
             EvosSerializer.Instance.Serialize(stream, message);
             Send(stream.ToArray());
@@ -81,7 +125,7 @@ namespace CentralServer.LobbyServer
             Sessions.Broadcast(stream.ToArray());
             LogMessage(">>", message);
         }
-        
+
         public void SendErrorResponse(WebSocketResponseMessage response, int requestId, string message)
         {
             response.Success = false;
@@ -119,7 +163,7 @@ namespace CentralServer.LobbyServer
                     }
                 };
             }
-            
+
 
             LobbyServerReadyNotification notification = new LobbyServerReadyNotification
             {
@@ -156,7 +200,7 @@ namespace CentralServer.LobbyServer
             return new LobbyStatusNotification
             {
                 AllowRelogin = false,
-                ClientAccessLevel = account.AccountComponent.IsDev() ? ClientAccessLevel.Admin : ClientAccessLevel.Full, 
+                ClientAccessLevel = account.AccountComponent.IsDev() ? ClientAccessLevel.Admin : ClientAccessLevel.Full,
                 ErrorReportRate = new TimeSpan(0, 3, 0),
                 GameplayOverrides = GameConfig.GetGameplayOverrides(),
                 HasPurchasedGame = true,
@@ -166,14 +210,14 @@ namespace CentralServer.LobbyServer
                 ServerMessageOverrides = GetServerMessageOverrides()
             };
         }
-        
+
         private static string FetchGithubPatchNotes()
         {
             if (LobbyConfiguration.GetPatchNotesCommitsUrl().IsNullOrEmpty())
             {
                 return null;
             }
-            
+
             try
             {
                 using HttpClient httpClient = new HttpClient();

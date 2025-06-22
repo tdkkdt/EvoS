@@ -9,6 +9,7 @@ using CentralServer.ApiServer;
 using CentralServer.LobbyServer.Session;
 using CentralServer.LobbyServer.Stats;
 using CentralServer.LobbyServer.Utils;
+using CentralServer.Proxy;
 using EvoS.DirectoryServer.Account;
 using EvoS.DirectoryServer.Inventory;
 using EvoS.Framework;
@@ -72,19 +73,9 @@ namespace EvoS.DirectoryServer
 
         private static readonly ILog log = LogManager.GetLogger(typeof(DirectoryServer));
         private static long _nextTmpAccountId = 1;
-        private static HashSet<IPAddress> _fullProxies;
-        private static HashSet<IPAddress> _allProxies;
 
         public void Configure(IApplicationBuilder app)
         {
-            _fullProxies = EvosConfiguration.GetProxies().Select(IPAddress.Parse).ToHashSet();
-            _allProxies = _fullProxies.Concat(EvosConfiguration.GetLightProxies().Select(IPAddress.Parse)).ToHashSet();
-            log.Info($"Configured proxies: {(_allProxies.Count > 0
-                ? string.Join(", ", _allProxies.Select(
-                    p => _fullProxies.Contains(p)
-                        ? p.ToString()
-                        : $"{p}*"))
-                : "none")}");
             var serverAddressesFeature = app.ServerFeatures.Get<IServerAddressesFeature>();
             log.Info($"Started DirectoryServer on '0.0.0.0:{EvosConfiguration.GetDirectoryServerPort()}'");
 
@@ -302,13 +293,14 @@ namespace EvoS.DirectoryServer
 
         private static string GetLobbyServerAddress(long accountId, HttpContext context)
         {
-            if (_fullProxies is not null
-                && context.Connection.RemoteIpAddress is not null
-                && _fullProxies.Contains(context.Connection.RemoteIpAddress))
+            var proxy = LobbyServerUtils.DetectProxy(context.Connection.RemoteIpAddress);
+
+            if (proxy != null)
             {
-                log.Info($"{LobbyServerUtils.GetHandle(accountId)} is connecting via proxy {context.Connection.RemoteIpAddress}");
-                return context.Connection.RemoteIpAddress.ToString();
+                log.Info($"{LobbyServerUtils.GetHandle(accountId)} is connecting via proxy {proxy.GetName()}");
+                return proxy.LobbyAddress;
             }
+            
             return EvosConfiguration.GetLobbyServerAddress();
         }
 
@@ -511,7 +503,7 @@ namespace EvoS.DirectoryServer
 
         public static IPAddress GetIpAddress(HttpContext context)
         {
-            return LobbyServerUtils.GetIpAddress(context, _allProxies);
+            return LobbyServerUtils.GetIpAddress(context, ProxyConfiguration.GetProxies()?.Keys);
         }
     }
 }

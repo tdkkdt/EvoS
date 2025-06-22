@@ -126,5 +126,10 @@ namespace CentralServer.BridgeServer
         {
             return ServerPool.Values.ToList();
         }
+
+        public static BridgeServerProtocol FindServerByAddress(string address)
+        {
+            return ServerPool.Values.FirstOrDefault(server => address.Equals(server.URI));
+        }
     }
 }
