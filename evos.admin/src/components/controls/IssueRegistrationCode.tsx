@@ -64,7 +64,7 @@ export default function IssueRegistrationCode() {
     return <FlexBox style={{ flexDirection: 'column' }}>
         <EvosCard variant="outlined">
             <Box component="form" onSubmit={handleSubmit} noValidate style={{ padding: 4 }}>
-                <BaseDialog title={code} onDismiss={() => setCode(undefined)} />
+                <BaseDialog title={code} onDismiss={() => setCode(undefined)} copyTitle />
                 <TextField
                     margin="normal"
                     required
