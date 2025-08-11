@@ -7,7 +7,9 @@ interface BaseDialogProps {
     title?: string;
     content?: string;
     dismissText?: string;
+    acceptText?: string;
     onDismiss: () => void;
+    onAccept?: () => void;
     copyTitle?: boolean;
 }
 
@@ -17,7 +19,9 @@ export default function BaseDialog(
         title,
         content,
         dismissText,
+        acceptText,
         onDismiss,
+        onAccept,
         copyTitle = false
     }: BaseDialogProps) {
     const dialogProps = props ?? {};
@@ -29,6 +33,8 @@ export default function BaseDialog(
                 .catch(err => console.error('Failed to copy text:', err));
         }
     };
+
+    const dismissCaption = dismissText ?? (onAccept ? "Cancel" : "Ok");
 
     return (
         <Dialog open={!!title} {...dialogProps}>
@@ -47,7 +53,10 @@ export default function BaseDialog(
                 <DialogContentText id="alert-dialog-description">{content}</DialogContentText>
             </DialogContent>}
             <DialogActions>
-                <Button onClick={onDismiss} autoFocus>{dismissText ?? "Ok"}</Button>
+                {onAccept && (
+                    <Button onClick={onAccept} autoFocus>{acceptText ?? "Accept"}</Button>
+                )}
+                <Button onClick={onDismiss}>{dismissCaption}</Button>
             </DialogActions>
         </Dialog>
     );

@@ -35,17 +35,10 @@ function buildTitle(info: ServerData, game?: GameData) {
 
 export default function Server({ info, game, playerData }: Props) {
   const [msg, setMsg] = useState<string>();
-  const [resultAction, setResultAction] = useState<string>("TieGame");
   const [processing, setProcessing] = useState<boolean>();
+  const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
   const authHeader = useAuthHeader();
   const navigate = useNavigate();
-
-  const handleChange = (event: SelectChangeEvent<typeof resultAction>) => {
-    const {
-      target: { value },
-    } = event;
-    setResultAction(value);
-  };
 
   const shutdownServerHandler = () => {
     setProcessing(true);
@@ -68,6 +61,18 @@ export default function Server({ info, game, playerData }: Props) {
         sx={{ p: 2 }}
       >
         <BaseDialog title={msg} onDismiss={() => setMsg(undefined)} />
+        <BaseDialog 
+          title="Confirm Server Shutdown"
+          content={`Are you sure you want to shutdown ${info.name}?`}
+          onDismiss={() => setShowConfirmDialog(false)}
+          onAccept={() => {
+            setShowConfirmDialog(false);
+            shutdownServerHandler();
+          }}
+          acceptText="Stop game"
+          dismissText="Cancel"
+          props={{ open: showConfirmDialog }}
+        />
         <Tooltip arrow title={info.id}>
           <Typography variant="h3">{buildTitle(info, game)}</Typography>
         </Tooltip>
@@ -76,9 +81,9 @@ export default function Server({ info, game, playerData }: Props) {
               disabled={processing}
               variant="contained"
               color="primary"
-              onClick={shutdownServerHandler}
+              onClick={() => setShowConfirmDialog(true)}
             >
-              Shutdown Server
+              Stop game
             </Button>
         )}
       </Box>
