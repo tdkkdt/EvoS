@@ -8,9 +8,21 @@ import Avatar from '@mui/material/Avatar';
 import {BannerType, logo, logoSmall, playerBanner} from "../../lib/Resources";
 import {NavLink, useNavigate} from "react-router-dom";
 import {useAuthUser, useIsAuthenticated, useSignOut} from "react-auth-kit";
-import {IconButton, Menu, MenuItem, Stack, styled, TextField, Typography} from "@mui/material";
+import {
+    FormControlLabel,
+    IconButton,
+    Menu,
+    MenuItem,
+    Stack,
+    styled,
+    Switch,
+    TextField,
+    Typography
+} from "@mui/material";
 import {EvosError} from "../../lib/Error";
 import ErrorDialog from "./ErrorDialog";
+import {useLocalStorage} from "../../lib/useLocalStorage";
+import {Settings, SettingsKey} from "../../lib/Settings";
 
 const pages = [
     { text: "Status", url: '/' },
@@ -42,6 +54,8 @@ export default function NavBar() {
     const [anchorNavMenu, setAnchorNavMenu] = useState<null | HTMLElement>(null);
     const [query, setQuery] = useState<string>("");
     const [error, setError] = useState<EvosError>();
+    
+    const [updateInBackground, setUpdateInBackground] = useLocalStorage(Settings.get(SettingsKey.updateInBackground)!!);
 
     const isAuthenticated = useIsAuthenticated();
     const signOut = useSignOut();
@@ -181,6 +195,17 @@ export default function NavBar() {
                                 onClose={handleUserMenuClose}
                             >
                                 <MenuItem onClick={handleLogOut}>Log out</MenuItem>
+                                <MenuItem>
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                checked={updateInBackground}
+                                                onChange={(e) => setUpdateInBackground(e.target.checked)}
+                                            />
+                                        }
+                                        label="Update in background"
+                                    />
+                                </MenuItem>
                             </Menu>
                         </>}
                         {!isAuthenticated() && <NavBarLink to='/login' style={(active) => active && { display: 'none' }}>

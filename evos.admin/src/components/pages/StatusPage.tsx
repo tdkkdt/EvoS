@@ -9,6 +9,8 @@ import {EvosError, processError} from "../../lib/Error";
 import ErrorDialog from "../generic/ErrorDialog";
 import useInterval from "../../lib/useInterval";
 import useHasFocus from "../../lib/useHasFocus";
+import {useLocalStorage} from "../../lib/useLocalStorage";
+import {Settings, SettingsKey} from "../../lib/Settings";
 
 function GroupBy<V, K>(key: (item: V) => K, list?: V[]) {
     return list?.reduce((res, p) => {
@@ -50,7 +52,10 @@ function StatusPage() {
     const groups = useMemo(() => GroupBy(g => g.groupId, status?.groups), [status]);
     const games = useMemo(() => GroupBy(g => g.server, status?.games), [status]);
 
-    const updatePeriodMs = useHasFocus() || !status ? UPDATE_PERIOD_MS : undefined;
+    const [updateInBackground] = useLocalStorage(Settings.get(SettingsKey.updateInBackground)!!);
+
+    const hasFocus = useHasFocus();
+    const updatePeriodMs = updateInBackground || hasFocus || !status ? UPDATE_PERIOD_MS : undefined;
 
     useInterval(() => {
         getStatus(authHeader)
