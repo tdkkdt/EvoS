@@ -3,13 +3,15 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
-using EvoS.Framework.Logging;
 using EvoS.Framework.Misc;
+using log4net;
 
 namespace EvoS.Framework.Network;
 
 public static class NetUtil
 {
+	private static readonly ILog log = LogManager.GetLogger(typeof(NetUtil));
+	
     private static Dictionary<string, IPAddress> s_hostCache = new Dictionary<string, IPAddress>();
 	private static string s_hostName;
 
@@ -29,7 +31,7 @@ public static class NetUtil
 		}
 		catch (Exception ex)
 		{
-			Log.Print(LogType.Warning, $"Failed to get hostname ({ex.Message}), will use localhost");
+			log.Warn($"Failed to get hostname ({ex.Message}), will use localhost");
 			s_hostName = "localhost";
 		}
 		return s_hostName;

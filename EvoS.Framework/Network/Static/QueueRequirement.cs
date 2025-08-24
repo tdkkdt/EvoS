@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using EvoS.Framework.Logging;
-using Newtonsoft.Json;
 
 namespace EvoS.Framework.Network.Static
 {

@@ -1,7 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using EvoS.Framework.Logging;
+using log4net;
 using Newtonsoft.Json;
 
 namespace EvoS.Framework.Network.Static
@@ -11,6 +11,8 @@ namespace EvoS.Framework.Network.Static
     [EvosMessage(446)]
     public class CurrencyWallet : IEnumerable<CurrencyData>, IEnumerable
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(CurrencyWallet));
+        
         public CurrencyWallet()
         {
             Data = new List<CurrencyData>();
@@ -90,7 +92,7 @@ namespace EvoS.Framework.Network.Static
                 int num = currencyData.Amount + amount;
                 if (num < 0)
                 {
-                    Log.Print(LogType.Error,
+                    log.Error(
                         $"Cannot withdraw {currencyType} amount {amount}, insufficient amount available.");
                     return null;
                 }

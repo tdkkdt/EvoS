@@ -1,6 +1,6 @@
 using System;
 using EvoS.Framework.Constants.Enums;
-using EvoS.Framework.Logging;
+using log4net;
 
 namespace EvoS.Framework.Network.Static
 {
@@ -8,6 +8,8 @@ namespace EvoS.Framework.Network.Static
     [EvosMessage(46)]
     public class MatchFreelancerStats : ICloneable, StatDisplaySettings.IPersistatedStatValueSupplier
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(MatchFreelancerStats));
+        
         public MatchFreelancerStats()
         {
         }
@@ -217,7 +219,7 @@ namespace EvoS.Framework.Network.Static
                     return Freelancer3;
                 }
                 default:
-                    Log.Print(LogType.Error, $"Unknown freelancer stat index: {FreelancerStatIndex}");
+                    log.Error($"Unknown freelancer stat index: {FreelancerStatIndex}");
                     return null;
             }
         }

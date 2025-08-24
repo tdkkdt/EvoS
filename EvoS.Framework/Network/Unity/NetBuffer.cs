@@ -1,10 +1,12 @@
 using System;
-using EvoS.Framework.Logging;
+using log4net;
 
 namespace EvoS.Framework.Network.Unity
 {
     internal class NetBuffer
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(NetBuffer));
+        
         private byte[] m_Buffer;
         private uint m_Pos;
         private const int k_InitialSize = 64;
@@ -138,7 +140,7 @@ namespace EvoS.Framework.Network.Unity
             {
                 length = (int) Math.Ceiling(length * 1.5);
                 if (length > 134217728)
-                    Log.Print(LogType.Warning, $"NetworkBuffer size is {length} bytes!");
+                    log.Warn($"NetworkBuffer size is {length} bytes!");
             }
 
             byte[] numArray = new byte[length];

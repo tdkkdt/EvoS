@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using EvoS.Framework.Constants.Enums;
-using EvoS.Framework.Logging;
 using EvoS.Framework.Network.Unity;
 
 namespace EvoS.Framework.Network.Static

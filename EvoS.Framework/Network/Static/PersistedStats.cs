@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using EvoS.Framework.Logging;
+using log4net;
 
 namespace EvoS.Framework.Network.Static
 {
@@ -8,6 +8,8 @@ namespace EvoS.Framework.Network.Static
     [EvosMessage(40)]
     public class PersistedStats : ICloneable
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(PersistedStats));
+        
         public PersistedStats()
         {
             TotalDeaths = new PersistedStatEntry();
@@ -197,7 +199,7 @@ namespace EvoS.Framework.Network.Static
                 case StatDisplaySettings.StatType.MatchesWon:
                     return MatchesWon;
                 default:
-                    Log.Print(LogType.Warning, "Attempting to display a stat that isn't categorized: " + TypeOfStat);
+                    log.Warn("Attempting to display a stat that isn't categorized: " + TypeOfStat);
                     return null;
             }
         }

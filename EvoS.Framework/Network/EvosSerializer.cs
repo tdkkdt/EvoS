@@ -2,14 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using EvoS.Framework.Logging;
 using EvoS.Framework.Network.Static;
+using log4net;
 using NetSerializer;
+using ILog = log4net.ILog;
 
 namespace EvoS.Framework.Network
 {
     public sealed class EvosSerializer
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(EvosSerializer));
+        
         private readonly Serializer _serializer = new Serializer(new Dictionary<Type, uint>());
 
         private readonly Dictionary<uint, Type> _typesById = new Dictionary<uint, Type>();
@@ -181,7 +184,7 @@ namespace EvoS.Framework.Network
             this._serializer.AddTypes(_idsByType);
 
 //            this.DumpTypeMap();
-            Log.Print(LogType.Lobby, $"Loaded {_idsByType.Count} {(_idsByType.Count == 1 ? "ID" : "IDs")}");
+            log.Info($"Loaded {_idsByType.Count} {(_idsByType.Count == 1 ? "ID" : "IDs")}");
             return this._serializer;
         }
 

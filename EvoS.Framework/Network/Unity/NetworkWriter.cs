@@ -2,12 +2,14 @@ using System;
 using System.Drawing;
 using System.Numerics;
 using System.Text;
-using EvoS.Framework.Logging;
+using log4net;
 
 namespace EvoS.Framework.Network.Unity
 {
     public class NetworkWriter
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(NetworkWriter));
+        
         private const int k_MaxStringLength = 32768;
         private NetBuffer m_Buffer;
         private static Encoding s_Encoding;
@@ -279,7 +281,7 @@ namespace EvoS.Framework.Network.Unity
         {
             if (count > ushort.MaxValue)
             {
-                Log.Print(LogType.Error, "NetworkWriter Write: buffer is too large (" + count +
+                log.Error("NetworkWriter Write: buffer is too large (" + count +
                                          ") bytes. The maximum buffer size is 64K bytes.");
             }
             else
@@ -290,7 +292,7 @@ namespace EvoS.Framework.Network.Unity
         {
             if (count > ushort.MaxValue)
             {
-                Log.Print(LogType.Error, "NetworkWriter Write: buffer is too large (" + count +
+                log.Error("NetworkWriter Write: buffer is too large (" + count +
                                          ") bytes. The maximum buffer size is 64K bytes.");
             }
             else
@@ -303,8 +305,8 @@ namespace EvoS.Framework.Network.Unity
                 Write((ushort) 0);
             else if (count > ushort.MaxValue)
             {
-                Log.Print(LogType.Error, "NetworkWriter Write: buffer is too large (" + count +
-                                         ") bytes. The maximum buffer size is 64K bytes.");
+                log.Error("NetworkWriter Write: buffer is too large (" + count +
+                          ") bytes. The maximum buffer size is 64K bytes.");
             }
             else
             {
@@ -319,8 +321,8 @@ namespace EvoS.Framework.Network.Unity
                 Write((ushort) 0);
             else if (buffer.Length > ushort.MaxValue)
             {
-                Log.Print(LogType.Error, "NetworkWriter Write: buffer is too large (" + buffer.Length +
-                                         ") bytes. The maximum buffer size is 64K bytes.");
+                log.Error("NetworkWriter Write: buffer is too large (" + buffer.Length +
+                          ") bytes. The maximum buffer size is 64K bytes.");
             }
             else
             {
