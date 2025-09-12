@@ -111,6 +111,11 @@ public class ProxyPatcher
 
     private static string GetProxyAddressOverride(string originalAddress, ProxyConfiguration.Proxy proxy)
     {
+        if (originalAddress is null)
+        {
+            return null;
+        }
+        
         proxy.AddressMapping.TryGetValue(originalAddress, out var addressOverride);
         if (addressOverride is null)
         {
