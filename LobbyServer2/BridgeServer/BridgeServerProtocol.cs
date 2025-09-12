@@ -213,8 +213,8 @@ namespace CentralServer.BridgeServer
             short messageType = BridgeMessageSerializer.GetMessageType(msg);
             if (messageType >= 0)
             {
-                Send(messageType, msg, originalCallbackId);
                 LogMessage(">", msg);
+                Send(messageType, msg, originalCallbackId);
                 return true;
             }
             log.Error($"No sender for {msg.GetType().Name}");

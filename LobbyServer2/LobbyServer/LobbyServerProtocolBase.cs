@@ -112,10 +112,10 @@ namespace CentralServer.LobbyServer
                 message = patcher(message, Proxy);
             }
 
+            LogMessage(">", message);
             MemoryStream stream = new MemoryStream();
             EvosSerializer.Instance.Serialize(stream, message);
             Send(stream.ToArray());
-            LogMessage(">", message);
         }
 
         private void BroadcastImpl(WebSocketMessage message)
