@@ -9,8 +9,9 @@ namespace EvoS.Framework.DataAccess.Mock
         public List<ChatHistoryDao.Entry> GetRelevantMessages(
             long accountId,
             bool includeBlocked,
-            DateTime afterTime,
-            DateTime beforeTime,
+            bool includeGeneral,
+            bool isAfter,
+            DateTime time,
             int limit)
         {
             return new List<ChatHistoryDao.Entry>();

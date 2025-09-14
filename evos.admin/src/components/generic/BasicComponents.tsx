@@ -31,7 +31,33 @@ export const StackWrapper = styled(Stack)(({theme}) => ({
     maxWidth: theme.size.basicWidth,
 }));
 
-export function plainAccountLink(accountId: number, text: string, navigate: NavigateFunction) {
+export const StyledLink = styled(Link)(({ theme }) => ({
+    color: '#7ae',
+    cursor: 'pointer',
+    border: 'none',
+    background: 'none',
+    padding: 0,
+    font: 'inherit',
+    '&:hover': {
+        textDecoration: 'underline',
+    },
+}));
+
+export function plainAccountLink(accountId: number, text: string, navigate: NavigateFunction, sx?: any) {
     const uri = `/account/${accountId}`;
-    return <Link component={'button'} onClick={() => navigate(uri)}>{text}</Link>;
+    return (
+        <StyledLink onClick={() => navigate(uri)} sx={sx}>
+            {text}
+        </StyledLink>
+    );
+}
+
+export function plainMatchLink(accountId: number, matchId: string, navigate: NavigateFunction, text?: string, sx?: any) {
+    const uri = `/account/${accountId}/matches/${matchId}`;
+    const finalText = text || matchId.substring(matchId.length - 4, matchId.length);
+    return (
+        <StyledLink onClick={() => navigate(uri)} sx={sx} title={matchId}>
+            {finalText}
+        </StyledLink>
+    );
 }

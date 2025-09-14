@@ -269,6 +269,13 @@ export function getPlayer(abort: AbortController, authHeader: string, accountId:
         { params: { AccountId: accountId }, headers: { 'Authorization': authHeader }, signal: abort.signal });
 }
 
+export function getPlayers(abort: AbortController, authHeader: string, accountIds: number[]) {
+    return axios.post<SearchResults>(
+        baseUrl + "/api/admin/player/details",
+        { accountIds: accountIds },
+        { headers: { 'Authorization': authHeader }, signal: abort.signal });
+}
+
 export function pauseQueue(abort: AbortController, authHeader: string, paused: boolean) {
     return axios.put(
         baseUrl + "/api/admin/queue/paused",
@@ -362,4 +369,340 @@ export function reloadProxyConfig(abort: AbortController, authHeader: string) {
         baseUrl + "/api/admin/proxy/reload",
         {},
         { headers: { 'Authorization': authHeader }, signal: abort.signal });
+}
+
+export interface ChatMessage {
+    message: string;
+    senderId: number;
+    senderHandle: string;
+    game: string;
+    time: string;
+    character: CharacterType;
+    team: Team;
+    isMuted: boolean;
+    recipients: number[];
+    blockedRecipients: number[];
+    type: ChatType;
+}
+
+export interface ChatHistoryResponse {
+    messages: ChatMessage[];
+}
+
+export enum Team {
+    Invalid = 'Invalid',
+    TeamA = 'TeamA',
+    TeamB = 'TeamB',
+    Objects = 'Objects',
+    Spectator = 'Spectator'
+}
+
+export enum ChatType {
+    GlobalChat = 'GlobalChat',
+    GameChat = 'GameChat',
+    TeamChat = 'TeamChat',
+    GroupChat = 'GroupChat',
+    WhisperChat = 'WhisperChat',
+    CombatLog = 'CombatLog',
+    SystemMessage = 'SystemMessage',
+    Error = 'Error',
+    Exception = 'Exception',
+    BroadcastMessage = 'BroadcastMessage',
+    PingChat = 'PingChat',
+    ScriptedChat = 'ScriptedChat',
+    NUM_VALUES = 'NUM_VALUES'
+}
+
+export const chatTypeColors = new Map<ChatType, string>([
+    [ChatType.GlobalChat, 'rgba(80,80,80,0)'],
+    [ChatType.GameChat, '#655a01'],
+    [ChatType.TeamChat, '#004f6a'],
+    [ChatType.GroupChat, '#146700'],
+    [ChatType.WhisperChat, '#5a015a'],
+    [ChatType.CombatLog, '#006053'],
+    [ChatType.SystemMessage, '#006053'],
+    [ChatType.Error, '#006053'],
+    [ChatType.Exception, '#006053'],
+    [ChatType.BroadcastMessage, '#006053'],
+    [ChatType.PingChat, '#006053'],
+    [ChatType.ScriptedChat, '#006053'],
+]);
+
+export interface UserFeedback {
+    accountId: number;
+    time: string;
+    context: string;
+    message: string;
+    reason: FeedbackReason;
+    reportedPlayerAccountId: number;
+    reportedPlayerHandle: string;
+}
+
+export interface UserFeedbackResponse {
+    feedback: UserFeedback[];
+}
+
+export enum FeedbackReason {
+    None = 'None',
+    Suggestion = 'Suggestion',
+    Bug = 'Bug',
+    UnsportsmanlikeConduct = 'UnsportsmanlikeConduct',
+    VerbalHarassment = 'VerbalHarassment',
+    LeavingTheGameAFK = 'LeavingTheGameAFK',
+    HateSpeech = 'HateSpeech',
+    IntentionallyFeeding = 'IntentionallyFeeding',
+    SpammingAdvertising = 'SpammingAdvertising',
+    OffensiveName = 'OffensiveName',
+    Other = 'Other',
+    Botting = 'Botting'
+}
+
+export function getChatHistory(
+    abort: AbortController, 
+    authHeader: string, 
+    accountId: number, 
+    date: number,
+    before: boolean,
+    includeBlocked?: boolean,
+    includeGeneral?: boolean,
+    limit?: number
+) {
+    return axios.get<ChatHistoryResponse>(
+        baseUrl + "/api/admin/moderation/chatHistory",
+        { 
+            params: { 
+                accountId: accountId,
+                after: before ? undefined : date,
+                before: before ? date : undefined,
+                includeBlocked: includeBlocked,
+                includeGeneral: includeGeneral,
+                limit: limit
+            }, 
+            headers: { 'Authorization': authHeader }, 
+            signal: abort.signal 
+        }
+    );
+}
+
+export function getSentFeedback(
+    abort: AbortController,
+    authHeader: string,
+    accountId: number
+) {
+    return axios.get<UserFeedbackResponse>(
+        baseUrl + "/api/admin/moderation/sentFeedback",
+        {
+            params: { accountId: accountId },
+            headers: { 'Authorization': authHeader },
+            signal: abort.signal
+        }
+    );
+}
+
+export function getReceivedFeedback(
+    abort: AbortController,
+    authHeader: string,
+    accountId: number
+) {
+    return axios.get<UserFeedbackResponse>(
+        baseUrl + "/api/admin/moderation/receivedFeedback",
+        {
+            params: { accountId: accountId },
+            headers: { 'Authorization': authHeader },
+            signal: abort.signal
+        }
+    );
+}
+
+export enum PlayerGameResult {
+    NoResult = 'NoResult',
+    Tie = 'Tie',
+    Win = 'Win',
+    Lose = 'Lose'
+}
+
+export const resultColors = new Map<PlayerGameResult, string>([
+    [PlayerGameResult.NoResult, 'rgba(0,0,0,0)'],
+    [PlayerGameResult.Tie, 'rgba(255,255,0,0.16)'],
+    [PlayerGameResult.Win, 'rgba(0,255,0,0.1)'],
+    [PlayerGameResult.Lose, 'rgba(255,0,0,0.1)'],
+]);
+
+export interface MatchActor {
+    character: CharacterType;
+    team: Team;
+    isPlayer: boolean;
+}
+
+export interface MatchComponent {
+    matchTime: string;
+    result: PlayerGameResult;
+    kills: number;
+    characterUsed: CharacterType;
+    gameType: string;
+    mapName: string;
+    turnsPlayed: number;
+    gameMode: string;
+    participants: MatchActor[];
+}
+
+export interface MatchDetails {
+    deaths: number;
+    takedowns: number;
+    damageDealt: number;
+    damageTaken: number;
+    healing: number;
+    contribution: number;
+    matchResults: MatchResultsStats;
+    groupSize: number;
+    tier: string;
+    points: number;
+}
+
+export interface TeamStatline {
+    player: PlayerIdentity;
+    character: CharacterInfo;
+    combatStats: CombatStats;
+    performance: PerformanceStats;
+    customization: PlayerCustomization;
+    abilityMods: number[];
+    unusedCatalysts: CatalystPhaseInfo;
+}
+
+export interface PlayerIdentity {
+    playerId: number;
+    accountId: number;
+    displayName: string;
+    isPerspectivePlayer: boolean;
+    isAlly: boolean;
+    playerType: string;
+}
+
+export interface CharacterInfo {
+    type: CharacterType;
+}
+
+export interface CombatStats {
+    kills: number;
+    deaths: number;
+    damageDealt: number;
+    damageTaken: number;
+    healing: number;
+    assists: number;
+    absorbedDamage: number;
+}
+
+export interface PerformanceStats {
+    turnsPlayed: number;
+    averageLockInTime: number;
+    contributionScore: number;
+}
+
+export interface PlayerCustomization {
+    titleId: number;
+    titleLevel: number;
+    bannerId: number;
+    emblemId: number;
+    ribbonId: number;
+}
+
+export interface CatalystPhaseInfo {
+    hasPrepPhase: boolean;
+    hasDashPhase: boolean;
+    hasBlastPhase: boolean;
+}
+
+export interface Score {
+    teamAScore: number;
+    teamBScore: number;
+}
+
+export interface MatchResultsStats {
+    friendlyTeamStats: TeamStatline[];
+    enemyTeamStats: TeamStatline[];
+    score: Score;
+    victoryCondition: string;
+    victoryConditionTurns: number;
+    gameDuration: number;
+}
+
+export interface MatchFreelancerStats {
+    characterType: CharacterType;
+    totalAssists: number;
+    totalDeaths: number;
+    totalBadgePoints: number;
+    energyGainPerTurn: number;
+    damagePerTurn: number;
+    damageEfficiency: number;
+    killParticipation: number;
+    supportPerTurn: number;
+    damageTakenPerTurn: number;
+    damageDonePerLife: number;
+    mmr: number;
+    teamMitigation: number;
+    totalTurns: number;
+}
+
+export interface MatchData {
+    createDate: string;
+    updateDate: string;
+    gameServerProcessCode: string;
+    matchComponent: MatchComponent;
+    matchDetailsComponent: MatchDetails;
+    matchFreelancerStats: MatchFreelancerStats;
+}
+
+export function getMatch(abort: AbortController, authHeader: string, accountId: number, matchId: string) {
+    return axios.get<MatchData>(
+        baseUrl + "/api/admin/match",
+        {
+            params: {
+                accountId: accountId,
+                matchId: matchId
+            },
+            headers: { 'Authorization': authHeader },
+            signal: abort.signal
+        }
+    );
+}
+
+export interface MatchHistoryEntry {
+    matchId: string;
+    matchTime: string;
+    character: CharacterType;
+    gameType: string;
+    subType: string;
+    mapName: string;
+    numOfTurns: number;
+    teamAScore: number;
+    teamBScore: number;
+    team: Team;
+    result: PlayerGameResult;
+}
+
+export interface MatchHistoryResponse {
+    matches: MatchHistoryEntry[];
+}
+
+export function getMatchHistory(
+    abort: AbortController,
+    authHeader: string,
+    accountId: number,
+    date: number,
+    before: boolean,
+    limit?: number
+) {
+    return axios.get<MatchHistoryResponse>(
+        baseUrl + "/api/admin/player/matches",
+        {
+            params: {
+                accountId: accountId,
+                after: before ? undefined : date,
+                before: before ? date : undefined,
+                limit: limit
+            },
+            headers: { 'Authorization': authHeader },
+            signal: abort.signal
+        }
+    );
 }

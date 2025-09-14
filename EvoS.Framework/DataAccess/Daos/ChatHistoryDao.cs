@@ -13,8 +13,9 @@ namespace EvoS.Framework.DataAccess.Daos
         List<Entry> GetRelevantMessages(
             long accountId,
             bool includeBlocked,
+            bool includeGeneral,
+            bool isAfter,
             DateTime afterTime,
-            DateTime beforeTime,
             int limit);
         void Save(Entry entry);
         
