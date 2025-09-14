@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.Misc;
+using EvoS.Framework.Network.Unity;
 
 namespace EvoS.Framework.Network.Static
 {
@@ -86,6 +87,58 @@ namespace EvoS.Framework.Network.Static
 		    GameOptionFlags = on
 			    ? GameOptionFlags.WithGameOption(flag)
 			    : GameOptionFlags.WithoutGameOption(flag);
+	    }
+
+	    // rogues
+	    public virtual void Deserialize(NetworkReader reader)
+	    {
+		    AccountId = reader.ReadInt64();
+		    PlayerId = reader.ReadInt32();
+		    CustomGameVisualSlot = reader.ReadInt32();
+		    Handle = reader.ReadString();
+		    TitleID = reader.ReadInt32();
+		    TitleLevel = reader.ReadInt32();
+		    BannerID = reader.ReadInt32();
+		    EmblemID = reader.ReadInt32();
+		    RibbonID = reader.ReadInt32();
+		    IsGameOwner = reader.ReadBoolean();
+		    Difficulty = (BotDifficulty)reader.ReadSByte();
+		    BotCanTaunt = reader.ReadBoolean();
+		    TeamId = (Team)reader.ReadSByte();
+		    AllianceMessageBase.DeserializeObject(out CharacterInfo, reader);
+		    ReadyState = (ReadyState)reader.ReadSByte();
+		    ControllingPlayerId = reader.ReadInt32();
+		    GameAccountType = (PlayerGameAccountType)reader.ReadSByte();
+		    GameConnectionType = (PlayerGameConnectionType)reader.ReadSByte();
+		    GameOptionFlags = (PlayerGameOptionFlag)reader.ReadSByte();
+	    }
+
+	    // rogues
+	    public virtual void Serialize(NetworkWriter writer)
+	    {
+		    writer.Write(AccountId);
+		    writer.Write(PlayerId);
+		    writer.Write(CustomGameVisualSlot);
+		    writer.Write(Handle);
+		    writer.Write(TitleID);
+		    writer.Write(TitleLevel);
+		    writer.Write(BannerID);
+		    writer.Write(EmblemID);
+		    writer.Write(RibbonID);
+		    writer.Write(IsGameOwner);
+		    writer.Write((sbyte)Difficulty);
+		    writer.Write(BotCanTaunt);
+		    writer.Write((sbyte)TeamId);
+		    AllianceMessageBase.SerializeObject(CharacterInfo, writer);
+		    writer.Write((sbyte)ReadyState);
+		    if (ControllingPlayerId == 0 && ControllingPlayerInfo != null)
+		    {
+			    ControllingPlayerId = ControllingPlayerInfo.PlayerId;
+		    }
+		    writer.Write(ControllingPlayerId);
+		    writer.Write((sbyte)GameAccountType);
+		    writer.Write((sbyte)GameConnectionType);
+		    writer.Write((sbyte)GameOptionFlags);
 	    }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using EvoS.Framework.Constants.Enums;
 using EvoS.Framework.Network.Static;
+using EvoS.Framework.Network.Unity;
 using Newtonsoft.Json;
 
 namespace EvoS.Framework.Misc
@@ -35,5 +36,29 @@ namespace EvoS.Framework.Misc
         public Dictionary<long, TierPlacement> TierChangeMins;
         public Dictionary<long, TierPlacement> TierChangeMaxs;
         public Dictionary<long, TierPlacement> TierCurrents;
+
+        // rogues
+        public void Deserialize(NetworkReader reader)
+        {
+            int num = reader.ReadInt32();
+            TeamPlayerInfo = new List<LobbyServerPlayerInfo>(num);
+            for (int i = 0; i < num; i++)
+            {
+                LobbyServerPlayerInfo lobbyServerPlayerInfo = new LobbyServerPlayerInfo();
+                lobbyServerPlayerInfo.Deserialize(reader);
+                TeamPlayerInfo.Add(lobbyServerPlayerInfo);
+            }
+        }
+        
+        // custom
+        public void Serialize(NetworkWriter writer)
+        {
+            writer.Write(TeamPlayerInfo.Count);
+            foreach (var lobbyServerPlayerInfo in TeamPlayerInfo)
+            {
+                lobbyServerPlayerInfo.Serialize(writer);
+            }
+        }
+        
     }
 }
